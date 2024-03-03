@@ -46,5 +46,5 @@ jobs:
         working-directory: ./backend
       - uses: Swatinem/rust-cache@v2
       - name: "Clippy"
-        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
         working-directory: ./backend
