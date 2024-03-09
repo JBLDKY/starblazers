@@ -20,9 +20,13 @@ jobs:
 
     - name: Install dependencies
       run: npm install
+      working-directory: ./frontend
 
     - name: Run ESLint
       run: npx eslint .
+      working-directory: ./frontend
 
     - name: Check format with Prettier
       run: npx prettier --check .
+      working-directory: ./frontend
+
