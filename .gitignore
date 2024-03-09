@@ -14,8 +14,10 @@ Cargo.lock
 *.pdb
 
 # Typescript
-node_modules/
-.node_modules/
+frontend/node_modules/
+frontend/.node_modules/
+frontend/dist/
+frontend/package-lock.json
 built/*
 tests/cases/rwc/*
 tests/cases/perf/*
