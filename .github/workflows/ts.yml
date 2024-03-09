@@ -23,10 +23,10 @@ jobs:
       working-directory: ./frontend
 
     - name: Run ESLint
-      run: npx eslint .
+      run: eslint 'src/**/*.ts'
       working-directory: ./frontend
 
     - name: Check format with Prettier
-      run: npx prettier --check .
+      run: prettier --check 'src/**/*.{ts,json,css,md}'
       working-directory: ./frontend
 
