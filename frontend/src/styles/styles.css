@@ -1,0 +1,16 @@
+canvas {
+    /* border-left: 1px solid; */
+    /* border-right: 1px solid; */
+    background-color: #221569;
+}
+
+
+html,
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #221569;
+}
