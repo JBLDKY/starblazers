@@ -1,0 +1,13 @@
+canvas {
+  background-color: #221569;
+}
+
+html, body {
+  background-color: #221569;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+/*# sourceMappingURL=index.3b8f328d.css.map */
