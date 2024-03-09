@@ -13,7 +13,5 @@ export abstract class Entity {
 
 	move(direction: Position): void {
 		this.position.x += direction.x * this.speed;
-	};
-
+	}
 }
-
