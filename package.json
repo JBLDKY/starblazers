@@ -19,6 +19,7 @@
   "homepage": "https://github.com/JBLDKY/starblazers#readme",
   "devDependencies": {
     "@types/node": "^20.11.24",
+    "parcel": "^2.12.0",
     "typescript": "^5.3.3"
   }
 }
