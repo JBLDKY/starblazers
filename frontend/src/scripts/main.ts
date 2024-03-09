@@ -1,11 +1,6 @@
-import { SpaceInvadersGame } from "./game";
-
-import { Alien } from "./entity/alien";
-import { Player } from "./entity/player";
-import { Bullet } from "./entity/bullet";
+import { SpaceInvadersGame } from "./game/game";
 
 window.onload = () => {
-	console.log("starting")
-	const game = new SpaceInvadersGame('gameCanvas');
+	const game = new SpaceInvadersGame("gameCanvas");
 	game.start();
 };

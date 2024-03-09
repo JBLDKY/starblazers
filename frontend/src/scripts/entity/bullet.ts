@@ -1,5 +1,6 @@
 import { Entity } from "./base";
 import { Position } from "../types";
+import { Colors } from "../assets/color";
 
 export class Bullet extends Entity {
 	yVelocity: number;
@@ -11,16 +12,15 @@ export class Bullet extends Entity {
 	}
 
 	draw(ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = "red";
+		ctx.fillStyle = Colors.EFFECT;
 		ctx.fillRect(this.position.x, this.position.y, 5, 10);
-	};
+	}
 
-	update(ctx: CanvasRenderingContext2D) {
-		this.position.y -= 1 * this.speed * this.yVelocity
+	update() {
+		this.position.y -= 1 * this.speed * this.yVelocity;
 
 		if (this.position.y < 0) {
-			this.destroy = true
-
+			this.destroy = true;
 		}
 	}
 }
