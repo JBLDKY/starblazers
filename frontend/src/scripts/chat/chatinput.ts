@@ -12,12 +12,13 @@ export class ChatInput {
 	// Method to capture input and call onSendMessage
 	// Bind this to an input field in your UI
 	handleInput(text: string): void {
-		if (text.trim() !== "") {
-			this.onSendMessage(text);
-		}
+		this.onSendMessage(text);
 	}
 
+	/*
+	 * Returns the HTML Element referred to by this component;
+	 */
 	element(): HTMLInputElement | null {
-		return document.getElementById("chatInput") as HTMLInputElement;
+		return document.getElementById("chat-input") as HTMLInputElement;
 	}
 }

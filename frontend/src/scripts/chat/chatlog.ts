@@ -10,11 +10,24 @@ export class ChatLog {
 
 	addMessage(message: ChatMessage): void {
 		this.messages.push(message);
-		// Update the UI if needed
+		this.render();
 	}
 
-	// Render method to display messages, if you're managing UI rendering manually
 	render(): void {
-		// Logic to display chat messages
+		const chatMessagesContainer = document.getElementById("chat-messages");
+		if (chatMessagesContainer == null) {
+			return;
+		}
+
+		const message = this.messages[this.messages.length - 1];
+
+		const messageDiv = document.createElement("div");
+		messageDiv.classList.add("chat-message");
+
+		const messageContent = document.createTextNode(`${message.user.username}: ${message.text}`);
+
+		messageDiv.appendChild(messageContent);
+		chatMessagesContainer.appendChild(messageDiv);
+		chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
 	}
 }

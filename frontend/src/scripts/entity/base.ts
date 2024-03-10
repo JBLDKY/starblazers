@@ -11,9 +11,24 @@ export abstract class Entity {
 
 	abstract draw(ctx: CanvasRenderingContext2D): void;
 
-	move(direction: Position): void {
-		console.log(direction);
-		this.position.x += direction.x * this.speed;
-		this.position.y += direction.y * this.speed;
+	move(keyPresses: Record<string, boolean>): void {
+		const keyToVectorMap = {
+			w: { x: 0, y: -1 },
+			a: { x: -1, y: 0 },
+			s: { x: 0, y: 1 },
+			d: { x: 1, y: 0 },
+		};
+
+		const movement = { x: 0, y: 0 };
+
+		Object.entries(keyToVectorMap).forEach(([key, vector]) => {
+			if (keyPresses[key]) {
+				movement.x += vector.x;
+				movement.y += vector.y;
+			}
+		});
+
+		this.position.x += movement.x * this.speed;
+		this.position.y += movement.y * this.speed;
 	}
 }

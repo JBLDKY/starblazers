@@ -81,32 +81,28 @@ export class SpaceInvadersGame {
 	};
 
 	private handleInput() {
-		if (this.keyPresses["t"]) {
-			const chatInput = document.getElementById("chatInput");
-			if (chatInput != undefined && chatInput != null) {
-				chatInput.focus();
-			}
-		}
-
-		const chatInput = this.chatBox.chatInput.element();
-		if (this.keyPresses["Enter"] && chatInput != null && chatInput.value.trim() != "") {
-			this.chatBox.chatInput.handleInput(chatInput.value);
-			chatInput.value = "";
-		}
-
-		if (!this.keyPresses["w"] && !this.keyPresses["a"] && !this.keyPresses["s"] && !this.keyPresses["d"]) {
+		// Start typing a message
+		if (this.keyPresses["t"] || this.keyPresses["T"]) {
+			this.chatBox.startMessage();
 			return;
 		}
 
-		let x: number = 0;
-		x += Number(this.keyPresses["d"]) | 0;
-		x -= Number(this.keyPresses["a"]) | 0;
+		// Stop typing a message
+		if (this.keyPresses["Escape"]) {
+			this.chatBox.cancelMessage();
+			return;
+		}
 
-		let y: number = 0;
-		y += Number(this.keyPresses["s"]) | 0;
-		y -= Number(this.keyPresses["w"]) | 0;
+		// Send message
+		if (this.keyPresses["Enter"]) {
+			this.chatBox.sendMessage();
+			return;
+		}
 
-		this.getCurrentPlayer().move({ x, y });
+		// Assuming this.keyPresses is an object containing the current state of WASD keys
+		if (this.keyPresses["w"] || this.keyPresses["a"] || this.keyPresses["s"] || this.keyPresses["d"]) {
+			this.getCurrentPlayer().move(this.keyPresses);
+		}
 	}
 
 	/**
@@ -126,7 +122,6 @@ export class SpaceInvadersGame {
 		// Players
 		for (const player of this.players) {
 			player.update(this.ctx);
-			// console.log(player);
 
 			// Explanation of Bullet Management:
 			// Bullets are stored in each player's `bullets` attribute, which is an array of Bullet objects.
@@ -234,6 +229,9 @@ export class SpaceInvadersGame {
 		return canvas;
 	}
 
+	/**
+	 * Destructor
+	 */
 	destroy() {
 		document.removeEventListener("keydown", this.handleKeyDown);
 		document.removeEventListener("keyup", this.handleKeyUp);
