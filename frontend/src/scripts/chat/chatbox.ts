@@ -2,16 +2,19 @@ import { ChatLog } from "./chatlog";
 import { User } from "../user/user";
 import { ChatInput } from "./chatinput";
 import { ChatMessage } from "./chatmessage";
+import { WebSocketManager } from "../websocketmanager";
 
 export class ChatBox {
 	chatLog: ChatLog;
 	chatInput: ChatInput;
+	websocket: WebSocketManager;
 	readonly user: User;
 
-	constructor(user: User) {
+	constructor(user: User, websocket: WebSocketManager) {
 		this.user = user;
 		this.chatLog = new ChatLog();
 		this.chatInput = new ChatInput(this.user, this.handleSendMessage.bind(this));
+		this.websocket = websocket;
 	}
 
 	handleSendMessage(text: string): void {
@@ -20,7 +23,7 @@ export class ChatBox {
 		const userMessage = new ChatMessage(this.user, text);
 		this.chatLog.addMessage(userMessage);
 
-		// websocket.send(userMessage)
+		this.websocket.sendMessage(text);
 	}
 
 	getChatInputElement(): HTMLInputElement | null {
@@ -29,6 +32,36 @@ export class ChatBox {
 
 	getChatLineElement(): HTMLElement | null {
 		return document.getElementById("chat-line");
+	}
+
+	receiveMessage() {
+		const websocketMessages = this.websocket.getMessages();
+
+		console.log(this.chatLog.messages.length, websocketMessages.length);
+		if (this.chatLog.messages.length != websocketMessages.length) {
+			let message = websocketMessages[websocketMessages.length - 1];
+			if (message == undefined) {
+				return;
+			}
+
+			if (this.user.username == "" && message.includes("YOUR ID IS:")) {
+				this.user.username = message.split(": ")[1];
+				this.websocket.messages.pop();
+				return;
+			}
+
+			let split = message.split(":");
+			let u = split[0];
+			let t = split[1];
+
+			let user = new User(u);
+			let msg = new ChatMessage(user, t);
+			this.chatLog.addMessage(msg);
+		}
+		// if (this.chatLog.texts.length != websocketMessages.length) {
+		// 	this.chatLog.texts.push(websocketMessages[websocketMessages.length - 1]);
+		// 	console.log("new message!", websocketMessages[websocketMessages.length - 1]);
+		// }
 	}
 
 	sendMessage() {

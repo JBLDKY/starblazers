@@ -1,11 +1,12 @@
 import { ChatMessage } from "./chatmessage";
-import { User } from "../user/user";
 
 export class ChatLog {
 	messages: ChatMessage[];
+	texts: String[];
 
 	constructor() {
-		this.messages = [new ChatMessage(new User("jord"), "hello world")];
+		this.messages = [];
+		this.texts = [];
 	}
 
 	addMessage(message: ChatMessage): void {
