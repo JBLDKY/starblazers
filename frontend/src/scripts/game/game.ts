@@ -3,6 +3,8 @@ import { Player } from "../entity/player";
 import { Bullet } from "../entity/bullet";
 import { CollisionManager } from "./collisionManager";
 import { FPSManager } from "./fpsmanager";
+import { ChatBox } from "../chat/chatbox";
+import { User } from "../user/user";
 
 /**
  * Represents the main game logic for a Space Invaders-like game.
@@ -11,10 +13,14 @@ export class SpaceInvadersGame {
 	private canvas: HTMLCanvasElement;
 	private ctx: CanvasRenderingContext2D;
 	private collisionManager: CollisionManager;
+	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
 	private players: Player[];
 	private aliens: Alien[];
 	private lastTime: number = 0;
+	private user: User;
+	private keyPresses: { [key: string]: boolean } = {};
+
 	/**
 	 * Initializes the game with a given canvas.
 	 * @param {string} canvasId - The ID of the canvas element in the HTML document.
@@ -23,9 +29,14 @@ export class SpaceInvadersGame {
 		this.canvas = this.initCanvas(canvasId);
 		this.ctx = this.canvas.getContext("2d")!;
 		this.collisionManager = new CollisionManager();
+		this.user = new User("lordJord002");
+		this.chatBox = new ChatBox(this.user);
 		this.fpsManager = new FPSManager(this.ctx);
 		this.players = [];
 		this.aliens = [];
+
+		document.addEventListener("keydown", this.handleKeyDown);
+		document.addEventListener("keyup", this.handleKeyUp);
 	}
 
 	/**
@@ -33,13 +44,18 @@ export class SpaceInvadersGame {
 	 */
 	public start(): void {
 		// Create player
-		this.players.push(new Player({ x: this.canvas.width / 2, y: this.canvas.height - 30 }, 5));
+		const player = new Player({ x: this.canvas.width / 2, y: this.canvas.height - 30 }, 5, this.user.uuid);
+		this.players.push(player);
 
 		// Spawn some aliens
 		this.initAliens();
 
 		// Run gameloop through canvas
 		requestAnimationFrame(() => this.gameLoop(this.lastTime));
+	}
+
+	private getCurrentPlayer(): Player {
+		return this.players.filter((player) => this.user.uuid == player.uuid)[0];
 	}
 
 	/**
@@ -56,10 +72,48 @@ export class SpaceInvadersGame {
 		this.fpsManager.update(timestamp);
 	}
 
+	private handleKeyDown = (event: KeyboardEvent): void => {
+		this.keyPresses[event.key] = true;
+	};
+
+	private handleKeyUp = (event: KeyboardEvent): void => {
+		this.keyPresses[event.key] = false;
+	};
+
+	private handleInput() {
+		if (this.keyPresses["t"]) {
+			const chatInput = document.getElementById("chatInput");
+			if (chatInput != undefined && chatInput != null) {
+				chatInput.focus();
+			}
+		}
+
+		const chatInput = this.chatBox.chatInput.element();
+		if (this.keyPresses["Enter"] && chatInput != null && chatInput.value.trim() != "") {
+			this.chatBox.chatInput.handleInput(chatInput.value);
+			chatInput.value = "";
+		}
+
+		if (!this.keyPresses["w"] && !this.keyPresses["a"] && !this.keyPresses["s"] && !this.keyPresses["d"]) {
+			return;
+		}
+
+		let x: number = 0;
+		x += Number(this.keyPresses["d"]) | 0;
+		x -= Number(this.keyPresses["a"]) | 0;
+
+		let y: number = 0;
+		y += Number(this.keyPresses["s"]) | 0;
+		y -= Number(this.keyPresses["w"]) | 0;
+
+		this.getCurrentPlayer().move({ x, y });
+	}
+
 	/**
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	private update(): void {
+		this.handleInput();
 		const allBullets = this.getAllBullets();
 
 		this.collisions(allBullets);
@@ -72,6 +126,7 @@ export class SpaceInvadersGame {
 		// Players
 		for (const player of this.players) {
 			player.update(this.ctx);
+			// console.log(player);
 
 			// Explanation of Bullet Management:
 			// Bullets are stored in each player's `bullets` attribute, which is an array of Bullet objects.
@@ -177,5 +232,10 @@ export class SpaceInvadersGame {
 		canvas.width = 1280;
 		canvas.height = 800;
 		return canvas;
+	}
+
+	destroy() {
+		document.removeEventListener("keydown", this.handleKeyDown);
+		document.removeEventListener("keyup", this.handleKeyUp);
 	}
 }

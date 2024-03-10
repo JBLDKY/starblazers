@@ -12,6 +12,8 @@ export abstract class Entity {
 	abstract draw(ctx: CanvasRenderingContext2D): void;
 
 	move(direction: Position): void {
+		console.log(direction);
 		this.position.x += direction.x * this.speed;
+		this.position.y += direction.y * this.speed;
 	}
 }
