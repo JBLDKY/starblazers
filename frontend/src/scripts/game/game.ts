@@ -5,6 +5,7 @@ import { CollisionManager } from "./collisionManager";
 import { FPSManager } from "./fpsmanager";
 import { ChatBox } from "../chat/chatbox";
 import { User } from "../user/user";
+import { WebSocketManager } from "../websocketmanager";
 
 /**
  * Represents the main game logic for a Space Invaders-like game.
@@ -13,6 +14,7 @@ export class SpaceInvadersGame {
 	private canvas: HTMLCanvasElement;
 	private ctx: CanvasRenderingContext2D;
 	private collisionManager: CollisionManager;
+	private websocket: WebSocketManager;
 	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
 	private players: Player[];
@@ -29,8 +31,11 @@ export class SpaceInvadersGame {
 		this.canvas = this.initCanvas(canvasId);
 		this.ctx = this.canvas.getContext("2d")!;
 		this.collisionManager = new CollisionManager();
-		this.user = new User("lordJord002");
-		this.chatBox = new ChatBox(this.user);
+		this.websocket = new WebSocketManager();
+		// Start the websocket
+
+		this.user = new User("");
+		this.chatBox = new ChatBox(this.user, this.websocket);
 		this.fpsManager = new FPSManager(this.ctx);
 		this.players = [];
 		this.aliens = [];
@@ -50,12 +55,19 @@ export class SpaceInvadersGame {
 		// Spawn some aliens
 		this.initAliens();
 
+		// Start websocket
+		this.startWebsocket();
+
 		// Run gameloop through canvas
 		requestAnimationFrame(() => this.gameLoop(this.lastTime));
 	}
 
 	private getCurrentPlayer(): Player {
 		return this.players.filter((player) => this.user.uuid == player.uuid)[0];
+	}
+
+	private startWebsocket() {
+		this.websocket.connect();
 	}
 
 	/**
@@ -70,6 +82,8 @@ export class SpaceInvadersGame {
 		}
 
 		this.fpsManager.update(timestamp);
+
+		this.chatBox.receiveMessage();
 	}
 
 	private handleKeyDown = (event: KeyboardEvent): void => {
@@ -102,6 +116,7 @@ export class SpaceInvadersGame {
 		// Assuming this.keyPresses is an object containing the current state of WASD keys
 		if (this.keyPresses["w"] || this.keyPresses["a"] || this.keyPresses["s"] || this.keyPresses["d"]) {
 			this.getCurrentPlayer().move(this.keyPresses);
+			return;
 		}
 	}
 
