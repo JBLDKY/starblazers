@@ -27,4 +27,57 @@ body {
 	margin: 0 !important;
 	padding: 0 !important;
 	background-color: #221569;
+	height: 100%;
+	width: 100%;
+}
+
+.game {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100vh;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+.chat-box {
+	display: flex;
+	flex-direction: column;
+	background-color: #221569;
+	width: 300px;
+	position: fixed;
+	bottom: 10px;
+	left: 10px;
+	z-index: 100;
+}
+
+.chat-messages {
+	font-family: "Press Start 2P", cursive;
+	font-size: 8;
+	height: 100px;
+	overflow-y: hidden;
+	overflow-wrap: break-word;
+	background-color: #221569;
+	color: #b5e6ff;
+}
+
+.chat-line {
+	margin: 0;
+	border: 0;
+	border-top: 1px solid black;
+	display: block;
+}
+
+.chat-input {
+	font-family: "Press Start 2P", cursive;
+	font-size: 8;
+	color: #b5e6ff;
+	display: flex;
+	background-color: #221569;
+	border: none;
+	margin-top: 3;
+	box-shadow: none;
+	outline: none;
 }
