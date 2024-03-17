@@ -13,7 +13,7 @@ npm install
 
 Use [parcel](https://parceljs.org/) to serve files:
 ```bash
-npx parcel ./src/index.html
+npm start
 ```
 
 Parcel is a little finnicky and sometimes requires deleting `.parcel-cache` to fix errors.
