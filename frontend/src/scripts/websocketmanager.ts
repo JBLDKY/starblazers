@@ -1,7 +1,7 @@
 export class WebSocketManager {
 	private url: string;
 	private ws: WebSocket | null = null;
-	public messages: String[];
+	public messages: string[];
 
 	constructor() {
 		this.url = "ws://localhost:3030/chat";

@@ -2,7 +2,7 @@ import { ChatMessage } from "./chatmessage";
 
 export class ChatLog {
 	messages: ChatMessage[];
-	texts: String[];
+	texts: string[];
 
 	constructor() {
 		this.messages = [];

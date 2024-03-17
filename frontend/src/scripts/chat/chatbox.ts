@@ -39,7 +39,7 @@ export class ChatBox {
 
 		console.log(this.chatLog.messages.length, websocketMessages.length);
 		if (this.chatLog.messages.length != websocketMessages.length) {
-			let message = websocketMessages[websocketMessages.length - 1];
+			const message = websocketMessages[websocketMessages.length - 1];
 			if (message == undefined) {
 				return;
 			}
@@ -50,12 +50,12 @@ export class ChatBox {
 				return;
 			}
 
-			let split = message.split(":");
-			let u = split[0];
-			let t = split[1];
+			const split = message.split(":");
+			const u = split[0];
+			const t = split[1];
 
-			let user = new User(u);
-			let msg = new ChatMessage(user, t);
+			const user = new User(u);
+			const msg = new ChatMessage(user, t);
 			this.chatLog.addMessage(msg);
 		}
 		// if (this.chatLog.texts.length != websocketMessages.length) {
