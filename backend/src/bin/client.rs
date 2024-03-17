@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let connector = MakeTlsConnector::new(builder.build());
 
     let mut client = Client::connect(
-***REMOVED***
+        "***REMOVED***",
         connector,
     )?;
 

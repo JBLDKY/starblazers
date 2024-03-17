@@ -85,3 +85,6 @@ package-lock.json
 **/dist/**
 .parcel-cache
 *.js
+
+
+.env
