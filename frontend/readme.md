@@ -13,15 +13,15 @@ npm install
 
 Use [parcel](https://parceljs.org/) to serve files:
 ```bash
-npx parcel ./src/index.html
+npm start
 ```
-
-Parcel is a little finnicky and sometimes requires deleting `.parcel-cache` to fix errors.
 
 Use tsc to compile typescript:
 ```bash
 tsc --watch
 ```
+
+Parcel is a little finnicky and sometimes requires deleting `.parcel-cache` to fix errors.
 
 Before opening a PR run `npm run lint && npm run format` or CI will reject it.
 

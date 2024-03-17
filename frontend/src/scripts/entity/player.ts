@@ -7,40 +7,16 @@ export class Player extends Entity {
 	bullets: Bullet[];
 	fireRate: number;
 	cycles: number;
-	private keyPresses: { [key: string]: boolean } = {};
+	uuid: string;
 
-	constructor(position: Position, speed: number) {
+	constructor(position: Position, speed: number, uuid: string) {
 		super(position, speed);
 		this.bullets = [];
 		this.fireRate = 5;
 		this.cycles = 0;
-
-		document.addEventListener("keydown", this.handleKeyDown);
-		document.addEventListener("keyup", this.handleKeyUp);
+		this.uuid = uuid;
 	}
-
-	private handleKeyDown = (event: KeyboardEvent): void => {
-		this.keyPresses[event.key] = true;
-	};
-
-	private handleKeyUp = (event: KeyboardEvent): void => {
-		this.keyPresses[event.key] = false;
-	};
-
 	update(ctx: CanvasRenderingContext2D) {
-		if (this.keyPresses["w"]) {
-			this.position.y -= this.speed;
-		}
-		if (this.keyPresses["s"]) {
-			this.position.y += this.speed;
-		}
-		if (this.keyPresses["a"]) {
-			this.position.x -= this.speed;
-		}
-		if (this.keyPresses["d"]) {
-			this.position.x += this.speed;
-		}
-
 		if (this.bullets.length < 100 && this.cycles % this.fireRate == 0) {
 			this.fire();
 		}
@@ -66,10 +42,5 @@ export class Player extends Entity {
 		const y = this.position.y;
 		const position: Position = { x, y };
 		this.bullets.push(new Bullet(position, 10));
-	}
-
-	destroy() {
-		document.removeEventListener("keydown", this.handleKeyDown);
-		document.removeEventListener("keyup", this.handleKeyUp);
 	}
 }
