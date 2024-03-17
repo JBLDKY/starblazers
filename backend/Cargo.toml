@@ -19,3 +19,7 @@ thiserror = "1.0.57" # A crate for easily creating custom Error types that are c
 sqlx = "0.7.3" # An async, pure Rust SQL crate featuring compile-time checked queries without a DSL.
 anyhow = "1.0.80" # A flexible error handling crate suitable for all kinds of errors, especially those that don't need detailed inspection.
 chrono = "0.4.34" # Date and time library for Rust that provides timezone-aware and timezone-naive date and time functionality.
+postgres-openssl = "0.5.0"
+openssl = "0.10.64"
+postgres = "0.19.7"
+dotenv = "0.15.0"
