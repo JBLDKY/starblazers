@@ -11,7 +11,6 @@ use dotenv::dotenv;
 use std::env;
 
 fn main() -> Result<(), Box<dyn error::Error>> {
-
     // load .env file contents
     dotenv().ok();
 
@@ -21,25 +20,22 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     let db_url = env::var("SQL_DB").unwrap();
 
-    let mut client = Client::connect(
-        &db_url,
-        connector,
-    )?;
+    let mut client = Client::connect(&db_url, connector)?;
 
     /*for row in client.query("SELECT 42", &[])? {
-        let ret: i32 = row.get(0);
+            let ret: i32 = row.get(0);
 
-        println!("Result = {}", ret);
-    }
-    client.batch_execute(
-        "
-    CREATE TABLE IF NOT EXISTS jordgay (
-        id      SERIAL PRIMARY KEY,
-        name    TEXT NOT NULL,
-        data    BYTEA
-    )
-",
-    )?;*/
+            println!("Result = {}", ret);
+        }
+        client.batch_execute(
+            "
+        CREATE TABLE IF NOT EXISTS jordgay (
+            id      SERIAL PRIMARY KEY,
+            name    TEXT NOT NULL,
+            data    BYTEA
+        )
+    ",
+        )?;*/
 
     let result = client.query(
         "
@@ -47,8 +43,9 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     FROM information_schema.tables
     WHERE table_type = 'BASE TABLE'
     AND table_schema = 'public';
-        "
-    , &[])?;
+        ",
+        &[],
+    )?;
 
     for row in &result {
         let thing: String = row.get("table_name");
@@ -56,7 +53,6 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     }
 
     println!("{:#?}", result);
-
 
     Ok(())
 }
