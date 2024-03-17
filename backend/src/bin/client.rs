@@ -2,7 +2,6 @@ use postgres::{Client, Row};
 
 use openssl::ssl::{SslConnector, SslMethod};
 
-
 use postgres_openssl::MakeTlsConnector;
 
 use std::error;
