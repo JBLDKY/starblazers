@@ -1,8 +1,8 @@
-use postgres::{Client, Error, Row};
+use postgres::{Client, Row};
 
 use openssl::ssl::{SslConnector, SslMethod};
 
-use anyhow::anyhow;
+
 use postgres_openssl::MakeTlsConnector;
 
 use std::error;
@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         connector,
     )?;
 
-    let tables = get_table_names(&mut client)?;
+    let _tables = get_table_names(&mut client)?;
 
     Ok(())
 }
