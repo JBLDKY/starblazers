@@ -3,6 +3,9 @@ import { Player } from "../entity/player";
 import { Bullet } from "../entity/bullet";
 import { CollisionManager } from "./collisionManager";
 import { FPSManager } from "./fpsmanager";
+import { ChatBox } from "../chat/chatbox";
+import { User } from "../user/user";
+import { WebSocketManager } from "../websocketmanager";
 
 /**
  * Represents the main game logic for a Space Invaders-like game.
@@ -11,10 +14,15 @@ export class SpaceInvadersGame {
 	private canvas: HTMLCanvasElement;
 	private ctx: CanvasRenderingContext2D;
 	private collisionManager: CollisionManager;
+	private websocket: WebSocketManager;
+	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
 	private players: Player[];
 	private aliens: Alien[];
 	private lastTime: number = 0;
+	private user: User;
+	private keyPresses: { [key: string]: boolean } = {};
+
 	/**
 	 * Initializes the game with a given canvas.
 	 * @param {string} canvasId - The ID of the canvas element in the HTML document.
@@ -23,9 +31,17 @@ export class SpaceInvadersGame {
 		this.canvas = this.initCanvas(canvasId);
 		this.ctx = this.canvas.getContext("2d")!;
 		this.collisionManager = new CollisionManager();
+		this.websocket = new WebSocketManager();
+		// Start the websocket
+
+		this.user = new User("");
+		this.chatBox = new ChatBox(this.user, this.websocket);
 		this.fpsManager = new FPSManager(this.ctx);
 		this.players = [];
 		this.aliens = [];
+
+		document.addEventListener("keydown", this.handleKeyDown);
+		document.addEventListener("keyup", this.handleKeyUp);
 	}
 
 	/**
@@ -33,13 +49,25 @@ export class SpaceInvadersGame {
 	 */
 	public start(): void {
 		// Create player
-		this.players.push(new Player({ x: this.canvas.width / 2, y: this.canvas.height - 30 }, 5));
+		const player = new Player({ x: this.canvas.width / 2, y: this.canvas.height - 30 }, 5, this.user.uuid);
+		this.players.push(player);
 
 		// Spawn some aliens
 		this.initAliens();
 
+		// Start websocket
+		this.startWebsocket();
+
 		// Run gameloop through canvas
 		requestAnimationFrame(() => this.gameLoop(this.lastTime));
+	}
+
+	private getCurrentPlayer(): Player {
+		return this.players.filter((player) => this.user.uuid == player.uuid)[0];
+	}
+
+	private startWebsocket() {
+		this.websocket.connect();
 	}
 
 	/**
@@ -54,12 +82,49 @@ export class SpaceInvadersGame {
 		}
 
 		this.fpsManager.update(timestamp);
+
+		this.chatBox.receiveMessage();
+	}
+
+	private handleKeyDown = (event: KeyboardEvent): void => {
+		this.keyPresses[event.key] = true;
+	};
+
+	private handleKeyUp = (event: KeyboardEvent): void => {
+		this.keyPresses[event.key] = false;
+	};
+
+	private handleInput() {
+		// Start typing a message
+		if (this.keyPresses["t"] || this.keyPresses["T"]) {
+			this.chatBox.startMessage();
+			return;
+		}
+
+		// Stop typing a message
+		if (this.keyPresses["Escape"]) {
+			this.chatBox.cancelMessage();
+			return;
+		}
+
+		// Send message
+		if (this.keyPresses["Enter"]) {
+			this.chatBox.sendMessage();
+			return;
+		}
+
+		// Assuming this.keyPresses is an object containing the current state of WASD keys
+		if (this.keyPresses["w"] || this.keyPresses["a"] || this.keyPresses["s"] || this.keyPresses["d"]) {
+			this.getCurrentPlayer().move(this.keyPresses);
+			return;
+		}
 	}
 
 	/**
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	private update(): void {
+		this.handleInput();
 		const allBullets = this.getAllBullets();
 
 		this.collisions(allBullets);
@@ -177,5 +242,13 @@ export class SpaceInvadersGame {
 		canvas.width = 1280;
 		canvas.height = 800;
 		return canvas;
+	}
+
+	/**
+	 * Destructor
+	 */
+	destroy() {
+		document.removeEventListener("keydown", this.handleKeyDown);
+		document.removeEventListener("keyup", this.handleKeyUp);
 	}
 }
