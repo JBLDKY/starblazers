@@ -37,7 +37,6 @@ export class ChatBox {
 	receiveMessage() {
 		const websocketMessages = this.websocket.getMessages();
 
-		console.log(this.chatLog.messages.length, websocketMessages.length);
 		if (this.chatLog.messages.length != websocketMessages.length) {
 			const message = websocketMessages[websocketMessages.length - 1];
 			if (message == undefined) {
