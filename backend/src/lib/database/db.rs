@@ -15,19 +15,19 @@ impl DatabaseClient {
         dotenv().ok();
         let builder = SslConnector::builder(SslMethod::tls()).expect("IDK man");
         let connector = MakeTlsConnector::new(builder.build());
-        let db_url = env::var("SQL_DB").unwrap();
+        let db_url = env::var("SQL_DB").expect("Missing environtment variable: `SQL_DB`");
         let client = Client::connect(&db_url, connector)?;
         Ok(DatabaseClient { client })
     }
 
     pub fn reset_table(&mut self, table_name: &str) {
         let _ = self.execute_query("DELETE FROM $1", &[&table_name]);
-        println!("Succesfully cleared table: {}", table_name);
+        log::info!("Succesfully cleared table: {}", table_name);
     }
 
     pub fn add_record(&mut self, username: &str) {
         let password = DatabaseClient::generate_password();
-        let email = DatabaseClient::generate_email(&username);
+        let email = DatabaseClient::generate_email(username);
         let _ = self.execute_query(
             "INSERT INTO users (email, username, password) VALUES
                 ($1, $2, $3)",
