@@ -1,33 +1,13 @@
+#![allow(dead_code)]
 use postgres::{Client, Row};
-
-use openssl::ssl::{SslConnector, SslMethod};
-
-use postgres_openssl::MakeTlsConnector;
-
-use std::error;
-
-pub mod db;
-use crate::db::db::DatabaseClient;
+use service::cli::handle_cli_input;
 
 fn main() {
-    /*let builder = SslConnector::builder(SslMethod::tls())?;
+    std::env::set_var("RUST_LOG", "info");
+    pretty_env_logger::init();
+    log::info!("Starting starburst client");
 
-    let connector = MakeTlsConnector::new(builder.build());
-
-    let mut client = Client::connect(
-        "***REMOVED***",
-        connector,
-    )?;
-
-    let _tables = get_table_names(&mut client)?;
-
-    Ok(())*/
-
-    let mut db_client = DatabaseClient::new().unwrap();
-    for row in db_client.head().unwrap() {
-        let uname: &str = row.get("username");
-        println!("{}", uname);
-    }
+    handle_cli_input();
 }
 
 fn get_table_names(client: &mut Client) -> Result<Vec<Row>, postgres::Error> {
