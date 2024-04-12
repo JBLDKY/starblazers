@@ -1,5 +1,5 @@
-use super::queries::{PlayerEntry, PlayerField, Table};
-use anyhow::{Context, Result}; // Make sure to import Context for using `.context()`
+use super::queries::Table;
+use anyhow::Result; // Make sure to import Context for using `.context()`
 use dotenv::dotenv;
 use openssl::ssl::{SslConnector, SslMethod};
 use postgres::{types::ToSql, Client, Error, Row};
@@ -67,15 +67,9 @@ impl DatabaseClient {
     }
 
     /// Create a new table with the provided name.
-    pub fn create_table(&mut self, name: &Table) -> Result<(), Error> {
-        let create_table_sql = format!(
-            "CREATE TABLE IF NOT EXISTS {} (
-            id SERIAL PRIMARY KEY,
-            data TEXT NOT NULL
-        );",
-            name
-        );
-        self.client.execute(&create_table_sql, &[])?;
+    pub fn create_table(&mut self, table: &Table) -> Result<(), Error> {
+        let create_table_sql = table.create();
+        self.client.execute(create_table_sql, &[])?;
         Ok(())
     }
 
@@ -90,29 +84,6 @@ impl DatabaseClient {
             let drop_command = format!("DROP TABLE IF EXISTS {}", table_name);
             self.client.execute(&drop_command, &[])?;
         }
-        Ok(())
-    }
-
-    pub async fn update_player_field(
-        &mut self,
-        player: &PlayerEntry,
-        field: &PlayerField,
-        value: &str,
-    ) -> Result<()> {
-        let (sql, params) = player
-            .update_field(field, value)
-            .map_err(|e| anyhow::anyhow!("Failed to create PlayerField update query: {}", e))?;
-
-        self.client
-            .execute(
-                &sql,
-                &params
-                    .iter()
-                    .map(|p| p.as_ref() as &(dyn ToSql + Sync))
-                    .collect::<Vec<_>>(),
-            )
-            .context("Database execution failed")?;
-
         Ok(())
     }
 }

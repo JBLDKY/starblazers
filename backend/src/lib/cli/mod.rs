@@ -1,10 +1,10 @@
 mod commands; // Include the commands module
+use crate::cli::commands::Executable;
+
 pub use commands::{Cli, Commands, DatabaseCommands, TestCommands};
 
 use crate::database::DatabaseClient;
 use clap::Parser;
-
-use crate::database::queries::{PlayerEntry, PlayerField, Table};
 
 pub fn handle_cli_input() {
     let cli = Cli::parse();
@@ -33,29 +33,9 @@ pub fn handle_cli_input() {
                         "Failed to create table: `{name:?}` because of the following error: {e}."
                     ),
                 },
-
-                DatabaseCommands::UpdateRecord {
-                    table,
-                    record_id,
-                    field,
-                    value,
-                } => {} // match table {
-                        // Table::Player => match field {
-                        //     PlayerField::Email => {
-                        //         match db.update_player_field(&player_entry, &PlayerField::Email, value)
-                        //         {
-                        //             Ok(_) => log::info!(
-                        //                 "Successfully updated email for record ID {}.",
-                        //                 record_id
-                        //             ),
-                        //             Err(e) => log::error!("Failed to update email: {e}."),
-                        //         }
-                        //     }
-                        //     PlayerField::Username => {}
-                        //     PlayerField::Password => {}
-                        //     PlayerField::GamesPlayed => {}
-                        // },
-                        // },
+                DatabaseCommands::CreatePlayer(player) => {
+                    player.execute(&mut db);
+                }
             }
         }
         Commands::Server { message } => {

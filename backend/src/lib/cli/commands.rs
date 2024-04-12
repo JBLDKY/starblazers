@@ -1,4 +1,5 @@
-use crate::database::queries::{PlayerField, Table};
+use crate::database::db::DatabaseClient;
+use crate::database::queries::Table;
 use clap::{Parser, Subcommand};
 
 /// CLI for the Starblazers client
@@ -47,17 +48,49 @@ pub enum DatabaseCommands {
         #[clap(value_enum)]
         name: Table,
     },
-    /// Updates a record
-    UpdateRecord {
-        /// Table of the recod
-        #[clap(value_enum)]
-        table: Table,
-        /// ID
-        record_id: i32,
-        /// Field to update
-        #[clap(value_enum)]
-        field: PlayerField,
-        /// New value for the field
-        value: String,
-    },
+    CreatePlayer(CreatePlayer),
+}
+
+pub trait Executable {
+    fn execute(&self, db: &mut DatabaseClient);
+    fn query(&self) -> &str;
+}
+
+#[derive(Parser, Debug)]
+pub struct CreatePlayer {
+    #[clap(long)]
+    email: String,
+    #[clap(long)]
+    username: String,
+    #[clap(long)]
+    password: String,
+    #[clap(long, default_value_t = 0)]
+    games_played: i32,
+}
+
+impl Executable for CreatePlayer {
+    fn execute(&self, db: &mut DatabaseClient) {
+        match db.execute_query(
+            self.query(),
+            &[
+                &self.email,
+                &self.username,
+                &self.password,
+                &self.games_played,
+            ],
+        ) {
+            Ok(v) => log::info!("Succesfully created a new record: {:?}", v),
+            Err(e) => log::error!(
+                "Could not create record because of the following error: {}",
+                e
+            ),
+        };
+    }
+    fn query(&self) -> &str {
+        r#"
+    INSERT INTO players (email, username, password, games_played)
+    VALUES ($1, $2, $3, $4)
+    RETURNING id;
+"#
+    }
 }
