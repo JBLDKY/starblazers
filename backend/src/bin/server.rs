@@ -15,7 +15,7 @@ type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("rust_log", "debug");
+    std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
 
     // Keep track of all connected users, key is usize, value

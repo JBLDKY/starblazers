@@ -1,16 +1,13 @@
 #![allow(dead_code)]
 use postgres::{Client, Row};
-use service::database::db::DatabaseClient;
+use service::cli::handle_cli_input;
 
 fn main() {
-    std::env::set_var("rust_log", "debug");
+    std::env::set_var("RUST_LOG", "info");
     pretty_env_logger::init();
+    log::info!("Starting starburst client");
 
-    let mut db_client = DatabaseClient::new().unwrap();
-    for row in db_client.head().unwrap() {
-        let uname: &str = row.get("username");
-        log::info!("Found uname: {}", uname);
-    }
+    handle_cli_input();
 }
 
 fn get_table_names(client: &mut Client) -> Result<Vec<Row>, postgres::Error> {
