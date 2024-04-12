@@ -109,6 +109,7 @@ export class SpaceInvadersGame {
 
 		// Send message
 		if (this.keyPresses["Enter"]) {
+			console.log("enter pressed");
 			this.chatBox.sendMessage();
 			return;
 		}
@@ -235,14 +236,14 @@ export class SpaceInvadersGame {
 	 * @param {string} canvasId - The ID of the canvas element.
 	 * @returns {HTMLCanvasElement} The initialized canvas element.
 	 */
-	private initCanvas(canvasId: string): HTMLCanvasElement {
-		// TODO: create a new module that deals with more `meta` canvas stuff and move this there.
-		const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-		// TODO: figure out a computationally acceptable way to handle different sizes
-		canvas.width = 1280;
-		canvas.height = 800;
-		return canvas;
-	}
+	// private initCanvas(canvasId: string): HTMLCanvasElement {
+	// 	// TODO: create a new module that deals with more `meta` canvas stuff and move this there.
+	// 	const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+	// 	// TODO: figure out a computationally acceptable way to handle different sizes
+	// 	canvas.width = 1280;
+	// 	canvas.height = 800;
+	// 	return canvas;
+	// }
 
 	/**
 	 * Destructor
