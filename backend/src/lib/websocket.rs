@@ -13,7 +13,7 @@ use warp::ws::{Message, WebSocket};
 ///
 /// - Key is their id
 /// - Value is a sender of `warp::ws::Message`
-type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
+pub type Users = Arc<RwLock<HashMap<usize, mpsc::UnboundedSender<Message>>>>;
 
 /// Our global unique user id counter.
 pub static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
@@ -22,7 +22,7 @@ pub async fn user_connected(ws: WebSocket, users: Users) {
     // Use a counter to assign a new unique ID for this user.
     let my_id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
 
-    eprintln!("new chat user: {}", my_id);
+    log::info!("new chat user: {}", my_id);
 
     // Split the socket into a sender and receive of messages.
     let (mut user_ws_tx, mut user_ws_rx) = ws.split();
@@ -37,7 +37,7 @@ pub async fn user_connected(ws: WebSocket, users: Users) {
             user_ws_tx
                 .send(message)
                 .unwrap_or_else(|e| {
-                    eprintln!("websocket send error: {}", e);
+                    log::error!("websocket send error: {}", e);
                 })
                 .await;
         }
@@ -48,12 +48,12 @@ pub async fn user_connected(ws: WebSocket, users: Users) {
 
     for (&uid, tx) in users.read().await.iter() {
         if my_id == uid {
-            eprintln!("sending id to user");
+            log::info!("sending id to user");
             if let Err(_disconnected) = tx.send(Message::text(format!(
                 "YOUR ID IS: <User#{}>",
                 my_id.clone()
             ))) {
-                eprintln!("error")
+                log::info!("error")
                 // The tx is disconnected, our `user_disconnected` code
                 // should be happening in another task, nothing more to
                 // do here.
@@ -67,7 +67,6 @@ pub async fn user_connected(ws: WebSocket, users: Users) {
     // Every time the user sends a message, broadcast it to
     // all other users...
     while let Some(result) = user_ws_rx.next().await {
-        println!("hi");
         let msg = match result {
             Ok(msg) => msg,
             Err(e) => {
@@ -75,7 +74,7 @@ pub async fn user_connected(ws: WebSocket, users: Users) {
                 break;
             }
         };
-        println!(
+        log::info!(
             "Received message: {}: {}",
             my_id,
             msg.to_str().unwrap_or("")
@@ -97,11 +96,11 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
     };
 
     let new_msg = format!("<User#{}>: {}", my_id, msg);
-    println!("{}", new_msg);
+    log::info!("{}", new_msg);
     // New message from this user, send it to everyone else (except same uid)...
     for (&uid, tx) in users.read().await.iter() {
         if my_id != uid {
-            println!("Sending msg to {}", &uid);
+            log::info!("Sending msg to {}", &uid);
             if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
                 // The tx is disconnected, our `user_disconnected` code
                 // should be happening in another task, nothing more to
@@ -112,7 +111,7 @@ async fn user_message(my_id: usize, msg: Message, users: &Users) {
 }
 
 async fn user_disconnected(my_id: usize, users: &Users) {
-    eprintln!("good bye user: {}", my_id);
+    log::error!("good bye user: {}", my_id);
 
     // Stream closed up, so remove from the user list
     users.write().await.remove(&my_id);

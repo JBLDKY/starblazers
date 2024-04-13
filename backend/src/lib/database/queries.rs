@@ -1,34 +1,28 @@
 use clap::ValueEnum;
 use std::fmt;
 
-#[derive(Debug, ValueEnum, Clone)]
-pub enum Table {
-    Player,
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, ValueEnum, Clone, Serialize, Deserialize)]
+pub enum TableName {
+    Players,
 }
 
-impl fmt::Display for Table {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Table::Player => write!(f, "player"),
-        }
-    }
-}
-
-impl Table {
+impl TableName {
     pub fn create(&self) -> &str {
         match self {
-            Table::Player => CREATE_PLAYER_TABLE,
+            TableName::Players => CREATE_PLAYERS_TABLE,
         }
     }
 
     pub fn drop(&self) -> &str {
         match self {
-            Table::Player => DROP_PLAYER_TABLE,
+            TableName::Players => DROP_PLAYERS_TABLE,
         }
     }
 }
 
-pub const CREATE_PLAYER_TABLE: &str = r#"
+pub const CREATE_PLAYERS_TABLE: &str = r#"
         CREATE TABLE IF NOT EXISTS players (
             id SERIAL PRIMARY KEY,
             email VARCHAR(255) UNIQUE NOT NULL,
@@ -39,4 +33,35 @@ pub const CREATE_PLAYER_TABLE: &str = r#"
         );
     "#;
 
-pub const DROP_PLAYER_TABLE: &str = "DROP TABLE IF EXISTS players;";
+pub const DROP_PLAYERS_TABLE: &str = "DROP TABLE IF EXISTS players;";
+
+impl fmt::Display for TableName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TableName::Players => write!(f, "Players"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Table {
+    name: TableName,
+}
+
+impl Table {
+    pub fn create(&self) -> &str {
+        self.name.create()
+    }
+
+    pub fn drop(&self) -> &str {
+        self.name.drop()
+    }
+}
+
+pub const AUTHENTICATE_QUERY_EMAIL: &str = r#"
+SELECT * FROM players WHERE email = $1 AND password = $2;
+"#;
+
+pub const AUTHENTICATE_QUERY_USERNAME: &str = r#"
+SELECT * FROM players WHERE username = $1 AND password = $2;
+"#;
