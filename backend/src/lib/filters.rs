@@ -136,17 +136,7 @@ fn login(db: ArcDb) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::
 
 async fn handle_login(login_info: LoginDetails, db: ArcDb) -> Result<impl Reply, Rejection> {
     match db.check_login_details(&login_info).await {
-        Ok(authenticated) => {
-            if authenticated {
-                Ok(warp::reply::json(
-                    &json!({"success": true, "message": "Authentication successful"}),
-                ))
-            } else {
-                Ok(warp::reply::json(
-                    &json!({"success": false, "message": "Authentication failed"}),
-                ))
-            }
-        }
+        Ok(jwt) => Ok(warp::reply::json(&json!({"success": true, "message": jwt}))),
         Err(e) => {
             log::error!("Error during login: {}", e);
             Err(warp::reject::custom(e))

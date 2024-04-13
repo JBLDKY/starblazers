@@ -35,3 +35,4 @@ log = "0.4.21"
 sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio-rustls", "chrono"] }
 rand = "0.8.5"
 argon2 = "0.5.3"
+jsonwebtoken = "9.3.0"

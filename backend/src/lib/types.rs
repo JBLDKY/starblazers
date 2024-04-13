@@ -40,8 +40,17 @@ pub enum LoginError {
     #[error("User does not exist")]
     UserDoesntExist,
 
+    #[error("The password entered was incorrect")]
+    InvalidPassword,
+
     #[error("Failed to hash the password: {0}")]
     PasswordHashingError(String),
+
+    #[error("Encountered error: {0}")]
+    Catchall(String),
+
+    #[error("Unhandled error occurred")]
+    Unhandled,
 
     #[error(transparent)]
     SqlError(#[from] sqlx::Error),

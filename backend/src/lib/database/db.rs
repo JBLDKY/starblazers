@@ -1,4 +1,6 @@
 use anyhow::Result;
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
@@ -13,6 +15,8 @@ use argon2::{
 };
 
 pub type ArcDb = Arc<DatabaseClient>;
+
+const JWT_EXPIRY: chrono::Duration = chrono::Duration::minutes(30);
 
 #[derive(Clone)]
 pub struct DatabaseClient {
@@ -112,12 +116,14 @@ impl DatabaseClient {
     pub async fn check_login_details(
         &self,
         login_details: &LoginDetails,
-    ) -> Result<bool, LoginError> {
+    ) -> Result<String, LoginError> {
+        // We need either a username OR an email address
         if login_details.username.is_none() && login_details.email.is_none() {
             log::error!("No username or email was provided.");
             return Err(LoginError::MissingCredentials);
         }
 
+        // Find the password in the database by email or username
         let hashed_password = if let Some(email) = login_details.email.as_deref() {
             self.get_password_for_email(email).await
         } else {
@@ -125,13 +131,16 @@ impl DatabaseClient {
             self.get_password_for_username(username).await
         };
 
+        // If no password is found for the username or email, the user does not exist
         if hashed_password.is_err() {
             log::error!("User does not exist");
             return Err(LoginError::UserDoesntExist);
         };
 
+        // Verify the password using Argon2
         let is_valid = verify_password(&hashed_password.unwrap().password, &login_details.password);
 
+        // Not sure when this would be the case
         if is_valid.is_err() {
             log::error!("Failed to verify password.");
             return Err(LoginError::PasswordHashingError(
@@ -139,7 +148,24 @@ impl DatabaseClient {
             ));
         }
 
-        Ok(is_valid.unwrap())
+        let success = is_valid.unwrap(); // safe
+
+        // If we get a `False` it means the entered password
+        // does not match the found password
+        if !success {
+            return Err(LoginError::InvalidPassword);
+        }
+
+        // Since we early return in the case of a wrong password,
+        // we should create a JWT cuz the password seems valid
+        let jwt = if let Some(email) = login_details.email.as_deref() {
+            generate_jwt(email)
+        } else {
+            generate_jwt(login_details.username.as_deref().unwrap())
+        };
+
+        // Convert the error to a LoginError
+        jwt.map_err(|e| LoginError::Catchall(e.to_string()))
     }
 
     /// Searches the database for a password linked to the provided email
@@ -152,8 +178,6 @@ impl DatabaseClient {
         .fetch_one(&self.pool)
         .await
         .map_err(|_| LoginError::UserDoesntExist)?;
-
-        log::info!("Found password: `{:?}`", &password);
 
         Ok(password)
     }
@@ -174,4 +198,45 @@ impl DatabaseClient {
 
         Ok(password)
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: String,
+    exp: usize,
+}
+
+/// Returns a result containing a JWT or an error
+fn generate_jwt(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
+    let expiration = chrono::Utc::now()
+        .checked_add_signed(JWT_EXPIRY)
+        .expect("valid timestamp")
+        .timestamp();
+
+    let claims = Claims {
+        sub: user_id.to_owned(),
+        exp: expiration as usize,
+    };
+
+    let secret = get_jwt_secret();
+
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(&secret),
+    )
+}
+
+#[inline]
+fn get_jwt_secret() -> Vec<u8> {
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is not set");
+    secret.as_bytes().to_vec()
+}
+
+// Returns a Claims struct or an error
+fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
+    let secret = get_jwt_secret();
+
+    let validation = Validation::new(Algorithm::HS256); // NOTE: Let's use HS256 for now
+    decode::<Claims>(token, &DecodingKey::from_secret(&secret), &validation).map(|data| data.claims)
 }
