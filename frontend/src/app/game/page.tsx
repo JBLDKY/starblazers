@@ -10,7 +10,7 @@ export default function Game() {
 
   useEffect(() => {
     if (canvasRef.current) {
-      const canvasElement = canvasRef.current;
+      let canvasElement = canvasRef.current;
       canvasElement.width = 1280;
       canvasElement.height = 800;
 

@@ -116,8 +116,13 @@ export class SpaceInvadersGame {
 
 		// Assuming this.keyPresses is an object containing the current state of WASD keys
 		if (this.keyPresses["w"] || this.keyPresses["a"] || this.keyPresses["s"] || this.keyPresses["d"]) {
-			this.getCurrentPlayer().move(this.keyPresses);
-			return;
+			const currentPlayer = this.getCurrentPlayer();
+			if (currentPlayer != undefined) {
+				currentPlayer.move(this.keyPresses);
+				return;
+			}
+
+			console.error("Tried to process movement input but `getCurrentPlayer()` returned `undefined`");
 		}
 	}
 

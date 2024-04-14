@@ -3,10 +3,12 @@ import { User } from "../user/user";
 export class ChatInput {
 	user: User;
 	onSendMessage: (text: string) => void;
+	inputRef: React.RefObject<HTMLInputElement>;
 
-	constructor(user: User, onSendMessage: (text: string) => void) {
+	constructor(user: User, onSendMessage: (text: string) => void, inputRef: React.RefObject<HTMLInputElement>) {
 		this.user = user;
 		this.onSendMessage = onSendMessage;
+		this.inputRef = inputRef;
 	}
 
 	// Method to capture input and call onSendMessage

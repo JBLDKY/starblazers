@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Pixelify_Sans } from "next/font/google";
+import { Changa } from "next/font/google";
 import "./globals.css";
 
-const pixelifySans = Pixelify_Sans({ subsets: ["latin"] });
+const changa = Changa({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Starblaze.rs",
@@ -16,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={pixelifySans.className}>{children}</body>
+      <body className={changa.className}>{children}</body>
     </html>
   );
 }
