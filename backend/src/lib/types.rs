@@ -20,8 +20,7 @@ pub struct Player {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginDetails {
-    pub email: Option<String>,
-    pub username: Option<String>,
+    pub email: String,
     pub password: String,
 }
 

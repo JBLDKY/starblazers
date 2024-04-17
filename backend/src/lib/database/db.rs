@@ -82,6 +82,7 @@ impl DatabaseClient {
         &self,
         player: &Player,
     ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
+        log::info!("creating new account....");
         let creation_date = if let Some(creation_date) = player.creation_date {
             creation_date // Use the provided value if provided
         } else {
@@ -117,19 +118,8 @@ impl DatabaseClient {
         &self,
         login_details: &LoginDetails,
     ) -> Result<String, LoginError> {
-        // We need either a username OR an email address
-        if login_details.username.is_none() && login_details.email.is_none() {
-            log::error!("No username or email was provided.");
-            return Err(LoginError::MissingCredentials);
-        }
-
         // Find the password in the database by email or username
-        let hashed_password = if let Some(email) = login_details.email.as_deref() {
-            self.get_password_for_email(email).await
-        } else {
-            let username = login_details.username.as_deref().unwrap_or_default();
-            self.get_password_for_username(username).await
-        };
+        let hashed_password = self.get_password_for_email(&login_details.email).await;
 
         // If no password is found for the username or email, the user does not exist
         if hashed_password.is_err() {
@@ -158,11 +148,7 @@ impl DatabaseClient {
 
         // Since we early return in the case of a wrong password,
         // we should create a JWT cuz the password seems valid
-        let jwt = if let Some(email) = login_details.email.as_deref() {
-            generate_jwt(email)
-        } else {
-            generate_jwt(login_details.username.as_deref().unwrap())
-        };
+        let jwt = generate_jwt(&login_details.email);
 
         // Convert the error to a LoginError
         jwt.map_err(|e| LoginError::Catchall(e.to_string()))
