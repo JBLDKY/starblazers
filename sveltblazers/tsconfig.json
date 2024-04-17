@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+     "plugins": [{
+            "name": "typescript-svelte-plugin",
+            // the following options can be set additionally; they are optional; their default values are listed here
+            "enabled": true, // enables this plugin
+            "assumeIsSvelteProject": false // if true, skip detection and always assume it's a Svelte project
+        }],
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "target": "es6",
+    "checkJs": false,
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules/*", "__sapper__/*", "public/*"],
+  "extends": "./.svelte-kit/tsconfig.json"
+}
