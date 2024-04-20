@@ -7,7 +7,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use warp::http::Response;
-use warp::{Filter, Rejection, Reply};
+use warp::{Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
@@ -150,34 +150,16 @@ async fn handle_login(
     match db.check_login_details(&login_details).await {
         Ok(jwt) => {
             // Configure your cookie parameters
-            let cookie_value = format!(
-                "jwt={}; HttpOnly; Secure; SameSite=Lax; Max-Age=86400; Path=/",
-                jwt
-            );
-
-            // Prepare the JSON body as a Warp reply
-            let r = R {
-                message: "logged in succesfully".to_string(),
-            };
-
-            let json_body = warp::reply::json(&json!(r));
-            // Build the response with the Set-Cookie header
-            let response = Response::builder()
-                .header("Set-Cookie", cookie_value)
-                .header("Content-Type", "application/json") // Ensure the content type is set to application/json
-                .body(warp::reply::json(&json!(r))) // Ensure the body is serialized correctly
-                .unwrap();
-
-            Ok(response)
+            // Using warp's reply feature to simplify response construction
+            Ok(warp::reply::with_header(
+                warp::reply::json(&json!({ "message": "Logged in" })),
+                "Set-Cookie",
+                cookie,
+            ))
         }
         Err(e) => {
             log::error!("Error during login: {}", e);
             Err(warp::reject::custom(e))
         }
     }
-}
-
-#[derive(Serialize, Deserialize)]
-struct R {
-    message: String,
 }
