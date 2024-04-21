@@ -1,4 +1,4 @@
-export const loginMessages = [
+export const loginMessages: string[] = [
 		'Negotiating peace with aliens... Please stand by.',
 		'Warming up the laser cannons... Hold tight, cadet!',
 		"Launching in T-minus 10 seconds... Just kidding, we're still loading.",
@@ -11,7 +11,9 @@ export const loginMessages = [
 		'Plotting jump to hyperspace... Credentials confirmed, captain!'
 ];
 
-export const AUTH_SERVER_URL = 'http://localhost:3030/auth/login';
-export const CREATE_NEW_SERVER_URL = 'http://localhost:3030/players/create';
+const BASE_URL: string = "http://localhost:3030";
+export const AUTH_SERVER_URL: string = `${BASE_URL}/auth/login`;
+export const CREATE_NEW_SERVER_URL: string = `${BASE_URL}/players/create`;
+export const TEST_ENDPOINT_SERVER_URL: string  = `${BASE_URL}/test`;
 
-export const LOGIN_DELAY = 2000;
+export const LOGIN_DELAY: number = 2000;

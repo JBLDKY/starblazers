@@ -54,13 +54,15 @@
 		const body = { username: username, email: email, password: password };
 		console.log('body: ', body);
 		let response = await fetch(CREATE_NEW_SERVER_URL, {
+			method: 'POST',
 			mode: 'cors', // no-cors, *cors, same-origin,
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(body) // body data type must match "Content-Type" header
+			body: JSON.stringify(body)
 		});
-		await delay(LOGIN_DELAY); // Adjust delay as needed, here 1.5 seconds for user experience
+		// Give user time to read funni msg
+		await delay(LOGIN_DELAY);
 		let text = await response.json();
 		return text;
 	}
@@ -74,7 +76,7 @@
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(body) // body data type must match "Content-Type" header
+			body: JSON.stringify(body)
 		});
 		// Give user time to read funni msg
 		await delay(LOGIN_DELAY);
@@ -128,7 +130,9 @@
 				{#if $showLoginForm}
 					<div class={result_text}><span>{value.message}</span></div>
 				{:else}
-					<div class={result_text}><span>Welcome: {value.message}</span></div>
+					<div class={result_text}>
+						<span>Welcome {username}, your ship is being readied.</span>
+					</div>
 				{/if}
 			{:catch error}
 				<div class={result_text}>

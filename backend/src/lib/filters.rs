@@ -21,6 +21,7 @@ fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 /// POST /players/create - players_create - Create a new player
 /// POST /database/resettable - database_resettable - Drop the provided table
 /// POST /auth/login - login - start authenticating the login request
+/// GET /test - helloworld - for sanity checks / testing warp things
 ///
 pub fn all(
     db: ArcDb,
@@ -28,7 +29,7 @@ pub fn all(
     let cors = warp::cors()
         .allow_origin("http://localhost:5173")
         .allow_credentials(true)
-        .allow_headers(vec!["Content-Type", "Authorization"])
+        .allow_headers(vec!["Content-Type", "*"])
         .allow_methods(vec!["GET", "POST", "PUT"]);
 
     index()
@@ -50,10 +51,15 @@ fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::I
 fn hello_world() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("helloworld")
         .and(warp::get())
-        .and_then(hello_world_response)
+        .and(warp::header::headers_cloned())
+        .map(|h| {
+            println!("{:#?}", h);
+            "hello"
+        })
 }
 
-async fn hello_world_response() -> Result<impl Reply, warp::Rejection> {
+async fn hello_world_response(arg: String) -> Result<impl Reply, warp::Rejection> {
+    log::info!("{}", arg);
     Ok(warp::reply::json(&json!({"message:": "Hello world"})))
 }
 
@@ -158,16 +164,14 @@ async fn handle_login(
     login_details: LoginDetails,
     db: ArcDb,
 ) -> Result<impl Reply, warp::Rejection> {
-    log::info!("{:?}", &login_details);
-
     match db.check_login_details(&login_details).await {
         Ok(jwt) => {
-            let mut cookie = Cookie::new("jwt".to_string(), jwt);
-            cookie.set_max_age(3600); // Set cookie to expire in one hour
-            log::info!("cookie: {}", &cookie);
+            let mut cookie = Cookie::new("jwt".to_string(), jwt.clone());
+
+            cookie.set_max_age(3600).set_secure(false);
 
             Ok(warp::reply::with_header(
-                warp::reply::json(&json!({ "message": "Logged in" })),
+                warp::reply::json(&json!({ "message": "Logged in", "jwt" : jwt })),
                 "Set-Cookie",
                 cookie.to_string(),
             ))

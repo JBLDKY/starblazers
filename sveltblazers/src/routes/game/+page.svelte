@@ -1,7 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-
 	import { SpaceInvadersGame } from '../../lib/game/game';
+	import { jwtStore } from '../../store/auth';
+	import { get } from 'svelte/store';
+	import { goto } from '$app/navigation';
+	import { getToastStore } from '@skeletonlabs/skeleton';
+
+	const toastStore = getToastStore();
+
+	// This is a protected page; login is required
+	if (get(jwtStore) === undefined || get(jwtStore) == '') {
+		toastStore.trigger({ message: 'You are not logged in!' });
+		goto('/login');
+	}
 
 	let canvasElement: HTMLCanvasElement;
 

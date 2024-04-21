@@ -23,24 +23,29 @@ impl Cookie {
         }
     }
 
-    pub fn set_http_only(&mut self, http_only: bool) {
+    pub fn set_http_only(&mut self, http_only: bool) -> &mut Self {
         self.http_only = http_only;
+        self
     }
 
-    pub fn set_secure(&mut self, secure: bool) {
+    pub fn set_secure(&mut self, secure: bool) -> &mut Self {
         self.secure = secure;
+        self
     }
 
-    pub fn set_same_site(&mut self, same_site: String) {
+    pub fn set_same_site(&mut self, same_site: String) -> &mut Self {
         self.same_site = same_site;
+        self
     }
 
-    pub fn set_path(&mut self, path: String) {
+    pub fn set_path(&mut self, path: String) -> &mut Self {
         self.path = path;
+        self
     }
 
-    pub fn set_max_age(&mut self, max_age: u64) {
+    pub fn set_max_age(&mut self, max_age: u64) -> &mut Self {
         self.max_age = Some(max_age);
+        self
     }
 }
 

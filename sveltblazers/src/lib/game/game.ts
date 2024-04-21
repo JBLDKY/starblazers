@@ -25,7 +25,6 @@ export class SpaceInvadersGame {
 
 	/**
 	 * Initializes the game with a given canvas.
-	 * @param {HTMLCanvasElement} ReactRef Object
 	 */
 	constructor(canvas: HTMLCanvasElement) {
 		this.canvas = canvas;

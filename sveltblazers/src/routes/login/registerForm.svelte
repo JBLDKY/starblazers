@@ -16,7 +16,7 @@
 	export let onSubmit: () => void;
 </script>
 
-<form on:submit|preventDefault={submitHandler} class={form_tw}>
+<form on:submit|preventDefault={onSubmit} class={form_tw}>
 	<span class={title_text_tw}>Start your new adventure!</span>
 	<div class={input_field_div_wrapper_tw}>
 		<label for="usernameField" class={input_label_tw}>

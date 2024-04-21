@@ -1,12 +1,24 @@
 <script lang="ts">
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
+	import { jwtStore } from '../../store/auth';
+	import { get } from 'svelte/store';
+	import { goto } from '$app/navigation';
+	import { getToastStore } from '@skeletonlabs/skeleton';
+
+	const toastStore = getToastStore();
+
+	// This is a protected page; login is required
+	if (get(jwtStore) === undefined || get(jwtStore) == '') {
+		toastStore.trigger({ message: 'You are not logged in!' });
+		goto('/login');
+	}
+
 	let listBoxValue: string = 'account';
 </script>
 
 <div class="flex h-screen bg-surface-800">
-	<!-- ListBox Container -->
 	<div class="left-0 top-0 z-40 flex h-full w-64 overflow-auto bg-surface-600 text-tertiary-500">
-		<!-- Example of a ListBox component -->
+		<!-- Just placeholders for future functionality-->
 		<ListBox class="ml-auto mr-auto w-5/6 pt-20">
 			<ListBoxItem bind:group={listBoxValue} name="hi" value="account">Account</ListBoxItem>
 			<ListBoxItem bind:group={listBoxValue} name="hi" value="privacy">Privacy</ListBoxItem>
