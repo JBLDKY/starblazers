@@ -4,7 +4,7 @@ export class WebSocketManager {
 	public messages: string[];
 
 	constructor() {
-		this.url = "ws://localhost:3030/chat";
+		this.url = 'ws://localhost:3030/chat';
 		this.messages = [];
 	}
 
@@ -16,7 +16,7 @@ export class WebSocketManager {
 		this.ws = new WebSocket(this.url);
 
 		this.ws.onopen = () => {
-			console.log("WebSocket connection established");
+			console.log('WebSocket connection established');
 		};
 
 		this.ws.onmessage = (event) => {
@@ -25,11 +25,11 @@ export class WebSocketManager {
 		};
 
 		this.ws.onclose = (event) => {
-			console.log("WebSocket connection closed", event.code, event.reason);
+			console.log('WebSocket connection closed', event.code, event.reason);
 		};
 
 		this.ws.onerror = (error) => {
-			console.error("WebSocket error", error);
+			console.error('WebSocket error', error);
 		};
 	}
 
@@ -38,7 +38,7 @@ export class WebSocketManager {
 			this.messages.push(message);
 			this.ws.send(message);
 		} else {
-			console.error("WebSocket is not connected");
+			console.error('WebSocket is not connected');
 		}
 	}
 

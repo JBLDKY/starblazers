@@ -1,4 +1,5 @@
 pub mod cli;
+pub mod cookie;
 pub mod database;
 pub mod filters;
 pub mod types;

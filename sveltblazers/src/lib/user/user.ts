@@ -9,6 +9,6 @@ export class User {
 
 	private generateUUID(): string {
 		// Implementation to generate a unique identifier
-		return "uuid-12345"; // Placeholder, use a proper UUID generation method
+		return 'uuid-12345'; // Placeholder, use a proper UUID generation method
 	}
 }

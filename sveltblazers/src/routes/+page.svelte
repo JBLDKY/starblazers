@@ -14,6 +14,23 @@
 		'Plotting jump to hyperspace... Credentials confirmed, captain!'
 	];
 
+	async function testCookie() {
+		try {
+			const response = await fetch('http://localhost:3030/helloworld', {
+				method: 'GET',
+				credentials: 'include'
+			});
+			if (response.ok) {
+				const data = await response.json();
+				console.log('Protected data:', data);
+			} else {
+				console.error('Failed to fetch protected data:', response.status);
+			}
+		} catch (error) {
+			console.error('Error fetching data:', error);
+		}
+	}
+
 	let randomFunnyMessage = loginMessages[Math.floor(Math.random() * loginMessages.length)];
 	function updateMessage() {
 		randomFunnyMessage = loginMessages[Math.floor(Math.random() * loginMessages.length)];
@@ -54,10 +71,7 @@
 
 		await delay(1500); // Adjust delay as needed, here 1.5 seconds for user experience
 
-		console.log('hi');
 		let text = await response.json();
-		console.log('bye');
-		console.log('text: ', text);
 
 		return text;
 	}
@@ -114,6 +128,7 @@
 </script>
 
 <div class="bg-surface-800">
+	<button on:click={testCookie} class={button_tw}>Test</button>
 	<div class={form_div_wrapper_tw}>
 		<div>
 			{#if result === undefined}
@@ -199,12 +214,14 @@
 					<div class={result_text}><span>{randomFunnyMessage}</span></div>
 				{:then value}
 					{#if $showLoginForm}
-						<div class={result_text}><span>Json Web Token: {value.body}</span></div>
+						<div class={result_text}><span>{value.message}</span></div>
 					{:else}
 						<div class={result_text}><span>Welcome: {value.message}</span></div>
 					{/if}
 				{:catch error}
-					<div class={result_text}><span>Could not authenticate: {error.message}</span></div>
+					<div class={result_text}>
+						<span>Could not authenticate: {error.message} </span>
+					</div>
 				{/await}
 			{/if}
 		</div>

@@ -54,7 +54,7 @@ body {
 }
 
 .chat-messages {
-	font-family: "Press Start 2P", cursive;
+	font-family: 'Press Start 2P', cursive;
 	font-size: 8;
 	height: 100px;
 	overflow-y: hidden;
@@ -71,7 +71,7 @@ body {
 }
 
 .chat-input {
-	font-family: "Press Start 2P", cursive;
+	font-family: 'Press Start 2P', cursive;
 	font-size: 8;
 	color: #b5e6ff;
 	display: flex;

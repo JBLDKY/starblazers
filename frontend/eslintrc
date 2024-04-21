@@ -1,7 +1,0 @@
-{
-  "extends": "next",
-  "rules": {
-    "react/jsx-no-comment-textnodes": "off",
-    "react/display-name": "off"
-  }
-}

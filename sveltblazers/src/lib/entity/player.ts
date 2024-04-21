@@ -1,7 +1,7 @@
-import { Entity } from "./base";
-import { Position } from "../types";
-import { Bullet } from "./bullet";
-import { Colors } from "../assets/color";
+import { Entity } from './base';
+import type { Position } from '../types';
+import { Bullet } from './bullet';
+import { Colors } from '../assets/color';
 
 export class Player extends Entity {
 	bullets: Bullet[];

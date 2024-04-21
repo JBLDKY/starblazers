@@ -1,6 +1,6 @@
-import { Alien } from "../entity/alien";
-import { Bullet } from "../entity/bullet";
-import { Position } from "../types";
+import { Alien } from '../entity/alien';
+import { Bullet } from '../entity/bullet';
+import type { Position } from '../types';
 
 export class CollisionManager {
 	/**
@@ -31,7 +31,7 @@ export class CollisionManager {
 		circleRadius: number,
 		rectPos: Position,
 		rectWidth: number,
-		rectHeight: number,
+		rectHeight: number
 	): boolean {
 		const closestX = Math.max(rectPos.x, Math.min(circlePos.x, rectPos.x + rectWidth));
 		const closestY = Math.max(rectPos.y, Math.min(circlePos.y, rectPos.y + rectHeight));

@@ -1,8 +1,8 @@
-import { ChatLog } from "./chatlog";
-import { User } from "../user/user";
-import { ChatInput } from "./chatinput";
-import { ChatMessage } from "./chatmessage";
-import { WebSocketManager } from "../websocketmanager";
+import { ChatLog } from './chatlog';
+import { User } from '../user/user';
+import { ChatInput } from './chatinput';
+import { ChatMessage } from './chatmessage';
+import { WebSocketManager } from '../websocketmanager';
 
 export class ChatBox {
 	chatLog: ChatLog;
@@ -31,7 +31,7 @@ export class ChatBox {
 	}
 
 	getChatLineElement(): HTMLElement | null {
-		return document.getElementById("chat-line");
+		return document.getElementById('chat-line');
 	}
 
 	receiveMessage() {
@@ -43,13 +43,13 @@ export class ChatBox {
 				return;
 			}
 
-			if (this.user.username == "" && message.includes("YOUR ID IS:")) {
-				this.user.username = message.split(": ")[1];
+			if (this.user.username == '' && message.includes('YOUR ID IS:')) {
+				this.user.username = message.split(': ')[1];
 				this.websocket.messages.pop();
 				return;
 			}
 
-			const split = message.split(":");
+			const split = message.split(':');
 			const u = split[0];
 			const t = split[1];
 
@@ -65,7 +65,7 @@ export class ChatBox {
 
 	sendMessage() {
 		const chatInput = this.getChatInputElement();
-		if (chatInput == null || chatInput.value.trim() == "") {
+		if (chatInput == null || chatInput.value.trim() == '') {
 			return;
 		}
 
@@ -73,15 +73,15 @@ export class ChatBox {
 		this.chatInput.handleInput(chatInput.value);
 
 		// Set the message empty string and unfocus the input field
-		chatInput.value = "";
+		chatInput.value = '';
 		chatInput.blur();
 
 		const chatLine = this.getChatLineElement();
 		if (chatLine != null) {
-			chatLine.style.display = "none";
+			chatLine.style.display = 'none';
 		}
 
-		const game = document.getElementById("game-canvas");
+		const game = document.getElementById('game-canvas');
 		if (game != null) {
 			game.focus();
 		}
@@ -101,7 +101,7 @@ export class ChatBox {
 
 		const chatLine = this.getChatLineElement();
 		if (chatLine != null) {
-			chatLine.style.display = "block";
+			chatLine.style.display = 'block';
 		}
 	}
 
@@ -113,16 +113,16 @@ export class ChatBox {
 	cancelMessage() {
 		const chatInput = this.getChatInputElement();
 		if (chatInput != null && chatInput == document.activeElement) {
-			chatInput.value = ""; // clear the message the user was typing
+			chatInput.value = ''; // clear the message the user was typing
 			chatInput.blur(); // unfocus
 		}
 
 		const chatLine = this.getChatLineElement();
 		if (chatLine != null) {
-			chatLine.style.display = "none"; // Hide our cute chatline
+			chatLine.style.display = 'none'; // Hide our cute chatline
 		}
 
-		const game = document.getElementById("game-canvas");
+		const game = document.getElementById('game-canvas');
 		if (game != null) {
 			game.focus(); // go back to the game
 		}

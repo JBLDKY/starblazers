@@ -1,4 +1,4 @@
-import { Position } from "../types";
+import type { Position } from '../types';
 
 export abstract class Entity {
 	position: Position;
@@ -16,7 +16,7 @@ export abstract class Entity {
 			w: { x: 0, y: -1 },
 			a: { x: -1, y: 0 },
 			s: { x: 0, y: 1 },
-			d: { x: 1, y: 0 },
+			d: { x: 1, y: 0 }
 		};
 
 		const movement = { x: 0, y: 0 };

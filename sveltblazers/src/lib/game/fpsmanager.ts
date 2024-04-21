@@ -47,8 +47,8 @@ export class FPSManager {
 	 * Draws the FPS value on the canvas.
 	 */
 	public draw(): void {
-		this.ctx.fillStyle = "white";
-		this.ctx.font = "20px Arial";
+		this.ctx.fillStyle = 'white';
+		this.ctx.font = '20px Arial';
 		this.ctx.fillText(`FPS: ${this.fps}`, 10, 30);
 	}
 }

@@ -1,3 +1,4 @@
+use crate::cookie::Cookie;
 use crate::types::{DatabaseError, LoginDetails, Player};
 use crate::{
     database::db::ArcDb,
@@ -6,7 +7,6 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::http::Response;
 use warp::{Filter, Reply};
 
 /// Generically parse a json body into a struct
@@ -27,6 +27,7 @@ pub fn all(
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     let cors = warp::cors()
         .allow_origin("http://localhost:5173")
+        .allow_credentials(true)
         .allow_headers(vec!["Content-Type", "Authorization"])
         .allow_methods(vec!["GET", "POST", "PUT"]);
 
@@ -36,12 +37,24 @@ pub fn all(
         .or(players_create(db.clone()))
         .or(database_resettable(db.clone()))
         .or(login(db.clone()))
+        .or(hello_world())
         .with(cors)
 }
 
 // Utility to pass the database pool into Warp filters
 fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
+}
+
+/// GET /helloworld  ->  Returns {"message": "Hello World"}
+fn hello_world() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("helloworld")
+        .and(warp::get())
+        .and_then(hello_world_response)
+}
+
+async fn hello_world_response() -> Result<impl Reply, warp::Rejection> {
+    Ok(warp::reply::json(&json!({"message:": "Hello world"})))
 }
 
 /// GET / -> index html
@@ -149,12 +162,14 @@ async fn handle_login(
 
     match db.check_login_details(&login_details).await {
         Ok(jwt) => {
-            // Configure your cookie parameters
-            // Using warp's reply feature to simplify response construction
+            let mut cookie = Cookie::new("jwt".to_string(), jwt);
+            cookie.set_max_age(3600); // Set cookie to expire in one hour
+            log::info!("cookie: {}", &cookie);
+
             Ok(warp::reply::with_header(
                 warp::reply::json(&json!({ "message": "Logged in" })),
                 "Set-Cookie",
-                cookie,
+                cookie.to_string(),
             ))
         }
         Err(e) => {

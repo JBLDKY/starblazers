@@ -1,6 +1,6 @@
-import { Entity } from "./base";
-import { Position } from "../types";
-import { Colors } from "../assets/color";
+import { Entity } from './base';
+import type { Position } from '../types';
+import { Colors } from '../assets/color';
 
 export class Bullet extends Entity {
 	yVelocity: number;

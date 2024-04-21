@@ -1,11 +1,11 @@
-import { Alien } from "../entity/alien";
-import { Player } from "../entity/player";
-import { Bullet } from "../entity/bullet";
-import { CollisionManager } from "./collisionManager";
-import { FPSManager } from "./fpsmanager";
-import { ChatBox } from "../chat/chatbox";
-import { User } from "../user/user";
-import { WebSocketManager } from "../websocketmanager";
+import { Alien } from '../entity/alien';
+import { Player } from '../entity/player';
+import { Bullet } from '../entity/bullet';
+import { CollisionManager } from './collisionManager';
+import { FPSManager } from './fpsmanager';
+import { ChatBox } from '../chat/chatbox';
+import { User } from '../user/user';
+import { WebSocketManager } from '../websocketmanager';
 
 /**
  * Represents the main game logic for a Space Invaders-like game.
@@ -29,19 +29,19 @@ export class SpaceInvadersGame {
 	 */
 	constructor(canvas: HTMLCanvasElement) {
 		this.canvas = canvas;
-		this.ctx = this.canvas.getContext("2d")!;
+		this.ctx = this.canvas.getContext('2d')!;
 		this.collisionManager = new CollisionManager();
 		this.websocket = new WebSocketManager();
 		// Start the websocket
 
-		this.user = new User("");
+		this.user = new User('');
 		this.chatBox = new ChatBox(this.user, this.websocket);
 		this.fpsManager = new FPSManager(this.ctx);
 		this.players = [];
 		this.aliens = [];
 
-		document.addEventListener("keydown", this.handleKeyDown);
-		document.addEventListener("keyup", this.handleKeyUp);
+		document.addEventListener('keydown', this.handleKeyDown);
+		document.addEventListener('keyup', this.handleKeyUp);
 	}
 
 	/**
@@ -49,7 +49,11 @@ export class SpaceInvadersGame {
 	 */
 	public start(): void {
 		// Create player
-		const player = new Player({ x: this.canvas.width / 2, y: this.canvas.height - 30 }, 5, this.user.uuid);
+		const player = new Player(
+			{ x: this.canvas.width / 2, y: this.canvas.height - 30 },
+			5,
+			this.user.uuid
+		);
 		this.players.push(player);
 
 		// Spawn some aliens
@@ -96,33 +100,40 @@ export class SpaceInvadersGame {
 
 	private handleInput() {
 		// Start typing a message
-		if (this.keyPresses["t"] || this.keyPresses["T"]) {
+		if (this.keyPresses['t'] || this.keyPresses['T']) {
 			this.chatBox.startMessage();
 			return;
 		}
 
 		// Stop typing a message
-		if (this.keyPresses["Escape"]) {
+		if (this.keyPresses['Escape']) {
 			this.chatBox.cancelMessage();
 			return;
 		}
 
 		// Send message
-		if (this.keyPresses["Enter"]) {
-			console.log("enter pressed");
+		if (this.keyPresses['Enter']) {
+			console.log('enter pressed');
 			this.chatBox.sendMessage();
 			return;
 		}
 
 		// Assuming this.keyPresses is an object containing the current state of WASD keys
-		if (this.keyPresses["w"] || this.keyPresses["a"] || this.keyPresses["s"] || this.keyPresses["d"]) {
+		if (
+			this.keyPresses['w'] ||
+			this.keyPresses['a'] ||
+			this.keyPresses['s'] ||
+			this.keyPresses['d']
+		) {
 			const currentPlayer = this.getCurrentPlayer();
 			if (currentPlayer != undefined) {
 				currentPlayer.move(this.keyPresses);
 				return;
 			}
 
-			console.error("Tried to process movement input but `getCurrentPlayer()` returned `undefined`");
+			console.error(
+				'Tried to process movement input but `getCurrentPlayer()` returned `undefined`'
+			);
 		}
 	}
 
@@ -254,7 +265,7 @@ export class SpaceInvadersGame {
 	 * Destructor
 	 */
 	destroy() {
-		document.removeEventListener("keydown", this.handleKeyDown);
-		document.removeEventListener("keyup", this.handleKeyUp);
+		document.removeEventListener('keydown', this.handleKeyDown);
+		document.removeEventListener('keyup', this.handleKeyUp);
 	}
 }
