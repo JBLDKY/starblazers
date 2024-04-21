@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+
 	import { SpaceInvadersGame } from '../../lib/game/game';
-	// import ChatBox from '../../components/ChatBox.svelte';
 
 	let canvasElement: HTMLCanvasElement;
 
