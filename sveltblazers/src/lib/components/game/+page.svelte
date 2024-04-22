@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { ChatInput } from './ChatInput';
+	import { ChatBox } from './ChatBox';
 	import { onMount } from 'svelte';
 	import { SpaceInvadersGame } from '../../lib/game/game';
 	import { jwtStore } from '../../store/auth';
@@ -7,17 +9,16 @@
 	import { getToastStore } from '@skeletonlabs/skeleton';
 
 	const toastStore = getToastStore();
+
+	// This is a protected page; login is required
+	if (get(jwtStore) === undefined || get(jwtStore) == '') {
+		toastStore.trigger({ message: 'You are not logged in!' });
+		goto('/login');
+	}
+
 	let canvasElement: HTMLCanvasElement;
 
 	onMount(() => {
-		// This is a protected page; login is required
-		// If this is not inside onMount(), it will raise an error that
-		// `goto()` cannot be called on the server.
-		if (get(jwtStore) === undefined || get(jwtStore) == '') {
-			toastStore.trigger({ message: 'You are not logged in!' });
-			goto('/login');
-		}
-
 		if (canvasElement) {
 			canvasElement.width = 1280;
 			canvasElement.height = 800;
@@ -30,4 +31,5 @@
 
 <div class="game m-0 flex h-screen w-screen flex-col items-center justify-center bg-[#221569] p-0">
 	<canvas bind:this={canvasElement} class="bg-[#221569]" id="game-canvas"></canvas>
+	<ChatInput />
 </div>
