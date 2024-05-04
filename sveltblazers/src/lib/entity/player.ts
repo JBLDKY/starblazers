@@ -18,7 +18,7 @@ export class Player extends Entity {
 		this.uuid = uuid;
 	}
 	update(p: p5) {
-		if (this.bullets.length < 100 && this.cycles % this.fireRate == 0) {
+		if (this.bullets.length < MAX_BULLETS && this.cycles % this.fireRate == 0) {
 			this.fire();
 		}
 
