@@ -4,10 +4,7 @@ export class ChatInput {
 	user: User;
 	onSendMessage: (text: string) => void;
 
-	constructor(
-		user: User,
-		onSendMessage: (text: string) => void,
-	) {
+	constructor(user: User, onSendMessage: (text: string) => void) {
 		this.user = user;
 		this.onSendMessage = onSendMessage;
 	}

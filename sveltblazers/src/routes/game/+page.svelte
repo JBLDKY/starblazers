@@ -1,4 +1,5 @@
 <script lang="ts">
+	import P5, { type Sketch } from 'p5-svelte';
 	import { onMount } from 'svelte';
 	import { SpaceInvadersGame } from '../../lib/game/game';
 	import { jwtStore } from '../../store/auth';
@@ -7,7 +8,7 @@
 	import { getToastStore } from '@skeletonlabs/skeleton';
 
 	const toastStore = getToastStore();
-	let canvasElement: HTMLCanvasElement;
+	let spaceInvadersGame: SpaceInvadersGame;
 
 	onMount(() => {
 		// This is a protected page; login is required
@@ -17,17 +18,22 @@
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
 		}
-
-		if (canvasElement) {
-			canvasElement.width = 1280;
-			canvasElement.height = 800;
-
-			const game: SpaceInvadersGame = new SpaceInvadersGame(canvasElement);
-			game.start();
-		}
 	});
+
+	const sketch: Sketch = (p5) => {
+		p5.setup = () => {
+			p5.createCanvas(1280, 800);
+			const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p5);
+			spaceInvadersGame.start();
+		};
+
+		p5.draw = () => {
+			spaceInvadersGame.update();
+			spaceInvadersGame.draw();
+		};
+	};
 </script>
 
 <div class="game m-0 flex h-screen w-screen flex-col items-center justify-center bg-[#221569] p-0">
-	<canvas bind:this={canvasElement} class="bg-[#221569]" id="game-canvas"></canvas>
+	<P5 {sketch} />
 </div>

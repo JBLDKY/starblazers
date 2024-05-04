@@ -1,3 +1,4 @@
+import p5 from 'p5-svelte';
 import { Entity } from './base';
 import type { Position } from '../types';
 import { Colors } from '../assets/color';
@@ -11,9 +12,9 @@ export class Bullet extends Entity {
 		this.yVelocity = 1;
 	}
 
-	draw(ctx: CanvasRenderingContext2D) {
-		ctx.fillStyle = Colors.EFFECT;
-		ctx.fillRect(this.position.x, this.position.y, 5, 10);
+	draw(p5: p5) {
+		p5.fillStyle = Colors.EFFECT;
+		p5.rect(this.position.x, this.position.y, 5, 10);
 	}
 
 	update() {

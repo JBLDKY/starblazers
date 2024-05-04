@@ -1,3 +1,4 @@
+import p5 from 'p5-svelte';
 import { Entity } from './base';
 import type { Position } from '../types';
 import { Bullet } from './bullet';
@@ -16,25 +17,30 @@ export class Player extends Entity {
 		this.cycles = 0;
 		this.uuid = uuid;
 	}
-	update(ctx: CanvasRenderingContext2D) {
+	update(p: p5) {
 		if (this.bullets.length < 100 && this.cycles % this.fireRate == 0) {
 			this.fire();
 		}
 
-		this.position.x = Math.max(0, Math.min(this.position.x, ctx.canvas.width));
-		this.position.y = Math.max(0, Math.min(this.position.y, ctx.canvas.height));
+		this.position.x = Math.max(0, Math.min(this.position.x, p.canvas.width));
+		this.position.y = Math.max(0, Math.min(this.position.y, p.canvas.height));
 
 		this.cycles += 1;
 	}
 
-	draw(ctx: CanvasRenderingContext2D): void {
-		ctx.beginPath();
-		ctx.moveTo(this.position.x, this.position.y);
-		ctx.lineTo(this.position.x - 10, this.position.y + 20);
-		ctx.lineTo(this.position.x + 10, this.position.y + 20);
-		ctx.closePath();
-		ctx.fillStyle = Colors.PRIMARY;
-		ctx.fill();
+	draw(p: p5): void {
+		// Set the fill color
+		p.fill(Colors.PRIMARY);
+
+		// Draw the triangle
+		p.triangle(
+			this.position.x,
+			this.position.y,
+			this.position.x - 10,
+			this.position.y + 20,
+			this.position.x + 10,
+			this.position.y + 20
+		);
 	}
 
 	fire(): void {

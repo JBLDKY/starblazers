@@ -1,3 +1,4 @@
+import p5 from 'p5-svelte';
 import type { Position } from '../types';
 
 export abstract class Entity {
@@ -9,7 +10,7 @@ export abstract class Entity {
 		this.speed = speed;
 	}
 
-	abstract draw(ctx: CanvasRenderingContext2D): void;
+	abstract draw(p5: p5): void;
 
 	move(keyPresses: Record<string, boolean>): void {
 		const keyToVectorMap = {

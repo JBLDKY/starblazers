@@ -1,3 +1,4 @@
+import p5 from 'p5-svelte';
 /**
  * Manages the Frames Per Second (FPS) display and control for the game.
  */
@@ -10,9 +11,9 @@ export class FPSManager {
 
 	/**
 	 * Creates an FPSManager instance.
-	 * @param {CanvasRenderingContext2D} ctx - The canvas rendering context to draw the FPS display.
+	 * @param {p5} p5 - The canvas rendering context to draw the FPS display.
 	 */
-	constructor(private ctx: CanvasRenderingContext2D) {}
+	constructor(private p5: p5) {}
 
 	/**
 	 * Updates the frame count and calculates the FPS.
@@ -47,8 +48,8 @@ export class FPSManager {
 	 * Draws the FPS value on the canvas.
 	 */
 	public draw(): void {
-		this.ctx.fillStyle = 'white';
-		this.ctx.font = '20px Arial';
-		this.ctx.fillText(`FPS: ${this.fps}`, 10, 30);
+		this.p5.fillStyle = 'white';
+		this.p5.font = '20px Arial';
+		// this.p5.fillText(`FPS: ${this.fps}`, 10, 30);
 	}
 }

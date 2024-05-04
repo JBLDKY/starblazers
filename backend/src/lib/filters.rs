@@ -30,6 +30,7 @@ pub fn all(
         .allow_origin("http://localhost:5173")
         .allow_credentials(true)
         .allow_headers(vec!["Content-Type", "*"])
+        .allow_headers(vec!["Authorization", "*"])
         .allow_methods(vec!["GET", "POST", "PUT"]);
 
     index()

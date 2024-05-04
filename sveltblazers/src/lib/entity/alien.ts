@@ -1,3 +1,4 @@
+import p5 from 'p5-svelte';
 import { Entity } from './base';
 import type { Position } from '../types';
 import { Colors } from '../assets/color';
@@ -16,7 +17,7 @@ export class Alien extends Entity {
 		this.destroy = false;
 	}
 
-	update(ctx: CanvasRenderingContext2D) {
+	update(p5: p5) {
 		if (this.moveDown) {
 			this.position.y += 30; // Move down
 			this.xVelocity *= -1; // turn around (horizontally)
@@ -28,16 +29,14 @@ export class Alien extends Entity {
 		// Check if at the edge of the canvas and need to move down
 		if (
 			(this.position.x <= 0 && this.xVelocity < 0) ||
-			(this.position.x >= ctx.canvas.width && this.xVelocity > 0)
+			(this.position.x >= p5.canvas.width && this.xVelocity > 0)
 		) {
 			this.moveDown = true;
 		}
 	}
 
-	draw(ctx: CanvasRenderingContext2D) {
-		ctx.beginPath();
-		ctx.arc(this.position.x, this.position.y, 10, 0, 2 * Math.PI);
-		ctx.fillStyle = Colors.SECONDARY;
-		ctx.fill();
+	draw(p5: p5) {
+		p5.fill(Colors.SECONDARY); // Fill first or else one will be the wrong color
+		p5.circle(this.position.x, this.position.y, 10, 0, 2 * Math.PI);
 	}
 }

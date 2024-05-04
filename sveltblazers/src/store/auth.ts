@@ -12,14 +12,11 @@ export const checkJwt = async () => {
 		mode: 'cors', // no-cors, *cors, same-origin,
 		headers: {
 			'Content-Type': 'application/json',
-			"Authorization": `Bearer ${jwt}`
-		},
+			Authorization: `Bearer ${jwt}`
+		}
 	});
 
 	const text = await response.json();
 
-	console.log(text)
-
-
-}
-
+	console.log(text);
+};
