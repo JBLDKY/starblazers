@@ -15,8 +15,4 @@ export const checkJwt = async () => {
 			Authorization: `Bearer ${jwt}`
 		}
 	});
-
-	const text = await response.json();
-
-	console.log(text);
 };
