@@ -6,6 +6,7 @@
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { getToastStore } from '@skeletonlabs/skeleton';
+	import ChatBox from './ChatBox.svelte';
 
 	const toastStore = getToastStore();
 	let spaceInvadersGame: SpaceInvadersGame;
@@ -20,20 +21,21 @@
 		}
 	});
 
-	const sketch: Sketch = (p5) => {
-		p5.setup = () => {
-			p5.createCanvas(1280, 800);
-			const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p5);
+	const sketch: Sketch = (p) => {
+		p.setup = () => {
+			p.createCanvas(1280, 800);
+			const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p);
 			spaceInvadersGame.start();
 		};
 
-		p5.draw = () => {
+		p.draw = () => {
 			spaceInvadersGame.update();
 			spaceInvadersGame.draw();
 		};
 	};
 </script>
 
-<div class="game m-0 flex h-screen w-screen flex-col items-center justify-center bg-[#221569] p-0">
+<div class="game m-0 flex h-screen w-screen flex-col items-center justify-center bg-black p-0">
 	<P5 {sketch} />
+	<ChatBox />
 </div>

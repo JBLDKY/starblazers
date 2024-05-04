@@ -1,8 +1,7 @@
 <script lang="ts">
 </script>
 
-<input
-	id="chat-input"
-	type="text"
-	class="chat-input mt-1 border-none bg-[#221569] shadow-none outline-none"
-/>
+<div class="chat-input mt-1 flex border-none text-tertiary-500 shadow-none outline-none">
+	<div class="mr-1 text-tertiary-500">username:</div>
+	<input id="chat-input" type="text" class="bg-surface-500" />
+</div>

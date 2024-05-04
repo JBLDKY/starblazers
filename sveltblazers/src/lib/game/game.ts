@@ -7,6 +7,7 @@ import { FPSManager } from './fpsmanager';
 import { ChatBox } from '../chat/chatbox';
 import { User } from '../user/user';
 import { WebSocketManager } from '../websocketmanager';
+import { Colors } from '$lib/assets/color';
 
 /**
  * Represents the main game logic for a Space Invaders-like game.
@@ -111,6 +112,7 @@ export class SpaceInvadersGame {
 	public draw(): void {
 		// Clear p
 		this.p.clear();
+		this.p.background(Colors.BACKGROUND)
 
 		// Draw players
 		for (const player of this.players) {
@@ -179,7 +181,6 @@ export class SpaceInvadersGame {
 
 		// Send message
 		if (this.keyPresses['Enter']) {
-			console.log('enter pressed');
 			this.chatBox.sendMessage();
 			return;
 		}
