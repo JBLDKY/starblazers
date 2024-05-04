@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
-	import { jwtStore } from '../../store/auth';
+	import { jwtStore, checkJwt } from '../../store/auth';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { getToastStore } from '@skeletonlabs/skeleton';
@@ -11,11 +11,13 @@
 	onMount(() => {
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
-		// `goto()` cannot be called on the server.
+		// `goto()` cannot be called on the server
 		if (get(jwtStore) === undefined || get(jwtStore) == '') {
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
 		}
+
+		checkJwt();
 	});
 
 	let listBoxValue: string = 'account';

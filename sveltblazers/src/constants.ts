@@ -15,5 +15,6 @@ const BASE_URL: string = "http://localhost:3030";
 export const AUTH_SERVER_URL: string = `${BASE_URL}/auth/login`;
 export const CREATE_NEW_SERVER_URL: string = `${BASE_URL}/players/create`;
 export const TEST_ENDPOINT_SERVER_URL: string  = `${BASE_URL}/test`;
+export const VERIFY_JWT_SERVER_URL: string  = `${BASE_URL}/auth/verify`;
 
 export const LOGIN_DELAY: number = 2000;
