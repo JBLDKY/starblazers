@@ -55,7 +55,7 @@
 		/>
 	</div>
 	<div class={button_spacer}>
-		<span class={link_tw} on:click={toggleForm}>Take me back to login!</span>
+		<button class={link_tw} on:click={toggleForm}>Take me back to login!</button>
 		<button class={button_tw}> Create </button>
 	</div>
 </form>

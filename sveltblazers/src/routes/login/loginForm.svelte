@@ -42,7 +42,7 @@
 		/>
 	</div>
 	<div class={button_spacer}>
-		<span class={link_tw} on:click={toggleForm}>New? Click here to sign up!</span>
+		<button class={link_tw} on:click={toggleForm}>New? Click here to sign up!</button>
 		<button class={button_tw}> Login </button>
 	</div>
 </form>
