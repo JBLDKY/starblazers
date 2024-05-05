@@ -90,7 +90,6 @@
 	}
 
 	function submitHandler() {
-		console.log('hello');
 		updateMessage();
 
 		if (get(showLoginForm)) {

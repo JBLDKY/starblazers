@@ -185,7 +185,6 @@ export class SpaceInvadersGame {
 		}
 		if (result != '' && result != undefined) {
 			this.handleMenuResult(result);
-			console.log(result);
 		}
 
 		this.p.clear();
@@ -215,7 +214,9 @@ export class SpaceInvadersGame {
 
 	private handleKeyDown = (event: KeyboardEvent): void => {
 		this.keyPresses[event.key] = true;
+
 		if (this.state == GameState.MENU) {
+			// Since the menu's run at lower tickrate, we must cache keypresses to be processed on the next tick
 			this.cachedKeyPresses[event.key] = true; // remember to manually set to false
 		}
 	};

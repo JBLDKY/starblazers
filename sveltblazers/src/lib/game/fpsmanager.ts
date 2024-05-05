@@ -46,13 +46,22 @@ export class FPSManager {
 		return false;
 	}
 
+	/**
+	 * Determines whether menu input should be processed based on the time elapsed since the last input processing.
+	 * This method helps in throttling the menu input to avoid excessively frequent processing.
+	 *
+	 * @param {number} timestamp - The current time in milliseconds, typically received from a high-resolution timer.
+	 * @returns {boolean} True if the input should be processed, false otherwise.
+	 */
 	public shouldProcessMenuInput(timestamp: number): boolean {
-		const elapsed = timestamp - this.menuLastFrameTime;
+		const elapsed = timestamp - this.menuLastFrameTime; // Calculate the time elapsed since the last processed frame
 		if (elapsed > this.menuInputInterval) {
-			this.menuLastFrameTime = timestamp - (elapsed % this.fpsInterval);
-			return true;
+			// Check if the elapsed time exceeds the set interval for menu input
+			// Adjust the last frame time, compensating for any extra time beyond the interval
+			this.menuLastFrameTime = timestamp - (elapsed % this.menuInputInterval);
+			return true; // Return true to indicate that input should be processed
 		}
-		return false;
+		return false; // Return false if the interval has not yet been exceeded
 	}
 
 	/**
