@@ -8,6 +8,7 @@
 				"assumeIsSvelteProject": false // if true, skip detection and always assume it's a Svelte project
 			}
 		],
+		"types": ["p5"],
 		"moduleResolution": "node",
 		"module": "ESNext",
 		"target": "ESNext",

@@ -1,4 +1,4 @@
-import p5 from 'p5-svelte';
+import type p5 from 'p5';
 /**
  * Manages the Frames Per Second (FPS) display and control for the game.
  */
@@ -8,12 +8,14 @@ export class FPSManager {
 	private frameCount: number = 0;
 	private fpsDisplayTime: number = 0;
 	private readonly fpsInterval: number = 1000 / 60;
+	private readonly menuInputInterval: number = 100;
+	private menuLastFrameTime: number = 0;
 
 	/**
 	 * Creates an FPSManager instance.
-	 * @param {p5} p5 - The canvas rendering context to draw the FPS display.
+	 * @param {p} p - The canvas rendering context to draw the FPS display.
 	 */
-	constructor(private p5: p5) {}
+	constructor(private p: p5) {}
 
 	/**
 	 * Updates the frame count and calculates the FPS.
@@ -44,12 +46,21 @@ export class FPSManager {
 		return false;
 	}
 
+	public shouldProcessMenuInput(timestamp: number): boolean {
+		const elapsed = timestamp - this.menuLastFrameTime;
+		if (elapsed > this.menuInputInterval) {
+			this.menuLastFrameTime = timestamp - (elapsed % this.fpsInterval);
+			return true;
+		}
+		return false;
+	}
+
 	/**
 	 * Draws the FPS value on the canvas.
+	 * TODO: Fix
 	 */
 	public draw(): void {
-		this.p5.fillStyle = 'white';
-		this.p5.font = '20px Arial';
-		// this.p5.fillText(`FPS: ${this.fps}`, 10, 30);
+		this.p.fill('white');
+		// this.p.fillText(`FPS: ${this.fps}`, 10, 30);
 	}
 }

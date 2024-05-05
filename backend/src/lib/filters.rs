@@ -21,7 +21,7 @@ fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 /// POST /players/create - players_create - Create a new player
 /// POST /database/resettable - database_resettable - Drop the provided table
 /// POST /auth/login - login - start authenticating the login request
-/// GET /test - helloworld - for sanity checks / testing warp things
+/// GET /helloworld - helloworld - for sanity checks / testing warp things
 ///
 pub fn all(
     db: ArcDb,

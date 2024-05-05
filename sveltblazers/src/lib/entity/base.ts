@@ -1,4 +1,4 @@
-import p5 from 'p5-svelte';
+import type p5 from 'p5';
 import type { Position } from '../types';
 
 export abstract class Entity {

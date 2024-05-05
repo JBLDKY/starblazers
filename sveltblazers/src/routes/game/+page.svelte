@@ -24,8 +24,15 @@
 	const sketch: Sketch = (p) => {
 		p.setup = () => {
 			p.createCanvas(1280, 800);
-			const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p);
-			spaceInvadersGame.start();
+
+			p.loadFont('/fonts/pressStart2P.ttf', (font) => {
+				p.fill('deeppink');
+				p.textFont(font);
+
+				// Wait for our font to load before starting the game, else the main menu will not be centered
+				const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p);
+				spaceInvadersGame.start();
+			});
 		};
 
 		p.draw = () => {

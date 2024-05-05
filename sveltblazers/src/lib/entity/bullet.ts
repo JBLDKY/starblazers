@@ -1,4 +1,4 @@
-import p5 from 'p5-svelte';
+import type p5 from 'p5';
 import { Entity } from './base';
 import type { Position } from '../types';
 import { Colors } from '../assets/color';

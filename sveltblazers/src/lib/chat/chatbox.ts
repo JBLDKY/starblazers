@@ -57,10 +57,6 @@ export class ChatBox {
 			const msg = new ChatMessage(user, t);
 			this.chatLog.addMessage(msg);
 		}
-		// if (this.chatLog.texts.length != websocketMessages.length) {
-		// 	this.chatLog.texts.push(websocketMessages[websocketMessages.length - 1]);
-		// 	console.log("new message!", websocketMessages[websocketMessages.length - 1]);
-		// }
 	}
 
 	sendMessage() {

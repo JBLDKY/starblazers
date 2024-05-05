@@ -81,3 +81,11 @@ body {
 	box-shadow: none;
 	outline: none;
 }
+
+
+@font-face {
+	font-family: 'PressStart2P';
+	src: url('/fonts/PressStart2P.ttf') format('ttf');
+	font-weight: normal;
+	font-style: normal;
+}

@@ -1,8 +1,9 @@
-import p5 from 'p5-svelte';
+import type p5 from 'p5';
 import { Entity } from './base';
 import type { Position } from '../types';
 import { Bullet } from './bullet';
 import { Colors } from '../assets/color';
+import { MAX_BULLETS } from '../../constants';
 
 export class Player extends Entity {
 	bullets: Bullet[];
@@ -22,8 +23,8 @@ export class Player extends Entity {
 			this.fire();
 		}
 
-		this.position.x = Math.max(0, Math.min(this.position.x, p.canvas.width));
-		this.position.y = Math.max(0, Math.min(this.position.y, p.canvas.height));
+		this.position.x = Math.max(0, Math.min(this.position.x, p.width));
+		this.position.y = Math.max(0, Math.min(this.position.y, p.height));
 
 		this.cycles += 1;
 	}

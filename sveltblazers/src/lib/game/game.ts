@@ -1,4 +1,3 @@
-import p5 from 'p5-svelte';
 import { Alien } from '../entity/alien';
 import { Player } from '../entity/player';
 import { Bullet } from '../entity/bullet';
@@ -8,6 +7,11 @@ import { ChatBox } from '../chat/chatbox';
 import { User } from '../user/user';
 import { WebSocketManager } from '../websocketmanager';
 import { Colors } from '$lib/assets/color';
+import { GameState } from '../../constants';
+import type p5 from 'p5';
+import type { BaseMenu } from '$lib/menu/base';
+import { MainMenu } from '$lib/menu/main';
+import { SettingsMenu } from '$lib/menu/settings';
 
 /**
  * Represents the main game logic for a Space Invaders-like game.
@@ -18,11 +22,14 @@ export class SpaceInvadersGame {
 	private websocket: WebSocketManager;
 	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
-	private players: Player[];
-	private aliens: Alien[];
+	private players: Player[] = [];
+	private aliens: Alien[] = [];
 	private lastTime: number = 0;
 	private user: User;
 	private keyPresses: { [key: string]: boolean } = {};
+	private cachedKeyPresses: { [key: string]: boolean } = {};
+	private state: GameState = GameState.MENU;
+	private currentMenu: BaseMenu | null;
 
 	/**
 	 * Initializes the game with a given p5 canvas.
@@ -36,8 +43,8 @@ export class SpaceInvadersGame {
 		this.user = new User('');
 		this.chatBox = new ChatBox(this.user, this.websocket);
 		this.fpsManager = new FPSManager(this.p);
-		this.players = [];
-		this.aliens = [];
+
+		this.currentMenu = new MainMenu(this.p);
 
 		document.addEventListener('keydown', this.handleKeyDown);
 		document.addEventListener('keyup', this.handleKeyUp);
@@ -65,7 +72,6 @@ export class SpaceInvadersGame {
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	public update(): void {
-		this.handleInput();
 		const allBullets = this.getAllBullets();
 
 		this.collisions(allBullets);
@@ -112,7 +118,7 @@ export class SpaceInvadersGame {
 	public draw(): void {
 		// Clear p
 		this.p.clear();
-		this.p.background(Colors.BACKGROUND)
+		this.p.background(Colors.BACKGROUND);
 
 		// Draw players
 		for (const player of this.players) {
@@ -148,18 +154,70 @@ export class SpaceInvadersGame {
 	private gameLoop(timestamp: number): void {
 		requestAnimationFrame((newTimestamp) => this.gameLoop(newTimestamp));
 
+		this.handleInput();
 		if (this.fpsManager.shouldDraw(timestamp)) {
-			this.update();
-			this.draw();
+			switch (this.state) {
+				case GameState.RUN:
+					this.update();
+					this.draw();
+					break;
+				case GameState.PAUSE:
+					this.handleInput();
+					break;
+				case GameState.MENU:
+					this.menuLoop(timestamp);
+					break;
+			}
 		}
 
-		this.fpsManager.update(timestamp);
-
 		this.chatBox.receiveMessage();
+		this.fpsManager.update(timestamp);
+	}
+
+	private menuLoop(timestamp: number): void {
+		if (this.currentMenu === null) {
+			return;
+		}
+
+		let result;
+		if (this.fpsManager.shouldProcessMenuInput(timestamp)) {
+			result = this.currentMenu.handleInput(this.cachedKeyPresses);
+		}
+		if (result != '' && result != undefined) {
+			this.handleMenuResult(result);
+			console.log(result);
+		}
+
+		this.p.clear();
+		this.currentMenu.display();
+		this.p.rect(0, 30, 30, this.p.height);
+		this.p.rect(this.p.width - 30, 30, 30, this.p.height);
+	}
+
+	private handleMenuResult(result: string) {
+		switch (result) {
+			case 'Multiplayer':
+				this.state = GameState.RUN;
+				break;
+			case 'Single player':
+				this.state = GameState.RUN;
+				break;
+			case 'Main menu':
+				this.state = GameState.MENU;
+				this.currentMenu = new MainMenu(this.p);
+				break;
+			case 'Settings':
+				this.state = GameState.MENU;
+				this.currentMenu = new SettingsMenu(this.p);
+				break;
+		}
 	}
 
 	private handleKeyDown = (event: KeyboardEvent): void => {
 		this.keyPresses[event.key] = true;
+		if (this.state == GameState.MENU) {
+			this.cachedKeyPresses[event.key] = true; // remember to manually set to false
+		}
 	};
 
 	private handleKeyUp = (event: KeyboardEvent): void => {
@@ -176,6 +234,17 @@ export class SpaceInvadersGame {
 		// Stop typing a message
 		if (this.keyPresses['Escape']) {
 			this.chatBox.cancelMessage();
+
+			switch (this.state) {
+				case GameState.RUN:
+					this.state = GameState.MENU;
+					this.currentMenu = new MainMenu(this.p);
+					break;
+				case GameState.PAUSE:
+					this.state = GameState.RUN;
+					break;
+			}
+
 			return;
 		}
 

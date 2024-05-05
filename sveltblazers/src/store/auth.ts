@@ -7,7 +7,7 @@ export const jwtStore: Writable<string> = localStorageStore('token', '');
 
 export const checkJwt = async () => {
 	const jwt = get(jwtStore);
-	const response = await fetch(VERIFY_JWT_SERVER_URL, {
+	await fetch(VERIFY_JWT_SERVER_URL, {
 		method: 'POST',
 		mode: 'cors', // no-cors, *cors, same-origin,
 		headers: {
