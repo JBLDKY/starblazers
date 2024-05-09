@@ -12,6 +12,7 @@ import {
 	PIXELS_BETWEEN_ITEMS,
 	MAIN_MENU_ITEM_TEXTS
 } from './menuConstants';
+import type { InputHandler } from '$lib/system/input_handler';
 
 /**
  * Represents a main menu derived from the BaseMenu. This class manages the
@@ -25,8 +26,8 @@ export class MainMenu extends BaseMenu {
 	 * Constructs a settings menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
-	constructor(p: p5) {
-		super(p);
+	constructor(p: p5, inputHandler: InputHandler) {
+		super(p, inputHandler);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
@@ -105,4 +106,17 @@ export class MainMenu extends BaseMenu {
 
 		return '';
 	}
+
+	loop = (): void => {
+		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
+
+		if (result != '' && result != undefined) {
+			this.inputHandler.handleMenuResult(result);
+		}
+
+		this.p.clear();
+		this.display();
+		this.p.rect(0, 30, 30, this.p.height);
+		this.p.rect(this.p.width - 30, 30, 30, this.p.height);
+	};
 }

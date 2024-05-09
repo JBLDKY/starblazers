@@ -94,7 +94,7 @@ export class ChatBox {
 	 *
 	 * Also enables some styling on the chatbox, the cute chatline
 	 */
-	startMessage() {
+	startTypingMessage() {
 		const chatInput = this.getChatInputElement();
 		if (chatInput != null) {
 			// This allows the user to start typing

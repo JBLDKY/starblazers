@@ -11,6 +11,7 @@ import {
 	PIXELS_BETWEEN_ITEMS,
 	OPTION_MENU_ITEM_TEXTS
 } from './menuConstants';
+import type { InputHandler } from '$lib/system/input_handler';
 
 /**
  * Represents a settings menu derived from the BaseMenu. This class manages the
@@ -24,8 +25,8 @@ export class SettingsMenu extends BaseMenu {
 	 * Constructs a settings menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
-	constructor(p: p5) {
-		super(p);
+	constructor(p: p5, inputHandler: InputHandler) {
+		super(p, inputHandler);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
