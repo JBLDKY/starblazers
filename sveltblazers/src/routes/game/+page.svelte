@@ -36,8 +36,10 @@
 		};
 
 		p.draw = () => {
-			spaceInvadersGame.update();
-			spaceInvadersGame.draw();
+			if (spaceInvadersGame !== undefined) {
+				spaceInvadersGame.update();
+				spaceInvadersGame.draw();
+			}
 		};
 	};
 </script>

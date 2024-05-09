@@ -3,6 +3,7 @@ import { User } from '../user/user';
 import { ChatInput } from './chatinput';
 import { ChatMessage } from './chatmessage';
 import { WebSocketManager } from '../websocketmanager';
+import type { DevConsole } from '$lib/dev_console';
 
 export class ChatBox {
 	chatLog: ChatLog;
@@ -59,7 +60,7 @@ export class ChatBox {
 		}
 	}
 
-	sendMessage() {
+	sendMessage(devConsole: DevConsole) {
 		const chatInput = this.getChatInputElement();
 		if (chatInput == null || chatInput.value.trim() == '') {
 			return;
@@ -67,6 +68,10 @@ export class ChatBox {
 
 		// Actual sending happens here
 		this.chatInput.handleInput(chatInput.value);
+
+		if (chatInput.value[0] == '/') {
+			devConsole.handleCommand(chatInput.value.slice(1));
+		}
 
 		// Set the message empty string and unfocus the input field
 		chatInput.value = '';

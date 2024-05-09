@@ -8,11 +8,18 @@ import { User } from '../user/user';
 import { WebSocketManager } from '../websocketmanager';
 import { Colors } from '$lib/assets/color';
 import { GameState } from '../../constants';
+import { EntityIndex } from '../entity/entity_index';
 import type p5 from 'p5';
 import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
 import { SettingsMenu } from '$lib/menu/settings';
+import { slowStraightShootingAlien } from '$lib/entity/slowStraightShootingAlien';
+import type { Entity } from '$lib/entity/base';
+import { DevConsole } from '$lib/dev_console';
+import { SpawnHandler } from '$lib/system/spawn_handler';
+import DebugManager from '$lib/system/debug_manager';
 
+const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
 /**
  * Represents the main game logic for a Space Invaders-like game.
  */
@@ -22,14 +29,15 @@ export class SpaceInvadersGame {
 	private websocket: WebSocketManager;
 	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
-	private players: Player[] = [];
-	private aliens: Alien[] = [];
 	private lastTime: number = 0;
 	private user: User;
 	private keyPresses: { [key: string]: boolean } = {};
 	private cachedKeyPresses: { [key: string]: boolean } = {};
 	private state: GameState = GameState.MENU;
 	private currentMenu: BaseMenu | null;
+	private devConsole: DevConsole = new DevConsole(this);
+	public debugManager: DebugManager = new DebugManager();
+	public spawnHandler: SpawnHandler;
 
 	/**
 	 * Initializes the game with a given p5 canvas.
@@ -46,6 +54,8 @@ export class SpaceInvadersGame {
 
 		this.currentMenu = new MainMenu(this.p);
 
+		this.spawnHandler = new SpawnHandler(this.p);
+
 		document.addEventListener('keydown', this.handleKeyDown);
 		document.addEventListener('keyup', this.handleKeyUp);
 	}
@@ -55,8 +65,11 @@ export class SpaceInvadersGame {
 	 */
 	public start(): void {
 		// Create player
-		const player = new Player({ x: this.p.width / 2, y: this.p.height - 30 }, 5, this.user.uuid);
-		this.players.push(player);
+		this.spawnHandler.spawn_player(
+			{ x: this.p.width / 2, y: this.p.height - 30 },
+			5,
+			this.user.uuid
+		);
 
 		// Spawn some aliens
 		this.initAliens();
@@ -68,22 +81,27 @@ export class SpaceInvadersGame {
 		requestAnimationFrame(() => this.gameLoop(this.lastTime));
 	}
 
+	public getPlayers(): Player[] {
+		return this.spawnHandler.getPlayers();
+	}
+
 	/**
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	public update(): void {
-		const allBullets = this.getAllBullets();
+		this.collisions();
 
-		this.collisions(allBullets);
+		const players = this.getPlayers();
 
 		// Bullets should probably take priority over other entities
+		const allBullets = this.getAllBullets(this.spawnHandler.alive, players);
 		for (const bullet of allBullets) {
-			bullet.update();
+			bullet.update(this.p);
 		}
 
 		// Players
-		for (const player of this.players) {
-			player.update(this.p);
+		for (const player of players) {
+			player.update(this.p, this.spawnHandler);
 
 			// Explanation of Bullet Management:
 			// Bullets are stored in each player's `bullets` attribute, which is an array of Bullet objects.
@@ -104,12 +122,16 @@ export class SpaceInvadersGame {
 
 		// Update aliens, removing destroyed ones
 		// This filtering is similar to bullet handling but simpler since aliens are directly managed by the game class.
-		this.aliens = this.aliens.filter((alien) => !alien.destroy);
+		const aliens = this.spawnHandler.alive.filter((alien) => !alien.destroy);
+
 		// Only update aliens that are alive
-		for (const alien of this.aliens) {
-			alien.update(this.p);
+		for (const alien of aliens) {
+			alien.update(this.p, this.spawnHandler);
+			alien.bullets = alien.bullets.filter((bullet) => !bullet.destroy);
 		}
 		// TODO: Implement player death
+
+		this.spawnHandler.cleanDeadEntities();
 	}
 
 	/**
@@ -121,18 +143,16 @@ export class SpaceInvadersGame {
 		this.p.background(Colors.BACKGROUND);
 
 		// Draw players
-		for (const player of this.players) {
+		for (const player of this.getPlayers()) {
 			player.draw(this.p);
-
-			// Draw each player's bullets
-			// TODO: Figure out if this can be moved out of the player loop
-			for (const bullet of player.bullets) {
-				bullet.draw(this.p);
-			}
 		}
 
+		this.getAllBullets(this.getPlayers(), this.spawnHandler.alive).forEach((bullet) =>
+			bullet.draw(this.p)
+		);
+
 		// Draw aliens
-		for (const alien of this.aliens) {
+		for (const alien of this.spawnHandler.alive) {
 			alien.draw(this.p);
 		}
 
@@ -141,7 +161,7 @@ export class SpaceInvadersGame {
 	}
 
 	private getCurrentPlayer(): Player {
-		return this.players.filter((player) => this.user.uuid == player.uuid)[0];
+		return this.getPlayers().filter((player) => this.user.uuid == player.uuid)[0];
 	}
 
 	private startWebsocket() {
@@ -251,7 +271,7 @@ export class SpaceInvadersGame {
 
 		// Send message
 		if (this.keyPresses['Enter']) {
-			this.chatBox.sendMessage();
+			this.chatBox.sendMessage(this.devConsole);
 			return;
 		}
 
@@ -277,39 +297,69 @@ export class SpaceInvadersGame {
 	/**
 	 * Checks and handles collisions between game entities.
 	 */
-	private collisions(allBullets: Bullet[]): void {
-		for (const alien of this.aliens) {
-			for (const bullet of allBullets) {
-				// Check each alien against each bullet
-				// TODO: Surely real gamedevs have tricks to reduce computation here
-				if (this.collisionManager.checkCollision(alien, bullet)) {
-					alien.destroy = true;
-				}
+	private collisions(): void {
+		// for (const alien of this.aliens) {
+		// 	for (const bullet of this.getAllBullets(this.players)) {
+		// 		// Check each alien against each bullet
+		// 		// TODO: Surely real gamedevs have tricks to reduce computation here
+		// 		if (this.collisionManager.checkCollision(alien, bullet)) {
+		// 			alien.destroy = true;
+		// 		}
+		// 	}
+		// }
+
+		cartesian(this.spawnHandler.alive, this.getAllBullets(this.getPlayers())).forEach((pair) => {
+			const alien = pair[0];
+			const bullet = pair[1];
+			if (this.collisionManager.checkCollision(alien, bullet)) {
+				alien.take_damage();
 			}
-		}
+		});
+
+		cartesian(this.getPlayers(), this.getAllBullets(this.spawnHandler.alive)).forEach((pair) => {
+			const player = pair[0];
+			const bullet = pair[1];
+			if (this.collisionManager.checkCollision(player, bullet)) {
+				player.destroy = true;
+			}
+		});
+
+		// for (const player of this.spawnHandler.alive) {
+		// 	for (const bullet of this.getAllBullets(this.players)) {
+		// 		// Check each alien against each bullet
+		// 		// TODO: Surely real gamedevs have tricks to reduce computation here
+		// 		if (this.collisionManager.checkCollision(alien, bullet)) {
+		// 			alien.destroy = true;
+		// 		}
+		// 	}
+		// }
 	}
 
 	/**
 	 * Aggregates bullets from all players.
 	 * @returns {Bullet[]} An array of bullets from all players.
 	 */
-	private getAllBullets(): Bullet[] {
-		return this.players.flatMap((player) => player.bullets);
+	private getAllBullets(...entities: Entity[][]): Bullet[] {
+		return entities.flatMap((group: Entity[]) => group.flatMap((entity: Entity) => entity.bullets));
 	}
 
 	/**
 	 * Initializes aliens and positions them in a grid layout.
 	 */
 	private initAliens(): void {
-		for (let i = 0; i < 5; i++) {
-			// 5 rows
-			for (let j = 0; j < 10; j++) {
-				// 10 columns
-				const x = 50 + j * 100;
-				const y = 30 + i * 60;
-				this.aliens.push(new Alien({ x, y }, 0.1));
-			}
-		}
+		// const x = 1;
+		// const y = 1;
+		// this.spawnHandler.alive.push(new slowStraightShootingAlien({ x, y }, 0.1, this.p));
+		// this.spawnHandler.spawn([EntityIndex.Alien, 1, 1, 2]);
+		// for (let i = 0; i < 5; i++) {
+		// 	// 5 rows
+		// 	for (let j = 0; j < 10; j++) {
+		// 		// 10 columns
+		// 		const x = 50 + j * 100;
+		// 		const y = 30 + i * 60;
+		// 		this.spawnHandler.alive.push(new slowStraightShootingAlien({ x, y }, 0.1, this.p));
+		// 	}
+		// }
 	}
 
 	/**
