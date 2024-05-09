@@ -1,6 +1,7 @@
 import type p5 from 'p5';
 import { Navigator } from './navigator';
 import type { MenuItem } from './menuitem/menu_item';
+import type { InputHandler } from '$lib/system/input_handler';
 
 /**
  * Abstract class representing the base structure of a menu in a p5 application.
@@ -11,14 +12,16 @@ export abstract class BaseMenu {
 	protected items: MenuItem[] = [];
 	protected navigator: Navigator;
 	protected index: number = 1; // Assuming 0 can be a default start index
+	protected inputHandler: InputHandler;
 
 	/**
 	 * Constructs a base menu.
 	 * @param {p5} p - The p5 instance on which the menu will operate.
 	 */
-	constructor(p: p5) {
+	constructor(p: p5, inputHandler: InputHandler) {
 		this.p = p;
 		this.navigator = new Navigator(this.p);
+		this.inputHandler = inputHandler;
 	}
 
 	/**
@@ -63,4 +66,6 @@ export abstract class BaseMenu {
 	 * @returns {string} - Optionally returns a status or command based on the input.
 	 */
 	abstract handleInput(key: { [key: string]: boolean }): string;
+
+	abstract loop: () => void;
 }
