@@ -77,6 +77,8 @@ export class SpaceInvadersGame {
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	public update(): void {
+		this.handleInput();
+
 		this.entityManager.cleanInactiveEntities();
 		this.collisions();
 
@@ -94,7 +96,11 @@ export class SpaceInvadersGame {
 		this.entityManager.allEntites().forEach((entity) => entity.draw());
 
 		// Draw FPS counter TODO: fix
-		this.fpsManager.draw();
+		this.p.text(Math.round(this.p.frameRate()), 50, 50);
+	}
+
+	setMessage(value: string): void {
+		this.chatBox.setMessage(value);
 	}
 
 	startTypingMessage(): void {
@@ -107,6 +113,10 @@ export class SpaceInvadersGame {
 
 	sendMessage(): void {
 		this.chatBox.sendMessage(this.devConsole);
+	}
+
+	getEntity(id: string): Entity | undefined {
+		return this.entityManager.allEntites().find((entity) => entity.id == id);
 	}
 
 	getGameState(): GameState {
@@ -139,7 +149,6 @@ export class SpaceInvadersGame {
 	private gameLoop(timestamp: number): void {
 		requestAnimationFrame((newTimestamp) => this.gameLoop(newTimestamp));
 
-		this.handleInput();
 		if (this.fpsManager.shouldDraw(timestamp)) {
 			switch (this.state) {
 				case GameState.RUN:

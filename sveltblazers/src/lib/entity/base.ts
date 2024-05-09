@@ -16,6 +16,7 @@ export abstract class Entity {
 	readonly id: string;
 	abstract entityKind: EntityIndex;
 
+	maxBullets: number = 1;
 	position: Position;
 	speed: number;
 	active: boolean = true;
@@ -50,7 +51,7 @@ export abstract class Entity {
 
 		this.p.textSize(10);
 		this.p.text(
-			`ID: ${this.id}\nPosition: x: ${this.position.x}, y: ${this.position.y}`,
+			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nbullets: ${this.bullets.length}\nspeed: ${this.speed}`,
 			this.position.x + shape.dimensions.width,
 			this.position.y + shape.dimensions.height
 		);
@@ -73,5 +74,60 @@ export abstract class Entity {
 
 		this.position.x += movement.x * this.speed;
 		this.position.y += movement.y * this.speed;
+	}
+
+	setProperty(property: string, value: any) {
+		if (property in ['x', 'y']) {
+			property = 'position' + property;
+		}
+
+		switch (property) {
+			case 'speed':
+				this.setSpeed(value);
+				break;
+			case 'x':
+				this.setXPos(value);
+				break;
+			case 'y':
+				this.setYPos(value);
+				break;
+			case 'maxBullets':
+				this.setMaxBullets(value);
+				break;
+			default:
+				console.error(`Property does not exist ${property}.`);
+		}
+	}
+
+	setSpeed(value: string | number) {
+		if (typeof value === 'string') {
+			value = Number.parseInt(value);
+		}
+
+		this.speed = value;
+	}
+
+	setXPos(value: string | number) {
+		if (typeof value === 'string') {
+			value = Number.parseInt(value);
+		}
+
+		this.position.x = value;
+	}
+
+	setYPos(value: string | number) {
+		if (typeof value === 'string') {
+			value = Number.parseInt(value);
+		}
+
+		this.position.y = value;
+	}
+
+	setMaxBullets(value: string | number) {
+		if (typeof value === 'string') {
+			value = Number.parseInt(value);
+		}
+
+		this.maxBullets = value;
 	}
 }

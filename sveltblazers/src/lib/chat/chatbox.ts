@@ -60,7 +60,14 @@ export class ChatBox {
 		}
 	}
 
-	getMessageFromChatInput() {}
+	setMessage(value: string) {
+		const chatInput = this.getChatInputElement();
+		if (chatInput == null || chatInput == undefined) {
+			return;
+		}
+		chatInput.value = value;
+	}
+
 	sendMessage(devConsole: DevConsole) {
 		const chatInput = this.getChatInputElement();
 		if (chatInput == null || chatInput.value.trim() == '') {

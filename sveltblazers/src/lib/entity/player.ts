@@ -3,7 +3,6 @@ import { Entity } from './base';
 import type { Position, Rectangle } from '../types';
 import { Bullet } from './bullet';
 import { Colors } from '../assets/color';
-import { MAX_BULLETS } from '../../constants';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
 
@@ -27,7 +26,7 @@ export class Player extends Entity {
 	}
 
 	update() {
-		if (this.bullets.length < MAX_BULLETS && this.cycles % this.fireRate == 0) {
+		if (this.bullets.length < this.maxBullets && this.cycles % this.fireRate == 0) {
 			this.fire();
 		}
 

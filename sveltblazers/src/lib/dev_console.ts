@@ -24,8 +24,8 @@ export class DevConsole {
 			case 'spawn':
 				this.game.spawnHandler.spawn(restArgs);
 				break;
-			case 'set':
-				// this.game.setProperty(args[0], args[1]); // Example: set speed 20
+			case 'set': // ID property value
+				this.setEntityProperty(args[0], args[1], args[2]); // Example: set speed 20
 				break;
 			case 'debug':
 				DebugManager.toggleDebugMode();
@@ -36,5 +36,14 @@ export class DevConsole {
 			default:
 				console.log(`Unknown command: ${command}`);
 		}
+	}
+
+	setEntityProperty(id: string, property: string, value: string) {
+		const entity = this.game.getEntity(id);
+		if (entity === undefined) {
+			console.error(`No entity with id ${id} exists.`);
+			return;
+		}
+		entity.setProperty(property, value);
 	}
 }

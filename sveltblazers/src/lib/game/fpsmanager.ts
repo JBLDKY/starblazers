@@ -66,10 +66,9 @@ export class FPSManager {
 
 	/**
 	 * Draws the FPS value on the canvas.
-	 * TODO: Fix
 	 */
-	public draw(): void {
-		this.p.fill('white');
-		// this.p.fillText(`FPS: ${this.fps}`, 10, 30);
-	}
+	// public draw(): void {
+	// this.p.fill('white');
+	// this.p.text(`FPS: ${this.fps}`, 10, 30);
+	// }
 }
