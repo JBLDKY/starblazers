@@ -1,4 +1,3 @@
-import { Alien } from '../entity/alien';
 import { Player } from '../entity/player';
 import { Bullet } from '../entity/bullet';
 import { CollisionManager } from './collisionManager';
@@ -8,12 +7,10 @@ import { User } from '../user/user';
 import { WebSocketManager } from '../websocketmanager';
 import { Colors } from '$lib/assets/color';
 import { GameState } from '../../constants';
-import { EntityIndex } from '../entity/entity_index';
 import type p5 from 'p5';
 import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
 import { SettingsMenu } from '$lib/menu/settings';
-import { slowStraightShootingAlien } from '$lib/entity/slowStraightShootingAlien';
 import type { Entity } from '$lib/entity/base';
 import { DevConsole } from '$lib/dev_console';
 import { SpawnHandler } from '$lib/system/spawn_handler';
@@ -70,9 +67,6 @@ export class SpaceInvadersGame {
 			5,
 			this.user.uuid
 		);
-
-		// Spawn some aliens
-		this.initAliens();
 
 		// Start websocket
 		this.startWebsocket();
@@ -298,16 +292,6 @@ export class SpaceInvadersGame {
 	 * Checks and handles collisions between game entities.
 	 */
 	private collisions(): void {
-		// for (const alien of this.aliens) {
-		// 	for (const bullet of this.getAllBullets(this.players)) {
-		// 		// Check each alien against each bullet
-		// 		// TODO: Surely real gamedevs have tricks to reduce computation here
-		// 		if (this.collisionManager.checkCollision(alien, bullet)) {
-		// 			alien.destroy = true;
-		// 		}
-		// 	}
-		// }
-
 		cartesian(this.spawnHandler.alive, this.getAllBullets(this.getPlayers())).forEach((pair) => {
 			const alien = pair[0];
 			const bullet = pair[1];
@@ -323,16 +307,6 @@ export class SpaceInvadersGame {
 				player.destroy = true;
 			}
 		});
-
-		// for (const player of this.spawnHandler.alive) {
-		// 	for (const bullet of this.getAllBullets(this.players)) {
-		// 		// Check each alien against each bullet
-		// 		// TODO: Surely real gamedevs have tricks to reduce computation here
-		// 		if (this.collisionManager.checkCollision(alien, bullet)) {
-		// 			alien.destroy = true;
-		// 		}
-		// 	}
-		// }
 	}
 
 	/**
@@ -341,25 +315,6 @@ export class SpaceInvadersGame {
 	 */
 	private getAllBullets(...entities: Entity[][]): Bullet[] {
 		return entities.flatMap((group: Entity[]) => group.flatMap((entity: Entity) => entity.bullets));
-	}
-
-	/**
-	 * Initializes aliens and positions them in a grid layout.
-	 */
-	private initAliens(): void {
-		// const x = 1;
-		// const y = 1;
-		// this.spawnHandler.alive.push(new slowStraightShootingAlien({ x, y }, 0.1, this.p));
-		// this.spawnHandler.spawn([EntityIndex.Alien, 1, 1, 2]);
-		// for (let i = 0; i < 5; i++) {
-		// 	// 5 rows
-		// 	for (let j = 0; j < 10; j++) {
-		// 		// 10 columns
-		// 		const x = 50 + j * 100;
-		// 		const y = 30 + i * 60;
-		// 		this.spawnHandler.alive.push(new slowStraightShootingAlien({ x, y }, 0.1, this.p));
-		// 	}
-		// }
 	}
 
 	/**
