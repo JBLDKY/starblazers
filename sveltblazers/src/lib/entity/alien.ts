@@ -1,6 +1,6 @@
 import type p5 from 'p5';
 import { Entity } from './base';
-import type { Position } from '../types';
+import { Circle, type Position } from '../types';
 import { Colors } from '../assets/color';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
@@ -20,6 +20,10 @@ export class Alien extends Entity {
 		this.cycle = 0;
 		this.moveDown = false;
 		this.xVelocity = 30;
+	}
+
+	shape(): Circle {
+		return new Circle(this.position, this.radius);
 	}
 
 	update() {

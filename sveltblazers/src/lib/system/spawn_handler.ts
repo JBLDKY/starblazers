@@ -20,6 +20,11 @@ export class SpawnHandler {
 		this.entityManager.addPlayer(new Player(this.p, position, speed, id));
 	}
 
+	public getNewId(): string {
+		this.spawn_counter += 1;
+		return this.spawn_counter.toString();
+	}
+
 	public spawn(args: number[]): void {
 		this.spawn_counter += 1;
 
@@ -32,13 +37,11 @@ export class SpawnHandler {
 
 		switch (typeId) {
 			case 0:
-				this.entityManager.addEnemy(
-					new Alien(this.p, position, speed, this.spawn_counter.toString())
-				);
+				this.entityManager.addEnemy(new Alien(this.p, position, speed, this.getNewId()));
 				break;
 			case 1:
 				this.entityManager.addEnemy(
-					new slowStraightShootingAlien(this.p, position, speed, this.spawn_counter.toString())
+					new slowStraightShootingAlien(this.p, position, speed, this.getNewId())
 				);
 				break;
 			case 2:

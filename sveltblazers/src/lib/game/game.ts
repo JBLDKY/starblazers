@@ -117,10 +117,6 @@ export class SpaceInvadersGame {
 		this.state = state;
 	}
 
-	getDevConsole(): GameState {
-		return this.state;
-	}
-
 	handleInput(): void {
 		this.inputHandler.handleInput();
 	}

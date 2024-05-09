@@ -44,12 +44,15 @@ export abstract class Entity {
 	}
 
 	drawDebug() {
-		this.p.fill(255, 0, 0);
-		this.p.text(`ID: ${this.id}`, this.position.x + 100, this.position.y + 100);
+		this.p.fill(255, 255, 255);
+
+		const shape = this.shape();
+
+		this.p.textSize(10);
 		this.p.text(
-			`Position: x: ${this.position.x}, y: ${this.position.y}`,
-			this.position.x + 100,
-			this.position.y + 130
+			`ID: ${this.id}\nPosition: x: ${this.position.x}, y: ${this.position.y}`,
+			this.position.x + shape.dimensions.width,
+			this.position.y + shape.dimensions.height
 		);
 	}
 

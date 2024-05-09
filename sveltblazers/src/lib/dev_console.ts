@@ -28,8 +28,7 @@ export class DevConsole {
 				// this.game.setProperty(args[0], args[1]); // Example: set speed 20
 				break;
 			case 'debug':
-				console.log('debug is ON');
-				DebugManager.debugMode = true;
+				DebugManager.toggleDebugMode();
 				break;
 			case 'move':
 				console.log('move command');

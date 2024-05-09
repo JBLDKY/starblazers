@@ -3,11 +3,6 @@ export interface Shape {
 	dimensions: Dimensions;
 }
 
-export type Position = {
-	x: number;
-	y: number;
-};
-
 export class Rectangle implements Shape {
 	pos: Position;
 	dimensions: Dimensions;
@@ -18,11 +13,24 @@ export class Rectangle implements Shape {
 	}
 }
 
+export class Circle implements Shape {
+	pos: Position;
+	dimensions: Dimensions;
+	r: number;
+
+	constructor(pos: Position, r: number) {
+		this.pos = pos;
+		this.dimensions = { width: 2 * r, height: 2 * r };
+		this.r = r;
+	}
+}
+
 export type Dimensions = {
 	width: number;
 	height: number;
 };
-export type Circle = {
-	pos: Position;
-	r: number;
+
+export type Position = {
+	x: number;
+	y: number;
 };

@@ -36,6 +36,11 @@ export class InputHandler {
 			return;
 		}
 
+		if (this.keyPresses['1']) {
+			this.devConsole.handleCommand('debug');
+			return;
+		}
+
 		if (this.keyPresses['p'] || this.keyPresses['P']) {
 			this.devConsole.handleCommand('spawn 1 100 100 0');
 			return;

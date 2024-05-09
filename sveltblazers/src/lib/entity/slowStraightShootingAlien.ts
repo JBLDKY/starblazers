@@ -1,5 +1,6 @@
 import type p5 from 'p5';
 import { Entity } from './base';
+import { Circle } from '../types';
 import type { Position } from '../types';
 import { Bullet } from './bullet';
 import DebugManager from '../system/debug_manager'; // Adjust path as necessary
@@ -8,7 +9,7 @@ import { EntityIndex } from './entity_index';
 export class slowStraightShootingAlien extends Entity {
 	entityKind: EntityIndex = EntityIndex.slowStraightShootingAlien;
 	cycle: number = 0;
-	radius: number = 10;
+	radius: number;
 	moveDown: boolean;
 	xVelocity: number;
 	active: boolean;
@@ -34,9 +35,14 @@ export class slowStraightShootingAlien extends Entity {
 		this.xVelocity = 10;
 		this.active = false;
 
-		this.size = this.idle.width / 2;
+		this.radius = this.image.width / 2;
+		this.size = this.image.width / 2;
 		this.damage_frame = null;
 		this.id = id;
+	}
+
+	shape(): Circle {
+		return new Circle(this.position, this.radius);
 	}
 
 	update() {
@@ -82,7 +88,6 @@ export class slowStraightShootingAlien extends Entity {
 	}
 
 	take_damage() {
-		console.log('taking damage');
 		this.image = this.damaged;
 		this.damage_frame = this.cycle;
 	}
