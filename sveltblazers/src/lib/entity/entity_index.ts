@@ -1,5 +1,6 @@
 export enum EntityIndex {
 	Alien,
 	slowStraightShootingAlien,
-	Bullet
+	Bullet,
+	Player
 }

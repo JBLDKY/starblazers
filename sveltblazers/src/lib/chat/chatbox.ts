@@ -60,6 +60,7 @@ export class ChatBox {
 		}
 	}
 
+	getMessageFromChatInput() {}
 	sendMessage(devConsole: DevConsole) {
 		const chatInput = this.getChatInputElement();
 		if (chatInput == null || chatInput.value.trim() == '') {

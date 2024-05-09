@@ -1,30 +1,23 @@
 import { Alien } from '$lib/entity/alien';
-import type { Entity } from '$lib/entity/base';
-import { Bullet } from '$lib/entity/bullet';
 import { Player } from '$lib/entity/player';
 import { slowStraightShootingAlien } from '$lib/entity/slowStraightShootingAlien';
 import type { Position } from '$lib/types';
 import type { p5 } from 'p5-svelte';
+import { EntityManager } from './entity_manager';
 
 export class SpawnHandler {
-	public alive: Entity[];
 	private p: p5;
 	public spawn_counter: number = 0;
-	private players: Player[];
+	private entityManager: EntityManager;
 
-	constructor(p: p5) {
+	constructor(p: p5, entityManager: EntityManager) {
 		this.p = p;
-		this.alive = [];
 		this.spawn_counter = 0;
-		this.players = [];
-	}
-
-	public getPlayers(): Player[] {
-		return this.players;
+		this.entityManager = entityManager;
 	}
 
 	public spawn_player(position: Position, speed: number, id: string): void {
-		this.players.push(new Player(position, speed, id));
+		this.entityManager.addPlayer(new Player(this.p, position, speed, id));
 	}
 
 	public spawn(args: number[]): void {
@@ -34,17 +27,18 @@ export class SpawnHandler {
 		const x = args[1] ?? 100;
 		const y = args[2] ?? 100;
 		const speed = args[3] ?? 1;
-		const dir = args[4] ?? true;
 		// const color = args[5] ?? 'white';
 		const position = { x, y };
 
 		switch (typeId) {
 			case 0:
-				this.alive.push(new Alien(position, speed, this.spawn_counter.toString()));
+				this.entityManager.addEnemy(
+					new Alien(this.p, position, speed, this.spawn_counter.toString())
+				);
 				break;
 			case 1:
-				this.alive.push(
-					new slowStraightShootingAlien(position, speed, this.p, this.spawn_counter.toString())
+				this.entityManager.addEnemy(
+					new slowStraightShootingAlien(this.p, position, speed, this.spawn_counter.toString())
 				);
 				break;
 			case 2:
@@ -53,9 +47,5 @@ export class SpawnHandler {
 				// );
 				break;
 		}
-	}
-
-	public cleanDeadEntities(): void {
-		this.alive = this.alive.filter((entity) => !entity.destroy);
 	}
 }

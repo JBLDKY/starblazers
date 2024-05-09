@@ -1,45 +1,23 @@
 import type { Entity } from '$lib/entity/base';
-import type { Player } from '$lib/entity/player';
-import type { slowStraightShootingAlien } from '$lib/entity/slowStraightShootingAlien';
-import { Alien } from '../entity/alien';
+import { EntityIndex } from '$lib/entity/entity_index';
 import { Bullet } from '../entity/bullet';
 import type { Position, Rectangle } from '../types';
-
-// Type guard for Alien
-function isAlien(entity: Entity): entity is Alien {
-	return (entity as Alien).isAlien !== undefined;
-}
-
-// Type guard for SlowStraightShootingAlien
-function isSlowStraightShootingAlien(entity: Entity): entity is Alien {
-	return (entity as slowStraightShootingAlien).isSlowStraighShootingAlien !== undefined;
-}
-
-// Type guard for Player
-function isPlayer(entity: Entity): entity is Player {
-	return (entity as Player).isPlayer !== undefined;
-}
 
 export class CollisionManager {
 	/**
 	 * Checks collision between an alien and a bullet.
-	 * @param {Alien} alien - The alien to check for collision.
+	 * @param {Entity} entity - The alien to check for collision.
 	 * @param {Bullet} bullet - The bullet to check for collision.
 	 * @returns {boolean} True if there is a collision, false otherwise.
 	 */
 	public checkCollision(entity: Entity, bullet: Bullet): boolean {
-		if (isAlien(entity)) {
-			return this.circleRectCollision(entity.position, 10, bullet.position, 5, 10);
-		}
-
-		if (isPlayer(entity)) {
-			const playerRect = entity.rect();
-			const bulletRect = bullet.rect();
-			return this.rectRectCollision(playerRect, bulletRect);
-		}
-
-		if (isSlowStraightShootingAlien(entity)) {
-			return this.circleRectCollision(entity.position, 136, bullet.position, 5, 10);
+		switch (entity.entityKind) {
+			case EntityIndex.Alien:
+				return this.circleRectCollision(entity.position, 10, bullet.position, 5, 10);
+			case EntityIndex.Player:
+				return this.rectRectCollision(entity.shape(), bullet.rect());
+			case EntityIndex.slowStraightShootingAlien:
+				return this.circleRectCollision(entity.position, 136, bullet.position, 5, 10);
 		}
 
 		console.error('Unknown entity type: ', entity);

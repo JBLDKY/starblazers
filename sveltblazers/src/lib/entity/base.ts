@@ -1,7 +1,7 @@
 import type p5 from 'p5';
-import type { Position } from '../types';
+import type { Position, Shape } from '../types';
 import type { Bullet } from './bullet';
-import type { SpawnHandler } from '$lib/system/spawn_handler';
+import type { EntityIndex } from './entity_index';
 
 const keyToVectorMap = {
 	w: { x: 0, y: -1 },
@@ -11,30 +11,42 @@ const keyToVectorMap = {
 };
 
 export abstract class Entity {
+	protected p: p5;
+	protected bullets: Bullet[] = [];
+	readonly id: string;
+	abstract entityKind: EntityIndex;
+
 	position: Position;
 	speed: number;
-	bullets: Bullet[] = [];
-	destroy: boolean = false;
-	id: string;
+	active: boolean = true;
 
-	constructor(position: Position, speed: number, id: string) {
+	constructor(p: p5, position: Position, speed: number, id: string) {
+		this.p = p;
 		this.id = id;
 		this.position = position;
 		this.speed = speed;
-		this.destroy = false;
+		this.active = true;
 	}
 
-	abstract draw(p5: p5): void;
-	abstract update(p5: p5, sh: SpawnHandler): void;
+	abstract draw(): void;
+	abstract update(): void;
+	abstract shape(): Shape;
+
+	getBullets(): Bullet[] {
+		return this.bullets;
+	}
+	cleanBullets(): void {
+		this.bullets = this.bullets.filter((bullet) => bullet.active);
+	}
 
 	getPosition(): Position {
 		return { x: this.position.x, y: this.position.y };
 	}
 
-	drawDebug(p: p5) {
-		p.fill(255, 0, 0);
-		p.text(`ID: ${this.id}`, this.position.x + 100, this.position.y + 100);
-		p.text(
+	drawDebug() {
+		this.p.fill(255, 0, 0);
+		this.p.text(`ID: ${this.id}`, this.position.x + 100, this.position.y + 100);
+		this.p.text(
 			`Position: x: ${this.position.x}, y: ${this.position.y}`,
 			this.position.x + 100,
 			this.position.y + 130
@@ -42,6 +54,10 @@ export abstract class Entity {
 	}
 
 	take_damage() {}
+
+	kill() {
+		this.active = false;
+	}
 
 	move(keyPresses: Record<string, boolean>): void {
 		const movement = { x: 0, y: 0 };

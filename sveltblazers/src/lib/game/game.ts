@@ -15,6 +15,7 @@ import type { Entity } from '$lib/entity/base';
 import { DevConsole } from '$lib/dev_console';
 import { SpawnHandler } from '$lib/system/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
+import { EntityManager } from '$lib/system/entity_manager';
 
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
 /**
@@ -35,6 +36,7 @@ export class SpaceInvadersGame {
 	private devConsole: DevConsole = new DevConsole(this);
 	public debugManager: DebugManager = new DebugManager();
 	public spawnHandler: SpawnHandler;
+	private entityManager: EntityManager = new EntityManager();
 
 	/**
 	 * Initializes the game with a given p5 canvas.
@@ -51,7 +53,7 @@ export class SpaceInvadersGame {
 
 		this.currentMenu = new MainMenu(this.p);
 
-		this.spawnHandler = new SpawnHandler(this.p);
+		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
 
 		document.addEventListener('keydown', this.handleKeyDown);
 		document.addEventListener('keyup', this.handleKeyUp);
@@ -75,57 +77,14 @@ export class SpaceInvadersGame {
 		requestAnimationFrame(() => this.gameLoop(this.lastTime));
 	}
 
-	public getPlayers(): Player[] {
-		return this.spawnHandler.getPlayers();
-	}
-
 	/**
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	public update(): void {
+		this.entityManager.cleanInactiveEntities();
 		this.collisions();
 
-		const players = this.getPlayers();
-
-		// Bullets should probably take priority over other entities
-		const allBullets = this.getAllBullets(this.spawnHandler.alive, players);
-		for (const bullet of allBullets) {
-			bullet.update(this.p);
-		}
-
-		// Players
-		for (const player of players) {
-			player.update(this.p, this.spawnHandler);
-
-			// Explanation of Bullet Management:
-			// Bullets are stored in each player's `bullets` attribute, which is an array of Bullet objects.
-			// To stop rendering and processing a bullet (e.g., when it hits an alien or goes off-screen),
-			// it must be removed from this array. Here, we loop through each player's bullets array and
-			// filter out bullets marked for destruction (`bullet.destroy` is true).
-			//
-			// This approach is more efficient than using `getAllBullets()` for two reasons:
-			// 1. Direct access: We can modify the `bullets` array directly within each player object.
-			//    Using `getAllBullets()` would require an additional loop to link each bullet back to its respective player.
-			// 2. Performance: It avoids the overhead of aggregating all bullets into a new array every frame.
-			//
-			// Future Consideration:
-			// If bullet management becomes more complex or if there are performance issues with many bullets,
-			// consider refactoring this to a more centralized bullet management system within the game class.
-			player.bullets = player.bullets.filter((bullet) => !bullet.destroy);
-		}
-
-		// Update aliens, removing destroyed ones
-		// This filtering is similar to bullet handling but simpler since aliens are directly managed by the game class.
-		const aliens = this.spawnHandler.alive.filter((alien) => !alien.destroy);
-
-		// Only update aliens that are alive
-		for (const alien of aliens) {
-			alien.update(this.p, this.spawnHandler);
-			alien.bullets = alien.bullets.filter((bullet) => !bullet.destroy);
-		}
-		// TODO: Implement player death
-
-		this.spawnHandler.cleanDeadEntities();
+		this.entityManager.allEntites().forEach((entity) => entity.update());
 	}
 
 	/**
@@ -136,26 +95,14 @@ export class SpaceInvadersGame {
 		this.p.clear();
 		this.p.background(Colors.BACKGROUND);
 
-		// Draw players
-		for (const player of this.getPlayers()) {
-			player.draw(this.p);
-		}
+		this.entityManager.allEntites().forEach((entity) => entity.draw());
 
-		this.getAllBullets(this.getPlayers(), this.spawnHandler.alive).forEach((bullet) =>
-			bullet.draw(this.p)
-		);
-
-		// Draw aliens
-		for (const alien of this.spawnHandler.alive) {
-			alien.draw(this.p);
-		}
-
-		// Draw FPS
+		// Draw FPS counter TODO: fix
 		this.fpsManager.draw();
 	}
 
 	private getCurrentPlayer(): Player {
-		return this.getPlayers().filter((player) => this.user.uuid == player.uuid)[0];
+		return this.entityManager.getPlayers().filter((player) => this.user.uuid == player.uuid)[0];
 	}
 
 	private startWebsocket() {
@@ -246,6 +193,11 @@ export class SpaceInvadersGame {
 			return;
 		}
 
+		if (this.keyPresses['p'] || this.keyPresses['P']) {
+			this.devConsole.handleCommand('spawn 1 100 100 0');
+			return;
+		}
+
 		// Stop typing a message
 		if (this.keyPresses['Escape']) {
 			this.chatBox.cancelMessage();
@@ -292,29 +244,25 @@ export class SpaceInvadersGame {
 	 * Checks and handles collisions between game entities.
 	 */
 	private collisions(): void {
-		cartesian(this.spawnHandler.alive, this.getAllBullets(this.getPlayers())).forEach((pair) => {
-			const alien = pair[0];
-			const bullet = pair[1];
-			if (this.collisionManager.checkCollision(alien, bullet)) {
-				alien.take_damage();
+		// Check if any players are hit by creating a cartesian product of all players and enemy bullets
+		cartesian(
+			this.entityManager.getEnemies(),
+			this.entityManager.getPlayers().flatMap((enemy) => enemy.getBullets())
+		).forEach((pair: [Entity, Bullet]) => {
+			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
+				pair[0].take_damage();
 			}
 		});
 
-		cartesian(this.getPlayers(), this.getAllBullets(this.spawnHandler.alive)).forEach((pair) => {
-			const player = pair[0];
-			const bullet = pair[1];
-			if (this.collisionManager.checkCollision(player, bullet)) {
-				player.destroy = true;
+		// Check if any players are hit by creating a cartesian product of all players and enemy bullets
+		cartesian(
+			this.entityManager.getPlayers(),
+			this.entityManager.getEnemies().flatMap((enemy) => enemy.getBullets())
+		).forEach((pair: [Player, Bullet]) => {
+			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
+				pair[0].active = false;
 			}
 		});
-	}
-
-	/**
-	 * Aggregates bullets from all players.
-	 * @returns {Bullet[]} An array of bullets from all players.
-	 */
-	private getAllBullets(...entities: Entity[][]): Bullet[] {
-		return entities.flatMap((group: Entity[]) => group.flatMap((entity: Entity) => entity.bullets));
 	}
 
 	/**

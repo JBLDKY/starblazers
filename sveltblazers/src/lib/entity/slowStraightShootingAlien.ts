@@ -3,14 +3,15 @@ import { Entity } from './base';
 import type { Position } from '../types';
 import { Bullet } from './bullet';
 import DebugManager from '../system/debug_manager'; // Adjust path as necessary
-import type { SpawnHandler } from '$lib/system/spawn_handler';
+import { EntityIndex } from './entity_index';
 
 export class slowStraightShootingAlien extends Entity {
+	entityKind: EntityIndex = EntityIndex.slowStraightShootingAlien;
 	cycle: number = 0;
 	radius: number = 10;
 	moveDown: boolean;
 	xVelocity: number;
-	destroy: boolean;
+	active: boolean;
 	isSlowStraighShootingAlien: boolean = true;
 	fireRate: number = 30;
 	maxBullets: number = 10;
@@ -21,8 +22,8 @@ export class slowStraightShootingAlien extends Entity {
 	size: number;
 	id: string;
 
-	constructor(position: Position, speed: number, p: p5, id: string) {
-		super(position, speed, id);
+	constructor(p: p5, position: Position, speed: number, id: string) {
+		super(p, position, speed, id);
 
 		this.idle = p.loadImage('/sprites/rock_boss_trimmed.png');
 		this.damaged = p.loadImage('/sprites/rock_boss_trimmed_damaged.png');
@@ -31,14 +32,14 @@ export class slowStraightShootingAlien extends Entity {
 		this.cycle = 0;
 		this.moveDown = false;
 		this.xVelocity = 10;
-		this.destroy = false;
+		this.active = false;
 
 		this.size = this.idle.width / 2;
 		this.damage_frame = null;
 		this.id = id;
 	}
 
-	update(p5: p5, sh: SpawnHandler) {
+	update() {
 		if (this.moveDown) {
 			this.position.y += 30; // Move down
 			this.xVelocity *= -1; // turn around (horizontally)
@@ -55,7 +56,7 @@ export class slowStraightShootingAlien extends Entity {
 		// Check if at the edge of the canvas and need to move down
 		if (
 			(this.position.x <= 0 && this.xVelocity < 0) ||
-			(this.position.x + this.size * 2 >= p5.width && this.xVelocity > 0)
+			(this.position.x + this.size * 2 >= this.p.width && this.xVelocity > 0)
 		) {
 			this.moveDown = true;
 		}
@@ -65,19 +66,18 @@ export class slowStraightShootingAlien extends Entity {
 			this.cycle % this.fireRate == 0 &&
 			Math.random() < 1
 		) {
-			this.fire(sh);
+			this.fire();
 		}
 
 		this.cycle += 1;
 	}
 
-	draw(p5: p5) {
-		p5.image(this.image, this.position.x, this.position.y);
-		// p5.fill('orange'); // Fill first or else one will be the wrong color
-		// p5.circle(this.position.x, this.position.y, this.radius);
-		//
+	draw() {
+		this.p.image(this.image, this.position.x, this.position.y);
+		this.bullets.forEach((bullet) => bullet.draw());
+
 		if (DebugManager.debugMode) {
-			this.drawDebug(p5);
+			this.drawDebug();
 		}
 	}
 
@@ -87,9 +87,9 @@ export class slowStraightShootingAlien extends Entity {
 		this.damage_frame = this.cycle;
 	}
 
-	fire(sh: SpawnHandler): void {
-		const x = this.position.x + this.image.width / 2;
-		const y = this.position.y + this.image.height / 2;
-		sh.spawn([2, x, y, 3, 1, 'orange']);
+	fire(): void {
+		this.bullets.push(
+			new Bullet(this.p, { x: this.position.x, y: this.position.y }, 20, true, 'pink', 0)
+		);
 	}
 }

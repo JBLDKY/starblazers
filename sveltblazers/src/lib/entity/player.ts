@@ -4,45 +4,47 @@ import type { Position, Rectangle } from '../types';
 import { Bullet } from './bullet';
 import { Colors } from '../assets/color';
 import { MAX_BULLETS } from '../../constants';
-import type { SpawnHandler } from '$lib/system/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
+import { EntityIndex } from './entity_index';
 
 export class Player extends Entity {
+	entityKind: EntityIndex = EntityIndex.Player;
 	fireRate: number;
 	cycles: number;
 	uuid: string;
 	height: number = 20;
 	width: number = 20;
-	isPlayer: boolean = true;
 
-	constructor(position: Position, speed: number, uuid: string) {
-		super(position, speed, uuid);
+	constructor(p: p5, position: Position, speed: number, uuid: string) {
+		super(p, position, speed, uuid);
 		this.fireRate = 5;
 		this.cycles = 0;
 		this.uuid = uuid;
 	}
 
-	rect(): Rectangle {
+	shape(): Rectangle {
 		return { pos: this.position, dimensions: { width: this.width, height: this.height } };
 	}
 
-	update(p: p5, sh: SpawnHandler) {
+	update() {
 		if (this.bullets.length < MAX_BULLETS && this.cycles % this.fireRate == 0) {
-			this.fire(sh);
+			this.fire();
 		}
 
-		this.position.x = Math.max(0, Math.min(this.position.x, p.width));
-		this.position.y = Math.max(0, Math.min(this.position.y, p.height));
+		this.position.x = Math.max(0, Math.min(this.position.x, this.p.width));
+		this.position.y = Math.max(0, Math.min(this.position.y, this.p.height));
 
 		this.cycles += 1;
+
+		this.bullets.forEach((bullet) => bullet.update());
 	}
 
-	draw(p: p5): void {
+	draw(): void {
 		// Set the fill color
-		p.fill(Colors.PRIMARY);
+		this.p.fill(Colors.PRIMARY);
 
 		// Draw the triangle
-		p.triangle(
+		this.p.triangle(
 			this.position.x,
 			this.position.y,
 			this.position.x - 10,
@@ -51,17 +53,16 @@ export class Player extends Entity {
 			this.position.y + 20
 		);
 
+		this.bullets.forEach((bullet) => bullet.draw());
+
 		if (DebugManager.debugMode) {
-			this.drawDebug(p);
+			this.drawDebug();
 		}
 	}
 
-	fire(sh: SpawnHandler): void {
-		// const x = this.position.x;
-		// const y = this.position.y;
-		// sh.spawn([2, x, y, 3, 0, 'orange']);
+	fire(): void {
 		this.bullets.push(
-			new Bullet({ x: this.position.x, y: this.position.y }, 20, false, 'white', 0)
+			new Bullet(this.p, { x: this.position.x, y: this.position.y }, 10, false, 'white', '0')
 		);
 	}
 }
