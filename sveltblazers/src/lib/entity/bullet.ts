@@ -21,6 +21,10 @@ export class Bullet extends Entity {
 		this.id = id;
 	}
 
+	shape(): Rectangle {
+		return this.rect();
+	}
+
 	rect(): Rectangle {
 		return { pos: this.position, dimensions: { width: this.width, height: this.height } };
 	}
