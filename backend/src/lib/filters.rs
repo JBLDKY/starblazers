@@ -59,11 +59,6 @@ fn hello_world() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rej
         })
 }
 
-async fn hello_world_response(arg: String) -> Result<impl Reply, warp::Rejection> {
-    log::info!("{}", arg);
-    Ok(warp::reply::json(&json!({"message:": "Hello world"})))
-}
-
 /// GET / -> index html
 fn index() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path::end().map(|| warp::reply::html(INDEX_HTML))

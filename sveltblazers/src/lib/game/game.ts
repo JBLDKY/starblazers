@@ -33,10 +33,11 @@ export class SpaceInvadersGame {
 	private state: GameState = GameState.MENU;
 	private currentMenu: BaseMenu | null;
 	private devConsole: DevConsole = new DevConsole(this);
-	public debugManager: DebugManager = new DebugManager();
 	private entityManager: EntityManager = new EntityManager();
-	public spawnHandler: SpawnHandler;
 	private inputHandler: InputHandler;
+
+	public debugManager: DebugManager = new DebugManager();
+	public spawnHandler: SpawnHandler;
 
 	/**
 	 * Initializes the game with a given p5 canvas.

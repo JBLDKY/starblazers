@@ -11,12 +11,22 @@ export class DevConsole {
 	handleCommand(command: string) {
 		// Logic to handle different commands
 		if (command.length == 0) {
-			console.warn('Empty commands cannot be processed');
+			console.warn('Dev console: Empty commands cannot be processed');
 		}
 
 		const args = command.split(' ');
 
+		if (args === undefined) {
+			console.error('Dev console: Args are undefined.');
+			return;
+		}
+
 		const commandName = args.shift().toLowerCase();
+
+		if (commandName === undefined) {
+			console.error('Dev console: Args are undefined.');
+			return;
+		}
 
 		const restArgs = args.map((arg) => Number.parseInt(arg));
 
@@ -30,18 +40,19 @@ export class DevConsole {
 			case 'debug':
 				DebugManager.toggleDebugMode();
 				break;
-			case 'move':
-				console.log('move command');
+			case 'inspect':
+				console.log('Dev console: ', this.game.getEntity(args[0]));
 				break;
 			default:
-				console.log(`Unknown command: ${command}`);
+				console.log(`Dev console: Unknown command: ${command}`);
+				break;
 		}
 	}
 
 	setEntityProperty(id: string, property: string, value: string) {
 		const entity = this.game.getEntity(id);
 		if (entity === undefined) {
-			console.error(`No entity with id ${id} exists.`);
+			console.error(`Dev console: No entity with id ${id} exists.`);
 			return;
 		}
 		entity.setProperty(property, value);

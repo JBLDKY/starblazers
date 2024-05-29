@@ -1,5 +1,5 @@
 use anyhow::Result;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -167,23 +167,6 @@ impl DatabaseClient {
 
         Ok(password)
     }
-
-    /// Searches the database for a password linked to the provided username
-    async fn get_password_for_username(
-        &self,
-        username: &str,
-    ) -> Result<PasswordRecord, LoginError> {
-        let password = sqlx::query_as!(
-            PasswordRecord,
-            "SELECT password FROM players WHERE username = $1",
-            username
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|_| LoginError::UserDoesntExist)?;
-
-        Ok(password)
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -217,12 +200,4 @@ fn generate_jwt(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
 fn get_jwt_secret() -> Vec<u8> {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is not set");
     secret.as_bytes().to_vec()
-}
-
-// Returns a Claims struct or an error
-fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    let secret = get_jwt_secret();
-
-    let validation = Validation::new(Algorithm::HS256); // NOTE: Let's use HS256 for now
-    decode::<Claims>(token, &DecodingKey::from_secret(&secret), &validation).map(|data| data.claims)
 }
