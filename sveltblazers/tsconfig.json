@@ -1,0 +1,32 @@
+{
+	"compilerOptions": {
+		"plugins": [
+			{
+				"name": "typescript-svelte-plugin",
+				// the following options can be set additionally; they are optional; their default values are listed here
+				"enabled": true, // enables this plugin
+				"assumeIsSvelteProject": false // if true, skip detection and always assume it's a Svelte project
+			}
+		],
+		"types": ["p5"],
+		"moduleResolution": "node",
+		"module": "ESNext",
+		"target": "ESNext",
+		"rootDir": "./src",
+		"outDir": "./dist",
+		"checkJs": false,
+		"strict": true,
+		"allowJs": true,
+		"jsx": "preserve",
+		"sourceMap": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules/*", "__sapper__/*", "public/*"],
+	"extends": "./.svelte-kit/tsconfig.json"
+}

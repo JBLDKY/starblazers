@@ -20,13 +20,13 @@ jobs:
 
     - name: Install dependencies
       run: npm install
-      working-directory: ./frontend
+      working-directory: ./sveltblazers
 
     - name: Run ESLint
       run: npm run lint
-      working-directory: ./frontend
+      working-directory: ./sveltblazers
 
     - name: Check format with Prettier
       run: npm run format
-      working-directory: ./frontend
+      working-directory: ./sveltblazers
 

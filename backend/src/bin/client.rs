@@ -1,24 +1,13 @@
+#![allow(dead_code)]
 use postgres::{Client, Row};
+// use service::cli::handle_cli_input;
 
-use openssl::ssl::{SslConnector, SslMethod};
+fn main() {
+    std::env::set_var("RUST_LOG", "info");
+    pretty_env_logger::init();
+    log::info!("Starting starburst client");
 
-use postgres_openssl::MakeTlsConnector;
-
-use std::error;
-
-fn main() -> Result<(), Box<dyn error::Error>> {
-    let builder = SslConnector::builder(SslMethod::tls())?;
-
-    let connector = MakeTlsConnector::new(builder.build());
-
-    let mut client = Client::connect(
-        "***REMOVED***",
-        connector,
-    )?;
-
-    let _tables = get_table_names(&mut client)?;
-
-    Ok(())
+    // handle_cli_input();
 }
 
 fn get_table_names(client: &mut Client) -> Result<Vec<Row>, postgres::Error> {

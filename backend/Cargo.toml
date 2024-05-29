@@ -5,28 +5,34 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "service"
+path = "src/lib/lib.rs"
+
 [[bin]]
 name = "server"
 path = "src/bin/server.rs"
+
+[[bin]]
+name = "client"
+path = "src/bin/client.rs"
 
 [dependencies]
 tokio = { version = "1.36.0", features = ["full"] } # An asynchronous runtime, providing I/O, networking, scheduling, timers, and more.
 serde = { version = "1.0", features = ["derive"] } # A framework for serializing and deserializing Rust data structures efficiently and generically.
 serde_json = "1.0" # A crate for serializing to and deserializing from JSON, built on top of Serde.
 warp = "0.3.6" # A web server framework with a focus on composability and ease of use.
-clap = { version = "4.5.1", features = ["derive"] } # A simple to use, efficient, and full-featured Command Line Argument Parser.
+clap = { version = "*", features = ["derive"] } # A simple to use, efficient, and full-featured Command Line Argument Parser.
 thiserror = "1.0.57" # A crate for easily creating custom Error types that are compatible with std::error::Error trait.
-sqlx = "0.7.3" # An async, pure Rust SQL crate featuring compile-time checked queries without a DSL.
 anyhow = "1.0.80" # A flexible error handling crate suitable for all kinds of errors, especially those that don't need detailed inspection.
-chrono = "0.4.34" # Date and time library for Rust that provides timezone-aware and timezone-naive date and time functionality.
+chrono = { version = "0.4.34", features = ["serde"] }# Date and time library for Rust that provides timezone-aware and timezone-naive date and time functionality.
 futures-util = "0.3.30"
 tokio-stream = "0.1.14"
 pretty_env_logger = "0.5.0"
 postgres = "0.19.7"
-tokio-native-tls = "0.3.1"
-tokio-postgres = "0.7.10"
 dotenv = "0.15.0"
-native-tls = "0.2.11"
-tokio-postgres-native-tls = "0.1.0-rc.1"
-openssl = "0.10.64"
-postgres-openssl = "0.5.0"
+log = "0.4.21"
+sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio-rustls", "chrono"] }
+rand = "0.8.5"
+argon2 = "0.5.3"
+jsonwebtoken = "9.3.0"
