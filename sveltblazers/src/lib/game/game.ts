@@ -18,7 +18,9 @@ import { EntityManager } from '$lib/system/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
+
 /**
  * Represents the main game logic for a Space Invaders-like game.
  */
@@ -161,6 +163,7 @@ export class SpaceInvadersGame {
 					break;
 				case GameState.MENU:
 					if (this.currentMenu !== null && this.fpsManager.shouldProcessMenuInput(timestamp)) {
+						this.p.fill('deeppink'); // This fixes the bug where subsequent menus are white
 						this.currentMenu.loop();
 					}
 					break;

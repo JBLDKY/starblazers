@@ -76,7 +76,7 @@ export abstract class Entity {
 		this.position.y += movement.y * this.speed;
 	}
 
-	setProperty(property: string, value: any) {
+	setProperty(property: string, value: string) {
 		if (property in ['x', 'y']) {
 			property = 'position' + property;
 		}
