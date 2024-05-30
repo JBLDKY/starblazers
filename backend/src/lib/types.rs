@@ -20,13 +20,46 @@ pub struct Player {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginDetails {
-    pub email: String,
+    pub email: Option<String>,
+    pub username: Option<String>,
     pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LoginMethod {
+    Email,
+    Username,
+}
+
+impl LoginMethod {
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::Email => "email".to_string(),
+            Self::Username => "username".to_string(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PasswordRecord {
     pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserRecord {
+    pub email: String,
+    pub password: String,
+    pub username: String,
+    //pub authorization: String, TODO add to database
+}
+
+#[derive(Error, Debug)]
+pub enum SignupError {
+    #[error("Username already in use")]
+    UsernameUnavailable,
+
+    #[error("Invalid email")]
+    InvalidEmail,
 }
 
 impl Reject for LoginError {}

@@ -40,12 +40,32 @@ pub fn all(
         .or(database_resettable(db.clone()))
         .or(login(db.clone()))
         .or(hello_world())
+        .or(sign_up(db.clone()))
         .with(cors)
 }
 
 // Utility to pass the database pool into Warp filters
 fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
+}
+
+/// POST /v2/auth/signup -> Returns TODO
+fn sign_up(
+    db: ArcDb,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("v2" / "auth" / "signup")
+        .and(warp::post())
+        .and(json_body())
+        .and(with_db(db))
+        .and_then(register_player)
+}
+
+async fn register_player(player: Player, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+    println!("Hi!");
+    match db.create_player(&player).await {
+        Ok(_) => Ok(warp::reply::json(&json!({"message:": player.username}))),
+        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+    }
 }
 
 /// GET /helloworld  ->  Returns {"message": "Hello World"}
@@ -162,10 +182,11 @@ async fn handle_login(
 ) -> Result<impl Reply, warp::Rejection> {
     match db.check_login_details(&login_details).await {
         Ok(jwt) => {
+            log::info!("Logged in!");
+
             let mut cookie = Cookie::new("jwt".to_string(), jwt.clone());
 
             cookie.set_max_age(3600).set_secure(false);
-
             Ok(warp::reply::with_header(
                 warp::reply::json(&json!({ "message": "Logged in", "jwt" : jwt })),
                 "Set-Cookie",
