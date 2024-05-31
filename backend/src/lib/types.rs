@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
@@ -16,17 +18,51 @@ pub struct Player {
     pub password: String,
     pub creation_date: Option<chrono::NaiveDateTime>,
     pub games_played: Option<i32>,
+    pub authority: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginDetails {
-    pub email: String,
+    pub email: Option<String>,
+    pub username: Option<String>,
     pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LoginMethod {
+    Email,
+    Username,
+}
+
+impl fmt::Display for LoginMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LoginMethod::Email => write!(f, "email"),
+            LoginMethod::Username => write!(f, "username"),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PasswordRecord {
     pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserRecord {
+    pub email: String,
+    pub password: String,
+    pub username: String,
+    pub authority: String,
+}
+
+#[derive(Error, Debug)]
+pub enum SignupError {
+    #[error("Username already in use")]
+    UsernameUnavailable,
+
+    #[error("Invalid email")]
+    InvalidEmail,
 }
 
 impl Reject for LoginError {}

@@ -1,11 +1,13 @@
 use anyhow::Result;
+use chrono::TimeDelta;
+use email_address::EmailAddress;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
     database::queries::Table,
-    types::{LoginDetails, LoginError, PasswordRecord, Player},
+    types::{LoginDetails, LoginError, LoginMethod, Player, SignupError, UserRecord},
 };
 use sqlx::postgres::PgPool;
 
@@ -16,7 +18,7 @@ use argon2::{
 
 pub type ArcDb = Arc<DatabaseClient>;
 
-const JWT_EXPIRY: chrono::Duration = chrono::Duration::minutes(30);
+const JWT_EXPIRY: std::option::Option<chrono::TimeDelta> = TimeDelta::try_minutes(30);
 
 #[derive(Clone)]
 pub struct DatabaseClient {
@@ -77,19 +79,25 @@ impl DatabaseClient {
     }
 
     /// Create a new player with the provided parameters
-    /// TODO: validate email
     pub async fn create_player(
         &self,
         player: &Player,
     ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
-        log::info!("creating new account....");
+        log::info!("Creating new account....");
         let creation_date = if let Some(creation_date) = player.creation_date {
             creation_date // Use the provided value if provided
         } else {
             chrono::Utc::now().naive_utc() // Default is the current time
         };
 
+        if !EmailAddress::is_valid(&player.email) {
+            return Err(SignupError::InvalidEmail)
+                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+        }
+
         let games_played = player.games_played.unwrap_or_default();
+
+        let authority = &player.authority;
 
         let hashed_password = hash_password(&player.password).map_err(|e| {
             log::error!("Failed to hash password: {}", e);
@@ -99,12 +107,13 @@ impl DatabaseClient {
             sqlx::Error::Configuration(e.to_string().into())
         })?;
 
-        sqlx::query("INSERT INTO players (email, username, password, creation_date, games_played) VALUES ($1, $2, $3, $4, $5)")
+        sqlx::query("INSERT INTO players (email, username, password, creation_date, games_played, authority) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(&player.email)
             .bind(&player.username)
             .bind(&hashed_password)
             .bind(creation_date)
             .bind(games_played)
+            .bind(authority)
             .execute(&self.pool)
             .await
     }
@@ -118,17 +127,21 @@ impl DatabaseClient {
         &self,
         login_details: &LoginDetails,
     ) -> Result<String, LoginError> {
-        // Find the password in the database by email or username
-        let hashed_password = self.get_password_for_email(&login_details.email).await;
+        // Determine if username or password was used
+        // Right now the Ok below is unused, only really checking the error
+        let login_method = match (&login_details.email, &login_details.username) {
+            (Some(_email), _) => Ok(LoginMethod::Email),
+            (None, Some(_username)) => Ok(LoginMethod::Username),
+            (None, None) => Err(LoginError::MissingCredentials),
+        }?;
 
-        // If no password is found for the username or email, the user does not exist
-        if hashed_password.is_err() {
-            log::error!("User does not exist");
-            return Err(LoginError::UserDoesntExist);
-        };
+        // Get user data
+        let user_details = self
+            .get_details_by_login_method(&login_method, login_details)
+            .await?;
 
         // Verify the password using Argon2
-        let is_valid = verify_password(&hashed_password.unwrap().password, &login_details.password);
+        let is_valid = verify_password(&user_details.password, &login_details.password);
 
         // Not sure when this would be the case
         if is_valid.is_err() {
@@ -148,24 +161,40 @@ impl DatabaseClient {
 
         // Since we early return in the case of a wrong password,
         // we should create a JWT cuz the password seems valid
-        let jwt = generate_jwt(&login_details.email);
+        let jwt = generate_jwt(user_details);
 
         // Convert the error to a LoginError
         jwt.map_err(|e| LoginError::Catchall(e.to_string()))
     }
 
-    /// Searches the database for a password linked to the provided email
-    async fn get_password_for_email(&self, email: &str) -> Result<PasswordRecord, LoginError> {
-        let password = sqlx::query_as!(
-            PasswordRecord,
-            "SELECT password FROM players WHERE email = $1",
-            email
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|_| LoginError::UserDoesntExist)?;
+    /// Searches the database for a password matching the provided login method (email or username) , returns all detail
+    async fn get_details_by_login_method(
+        &self,
+        login_method: &LoginMethod,
+        login_details: &LoginDetails,
+    ) -> Result<UserRecord, LoginError> {
+        let user_data = match login_method {
+            // obtain data using email
+            LoginMethod::Email => sqlx::query_as!(
+                UserRecord,
+                "SELECT email, username, password, authority FROM players WHERE email = $1",
+                login_details.email,
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|_| LoginError::UserDoesntExist)?,
+            // obtain data using username
+            LoginMethod::Username => sqlx::query_as!(
+                UserRecord,
+                "SELECT email, username, password, authority FROM players WHERE username = $1",
+                login_details.username,
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|_| LoginError::UserDoesntExist)?,
+        };
 
-        Ok(password)
+        Ok(user_data)
     }
 }
 
@@ -173,18 +202,22 @@ impl DatabaseClient {
 struct Claims {
     sub: String,
     exp: usize,
+    username: String,
+    authority_level: String,
 }
 
 /// Returns a result containing a JWT or an error
-fn generate_jwt(user_id: &str) -> Result<String, jsonwebtoken::errors::Error> {
+fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(JWT_EXPIRY)
+        .checked_add_signed(JWT_EXPIRY.expect("TimeDelta is none!"))
         .expect("valid timestamp")
         .timestamp();
 
     let claims = Claims {
-        sub: user_id.to_owned(),
+        sub: user_details.email,
         exp: expiration as usize,
+        username: user_details.username,
+        authority_level: user_details.authority, // level of authorization that user has
     };
 
     let secret = get_jwt_secret();

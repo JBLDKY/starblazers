@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, email, username, password, creation_date, games_played FROM players",
+  "query": "SELECT * FROM players",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "games_played",
         "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "authority",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -43,8 +48,9 @@
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "044ae4438a2e3d4e7a577ebaed7bc6a3af77edfc25876099b938871ced393c4d"
+  "hash": "b7cc3b35cd345ec11478e444d701ea7fc11e736be570ff64e09ec6d8d53d0851"
 }
