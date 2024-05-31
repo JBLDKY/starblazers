@@ -91,18 +91,10 @@ impl DatabaseClient {
             chrono::Utc::now().naive_utc() // Default is the current time
         };
 
-        // validate email
-        let email = (if EmailAddress::is_valid(&player.email) {
-            Ok(&player.email)
-        } else {
-            Err(SignupError::InvalidEmail)
-        })
-        .map_err(|e| {
-            log::error!("Invalid Email Format: {}", e);
-            // convert error so return type is still sqlx error
-            // TODO this doesn't feel like a good solution though
-            sqlx::Error::Configuration(e.to_string().into())
-        })?;
+        if !EmailAddress::is_valid(&player.email) {
+            return Err(SignupError::InvalidEmail)
+                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+        }
 
         let games_played = player.games_played.unwrap_or_default();
 
@@ -117,7 +109,7 @@ impl DatabaseClient {
         })?;
 
         sqlx::query("INSERT INTO players (email, username, password, creation_date, games_played, authority) VALUES ($1, $2, $3, $4, $5, $6)")
-            .bind(email)
+            .bind(&player.email)
             .bind(&player.username)
             .bind(&hashed_password)
             .bind(creation_date)
