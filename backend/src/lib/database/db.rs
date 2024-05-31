@@ -140,11 +140,8 @@ impl DatabaseClient {
             .get_details_by_login_method(&login_method, login_details)
             .await?;
 
-        let user_info = user_details.unwrap(); // TODO ownership issues withou assigning
-                                               // user_details.unwrap to something
-
         // Verify the password using Argon2
-        let is_valid = verify_password(&user_info.password, &login_details.password);
+        let is_valid = verify_password(&user_details.password, &login_details.password);
 
         // Not sure when this would be the case
         if is_valid.is_err() {
@@ -164,7 +161,7 @@ impl DatabaseClient {
 
         // Since we early return in the case of a wrong password,
         // we should create a JWT cuz the password seems valid
-        let jwt = generate_jwt(user_info);
+        let jwt = generate_jwt(user_details);
 
         // Convert the error to a LoginError
         jwt.map_err(|e| LoginError::Catchall(e.to_string()))
