@@ -96,12 +96,10 @@ fn players_all(
 
 /// Returns all players from the Players table
 async fn fetch_all_players(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
-    let result: Result<Vec<Player>, sqlx::Error> = sqlx::query_as!(
-        Player,
-        "SELECT id, email, username, password, creation_date, games_played FROM players",
-    )
-    .fetch_all(&db.pool)
-    .await;
+    let result: Result<Vec<Player>, sqlx::Error> =
+        sqlx::query_as!(Player, "SELECT * FROM players",)
+            .fetch_all(&db.pool)
+            .await;
 
     match result {
         Ok(players) => Ok(warp::reply::json(&json!(players))),

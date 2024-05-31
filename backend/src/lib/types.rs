@@ -16,6 +16,7 @@ pub struct Player {
     pub password: String,
     pub creation_date: Option<chrono::NaiveDateTime>,
     pub games_played: Option<i32>,
+    pub authority: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -50,7 +51,7 @@ pub struct UserRecord {
     pub email: String,
     pub password: String,
     pub username: String,
-    //pub authorization: String, TODO add to database
+    pub authority: String,
 }
 
 #[derive(Error, Debug)]

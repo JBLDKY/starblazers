@@ -106,6 +106,8 @@ impl DatabaseClient {
 
         let games_played = player.games_played.unwrap_or_default();
 
+        let authority = &player.authority;
+
         let hashed_password = hash_password(&player.password).map_err(|e| {
             log::error!("Failed to hash password: {}", e);
 
@@ -114,12 +116,13 @@ impl DatabaseClient {
             sqlx::Error::Configuration(e.to_string().into())
         })?;
 
-        sqlx::query("INSERT INTO players (email, username, password, creation_date, games_played) VALUES ($1, $2, $3, $4, $5)")
+        sqlx::query("INSERT INTO players (email, username, password, creation_date, games_played, authority) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(email)
             .bind(&player.username)
             .bind(&hashed_password)
             .bind(creation_date)
             .bind(games_played)
+            .bind(authority)
             .execute(&self.pool)
             .await
     }
@@ -188,20 +191,6 @@ impl DatabaseClient {
         jwt.map_err(|e| LoginError::Catchall(e.to_string()))
     }
 
-    /// Searches the database for a password linked to the provided email
-    async fn get_password_for_email(&self, email: &str) -> Result<PasswordRecord, LoginError> {
-        let password = sqlx::query_as!(
-            PasswordRecord,
-            "SELECT password FROM players WHERE email = $1",
-            email
-        )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|_| LoginError::UserDoesntExist)?;
-
-        Ok(password)
-    }
-
     /// Searches the database for a password matching the provided login method (email or username) , returns all detail
     async fn get_details_by_login_method(
         &self,
@@ -212,7 +201,7 @@ impl DatabaseClient {
             // obtain data using email
             LoginMethod::Email => sqlx::query_as!(
                 UserRecord,
-                "SELECT email, username, password FROM players WHERE email = $1",
+                "SELECT email, username, password, authority FROM players WHERE email = $1",
                 login_details.email,
             )
             .fetch_one(&self.pool)
@@ -221,7 +210,7 @@ impl DatabaseClient {
             // obtain data using username
             LoginMethod::Username => sqlx::query_as!(
                 UserRecord,
-                "SELECT email, username, password FROM players WHERE username = $1",
+                "SELECT email, username, password, authority FROM players WHERE username = $1",
                 login_details.username,
             )
             .fetch_one(&self.pool)
@@ -238,7 +227,7 @@ struct Claims {
     sub: String,
     exp: usize,
     username: String,
-    //auth_level: String,
+    authority_level: String,
 }
 
 /// Returns a result containing a JWT or an error
@@ -252,7 +241,7 @@ fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors
         sub: user_details.email,
         exp: expiration as usize,
         username: user_details.username,
-        //auth_level: login_details.authorization.clone(), // level of authorization that user has
+        authority_level: user_details.authority, // level of authorization that user has
     };
 
     let secret = get_jwt_secret();
