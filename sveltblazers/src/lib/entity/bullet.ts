@@ -32,6 +32,10 @@ export class Bullet extends Entity {
 	draw() {
 		this.p.fill(this.color);
 		this.p.rect(this.position.x, this.position.y, this.width, this.height);
+
+		if (DebugManager.debugMode) {
+			this.drawDebug();
+		}
 	}
 
 	update() {
@@ -39,10 +43,6 @@ export class Bullet extends Entity {
 
 		if (this.position.y < 0 || this.position.y > 800) {
 			this.kill();
-		}
-
-		if (DebugManager.debugMode) {
-			this.drawDebug();
 		}
 	}
 }
