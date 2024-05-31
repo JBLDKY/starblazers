@@ -43,6 +43,12 @@ export class InputHandler {
 		return timestamp - this.getLastDevCommandTime() > 200;
 	}
 
+	public handleInputWhileTyping() {
+		if (this.keyPresses['Enter']) {
+			this.game.sendMessage();
+			return;
+		}
+	}
 	public handleInput(timestamp: number) {
 		// Start typing a message
 		if (this.keyPresses['t'] || this.keyPresses['T']) {
@@ -84,12 +90,6 @@ export class InputHandler {
 					break;
 			}
 
-			return;
-		}
-
-		// Send message
-		if (this.keyPresses['Enter']) {
-			this.game.sendMessage();
 			return;
 		}
 

@@ -80,7 +80,11 @@ export class SpaceInvadersGame {
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	public update(timestamp: number): void {
-		this.handleInput(timestamp);
+		if (!this.isTypingInChat()) {
+			this.handleInput(timestamp);
+		} else {
+			this.handleInputWhileTyping();
+		}
 
 		this.entityManager.cleanInactiveEntities();
 		this.collisions();
@@ -100,6 +104,8 @@ export class SpaceInvadersGame {
 
 		// Draw FPS counter TODO: fix
 		this.p.text(Math.round(this.p.frameRate()), 50, 50);
+
+		this.p.text(this.isTypingInChat(), 50, 600);
 	}
 
 	setMessage(value: string): void {
@@ -134,8 +140,16 @@ export class SpaceInvadersGame {
 		this.inputHandler.handleInput(timestamp);
 	}
 
+	handleInputWhileTyping(): void {
+		this.inputHandler.handleInputWhileTyping();
+	}
+
 	setCurrentMenu(menuIndex: MenuIndex): void {
 		this.currentMenu = new MenuFactory().newMenu(this.p, menuIndex, this.inputHandler);
+	}
+
+	isTypingInChat(): boolean {
+		return this.chatBox.isTypingInChat();
 	}
 
 	public getCurrentPlayer(): Player {

@@ -114,6 +114,10 @@ export class ChatBox {
 		}
 	}
 
+	isTypingInChat(): boolean {
+		return this.getChatInputElement() == document.activeElement;
+	}
+
 	/*
 	 * Cancels the message the user was typing and returns to the game.
 	 *
