@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
@@ -32,11 +34,11 @@ pub enum LoginMethod {
     Username,
 }
 
-impl LoginMethod {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for LoginMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Email => "email".to_string(),
-            Self::Username => "username".to_string(),
+            LoginMethod::Email => write!(f, "email"),
+            LoginMethod::Username => write!(f, "username"),
         }
     }
 }

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::TimeDelta;
 use email_address::EmailAddress;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
@@ -6,9 +7,7 @@ use std::sync::Arc;
 
 use crate::{
     database::queries::Table,
-    types::{
-        LoginDetails, LoginError, LoginMethod, PasswordRecord, Player, SignupError, UserRecord,
-    },
+    types::{LoginDetails, LoginError, LoginMethod, Player, SignupError, UserRecord},
 };
 use sqlx::postgres::PgPool;
 
@@ -19,7 +18,7 @@ use argon2::{
 
 pub type ArcDb = Arc<DatabaseClient>;
 
-const JWT_EXPIRY: chrono::Duration = chrono::Duration::minutes(30);
+const JWT_EXPIRY: std::option::Option<chrono::TimeDelta> = TimeDelta::try_minutes(30);
 
 #[derive(Clone)]
 pub struct DatabaseClient {
@@ -130,21 +129,15 @@ impl DatabaseClient {
     ) -> Result<String, LoginError> {
         // Determine if username or password was used
         // Right now the Ok below is unused, only really checking the error
-        let login_method: Result<LoginMethod, LoginError> =
-            match (&login_details.email, &login_details.username) {
-                (Some(_email), _) => Ok(LoginMethod::Email),
-                (None, Some(_username)) => Ok(LoginMethod::Username),
-                (None, None) => Err(LoginError::MissingCredentials),
-            };
-
-        // Return the error if there are missing credentials
-        if login_method.is_err() {
-            return Err(login_method.unwrap_err());
-        }
+        let login_method = match (&login_details.email, &login_details.username) {
+            (Some(_email), _) => Ok(LoginMethod::Email),
+            (None, Some(_username)) => Ok(LoginMethod::Username),
+            (None, None) => Err(LoginError::MissingCredentials),
+        }?;
 
         // Get user data
         let user_details = self
-            .get_details_by_login_method(&login_method.unwrap(), &login_details)
+            .get_details_by_login_method(&login_method, login_details)
             .await;
 
         // If no password is found for the username or email, the user does not exist
@@ -225,7 +218,7 @@ struct Claims {
 /// Returns a result containing a JWT or an error
 fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = chrono::Utc::now()
-        .checked_add_signed(JWT_EXPIRY)
+        .checked_add_signed(JWT_EXPIRY.expect("TimeDelta is none!"))
         .expect("valid timestamp")
         .timestamp();
 
