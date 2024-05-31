@@ -138,13 +138,7 @@ impl DatabaseClient {
         // Get user data
         let user_details = self
             .get_details_by_login_method(&login_method, login_details)
-            .await;
-
-        // If no password is found for the username or email, the user does not exist
-        if user_details.is_err() {
-            log::error!("User does not exist!");
-            return Err(LoginError::UserDoesntExist);
-        };
+            .await?;
 
         let user_info = user_details.unwrap(); // TODO ownership issues withou assigning
                                                // user_details.unwrap to something
