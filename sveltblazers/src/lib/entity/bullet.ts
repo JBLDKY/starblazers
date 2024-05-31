@@ -42,7 +42,7 @@ export class Bullet extends Entity {
 		}
 
 		if (DebugManager.debugMode) {
-			// this.drawDebug();
+			this.drawDebug();
 		}
 	}
 }

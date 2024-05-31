@@ -8,10 +8,12 @@ export class InputHandler {
 	private keyPresses: { [key: string]: boolean } = {};
 	private cachedKeyPresses: { [key: string]: boolean } = {};
 	private devConsole: DevConsole;
+	private lastDevCommandTime: number;
 
 	constructor(game: SpaceInvadersGame, devConsole: DevConsole) {
 		this.game = game;
 		this.devConsole = devConsole;
+		this.lastDevCommandTime = 0;
 		document.addEventListener('keydown', this.handleKeyDown);
 		document.addEventListener('keyup', this.handleKeyUp);
 	}
@@ -29,24 +31,41 @@ export class InputHandler {
 		this.keyPresses[event.key] = false;
 	};
 
-	public handleInput() {
+	private setLastDevCommandTime(timestamp: number) {
+		this.lastDevCommandTime = timestamp;
+	}
+
+	private getLastDevCommandTime() {
+		return this.lastDevCommandTime;
+	}
+
+	private shouldHandleDevCommand(timestamp: number): boolean {
+		return timestamp - this.getLastDevCommandTime() > 200;
+	}
+
+	public handleInput(timestamp: number) {
 		// Start typing a message
 		if (this.keyPresses['t'] || this.keyPresses['T']) {
 			this.game.startTypingMessage();
 			return;
 		}
 
-		if (this.keyPresses['1']) {
+		if (this.keyPresses['1'] && this.shouldHandleDevCommand(timestamp)) {
+			this.setLastDevCommandTime(timestamp);
 			this.devConsole.handleCommand('debug');
+			this.keyPresses['1'] = false;
 			return;
 		}
 
-		if (this.keyPresses['2']) {
+		if (this.keyPresses['2'] && this.shouldHandleDevCommand(timestamp)) {
+			this.setLastDevCommandTime(timestamp);
 			this.devConsole.handleCommand('spawn 0 600 100 0');
 			return;
 		}
 
-		if (this.keyPresses['p'] || this.keyPresses['P']) {
+		if ((this.keyPresses['p'] || this.keyPresses['P']) && this.shouldHandleDevCommand(timestamp)) {
+			console.log('Spawning rock boss');
+			this.setLastDevCommandTime(timestamp);
 			this.devConsole.handleCommand('spawn 1 100 100 0');
 			return;
 		}

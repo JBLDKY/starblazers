@@ -79,8 +79,8 @@ export class SpaceInvadersGame {
 	/**
 	 * Updates the state of all game entities every loop/frame.
 	 */
-	public update(): void {
-		this.handleInput();
+	public update(timestamp: number): void {
+		this.handleInput(timestamp);
 
 		this.entityManager.cleanInactiveEntities();
 		this.collisions();
@@ -130,8 +130,8 @@ export class SpaceInvadersGame {
 		this.state = state;
 	}
 
-	handleInput(): void {
-		this.inputHandler.handleInput();
+	handleInput(timestamp: number): void {
+		this.inputHandler.handleInput(timestamp);
 	}
 
 	setCurrentMenu(menuIndex: MenuIndex): void {
@@ -155,11 +155,11 @@ export class SpaceInvadersGame {
 		if (this.fpsManager.shouldDraw(timestamp)) {
 			switch (this.state) {
 				case GameState.RUN:
-					this.update();
+					this.update(timestamp);
 					this.draw();
 					break;
 				case GameState.PAUSE:
-					this.handleInput(); // TODO: why
+					this.handleInput(timestamp); // TODO: why
 					break;
 				case GameState.MENU:
 					if (this.currentMenu !== null && this.fpsManager.shouldProcessMenuInput(timestamp)) {

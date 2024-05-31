@@ -1,7 +1,7 @@
 import type p5 from 'p5';
 import type { Position, Shape } from '../types';
 import type { Bullet } from './bullet';
-import type { EntityIndex } from './entity_index';
+import { EntityIndex } from './entity_index';
 
 const keyToVectorMap = {
 	w: { x: 0, y: -1 },
