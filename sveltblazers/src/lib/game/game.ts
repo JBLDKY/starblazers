@@ -16,7 +16,7 @@ import { SpawnHandler } from '$lib/system/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityManager } from '$lib/system/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
-import { MenuFactory, MenuIndex } from '$lib/entity/entity_index';
+import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -153,7 +153,9 @@ export class SpaceInvadersGame {
 	}
 
 	public getCurrentPlayer(): Player {
-		return this.entityManager.getPlayers().filter((player) => this.user.uuid == player.uuid)[0];
+		return this.entityManager
+			.getEntityByKind(EntityIndex.Player)
+			.filter((player: Player) => this.user.uuid == player.uuid)[0];
 	}
 
 	private startWebsocket() {
@@ -193,7 +195,7 @@ export class SpaceInvadersGame {
 	private collisions(): void {
 		// Check if any players are hit by creating a cartesian product of all players and enemy bullets
 		cartesian(
-			this.entityManager.getEnemies(),
+			this.entityManager.getAliens(),
 			this.entityManager.getPlayers().flatMap((enemy) => enemy.getBullets())
 		).forEach((pair: [Entity, Bullet]) => {
 			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
@@ -204,7 +206,7 @@ export class SpaceInvadersGame {
 		// Check if any players are hit by creating a cartesian product of all players and enemy bullets
 		cartesian(
 			this.entityManager.getPlayers(),
-			this.entityManager.getEnemies().flatMap((enemy) => enemy.getBullets())
+			this.entityManager.getAliens().flatMap((enemy) => enemy.getBullets())
 		).forEach((pair: [Player, Bullet]) => {
 			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
 				pair[0].active = false;

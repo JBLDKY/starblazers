@@ -36,9 +36,6 @@ export abstract class Entity {
 	getBullets(): Bullet[] {
 		return this.bullets;
 	}
-	cleanBullets(): void {
-		this.bullets = this.bullets.filter((bullet) => bullet.active);
-	}
 
 	getPosition(): Position {
 		return { x: this.position.x, y: this.position.y };

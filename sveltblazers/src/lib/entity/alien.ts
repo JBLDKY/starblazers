@@ -27,8 +27,6 @@ export class Alien extends Entity {
 	}
 
 	update() {
-		this.cleanBullets();
-
 		if (this.moveDown) {
 			this.position.y += 30; // Move down
 			this.xVelocity *= -1; // turn around (horizontally)
