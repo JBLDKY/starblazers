@@ -5,17 +5,19 @@ import { Bullet } from './bullet';
 import { Colors } from '../assets/color';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
+import type { Shooter } from './shooter';
 
-export class Player extends Entity {
+export class Player extends Entity implements Shooter {
 	entityKind: EntityIndex = EntityIndex.Player;
 	fireRate: number;
 	cycles: number;
 	uuid: string;
+
 	height: number = 20;
 	width: number = 20;
 
 	constructor(p: p5, position: Position, speed: number, uuid: string) {
-		super(p, position, speed, uuid);
+		super(p, position, speed);
 		this.fireRate = 5;
 		this.cycles = 0;
 		this.uuid = uuid;
@@ -38,6 +40,9 @@ export class Player extends Entity {
 		this.bullets.forEach((bullet) => bullet.update());
 	}
 
+	public newBullet(): Bullet {
+		return new Bullet(this.p, this.position, 1, true, 'pink', this.getId());
+	}
 	draw(): void {
 		// Set the fill color
 		this.p.fill(Colors.PRIMARY);
@@ -59,9 +64,7 @@ export class Player extends Entity {
 		}
 	}
 
-	fire(): void {
-		this.bullets.push(
-			new Bullet(this.p, { x: this.position.x, y: this.position.y }, 10, false, 'white', '0')
-		);
+	fire(): Bullet {
+		return this.newBullet();
 	}
 }

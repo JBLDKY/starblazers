@@ -4,19 +4,20 @@ import { Circle, type Position } from '../types';
 import { Colors } from '../assets/color';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
+import { Bullet } from './bullet';
+import type { Shooter } from './shooter';
+import { EntityEvent } from '$lib/system/entities/entity_event_handler';
 
-export class Alien extends Entity {
+export class Alien extends Entity implements Shooter {
 	entityKind: EntityIndex = EntityIndex.Alien;
 	cycle: number;
 	moveDown: boolean;
 	xVelocity: number;
-	id: string;
 	radius: number = 10;
 	isAlien: boolean = true;
 
-	constructor(p: p5, position: Position, speed: number, id: string) {
-		super(p, position, speed, id);
-		this.id = id;
+	constructor(p: p5, position: Position, speed: number) {
+		super(p, position, speed);
 		this.cycle = 0;
 		this.moveDown = false;
 		this.xVelocity = 30;
@@ -24,6 +25,10 @@ export class Alien extends Entity {
 
 	shape(): Circle {
 		return new Circle(this.position, this.radius);
+	}
+
+	newBullet(): Bullet {
+		return new Bullet(this.p, this.position, 0, false, 'black', this.getId());
 	}
 
 	update() {
@@ -51,5 +56,9 @@ export class Alien extends Entity {
 		if (DebugManager.debugMode) {
 			this.drawDebug();
 		}
+	}
+
+	public fire(): void {
+		this.getEntityManager().notify(this, EntityEvent.Fire);
 	}
 }

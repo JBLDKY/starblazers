@@ -37,12 +37,10 @@ export class SpawnHandler {
 
 		switch (typeId) {
 			case 0:
-				this.entityManager.addEntity(new Alien(this.p, position, speed, this.getNewId()));
+				this.entityManager.addEntity(new Alien(this.p, position, speed));
 				break;
 			case 1:
-				this.entityManager.addEntity(
-					new slowStraightShootingAlien(this.p, position, speed, this.getNewId())
-				);
+				this.entityManager.addEntity(new slowStraightShootingAlien(this.p, position, speed));
 				break;
 			case 2:
 				// this.alive.push(

@@ -12,9 +12,9 @@ import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
 import type { Entity } from '$lib/entity/base';
 import { DevConsole } from '$lib/dev_console';
-import { SpawnHandler } from '$lib/system/spawn_handler';
+import { SpawnHandler } from '$lib/system/entities/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
-import { EntityManager } from '$lib/system/entity_manager';
+import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 
@@ -96,16 +96,45 @@ export class SpaceInvadersGame {
 	 * Draws all game entities to the p.
 	 */
 	public draw(): void {
-		// Clear p
+		this.clearCanvas();
+		this.drawBackground();
+		this.drawEntities();
+		this.drawFrameRate();
+		this.debugInfo();
+	}
+
+	private clearCanvas(): void {
 		this.p.clear();
+	}
+
+	private drawBackground(): void {
 		this.p.background(Colors.BACKGROUND);
+	}
 
-		this.entityManager.allEntites().forEach((entity) => entity.draw());
+	private drawEntities(): void {
+		this.entityManager.allEntites().forEach((entity: Entity) => entity.draw());
+	}
 
-		// Draw FPS counter TODO: fix
-		this.p.text(Math.round(this.p.frameRate()), 50, 50);
+	private drawFrameRate(): void {
+		this.p.text(Math.round(this.p.frameRate()), 5, 50);
+	}
 
-		this.p.text(this.isTypingInChat(), 50, 600);
+	private debugInfo(): void {
+		const debugMessages = [
+			'typing in chat: ' + this.isTypingInChat(),
+			'shouldHandleDevCommand: ' + this.inputHandler.shouldHandleDevCommand(this.lastTime)
+		];
+
+		this.displayDebugInfo(debugMessages);
+	}
+
+	private displayDebugInfo(messages: string[]): void {
+		let yPos = 400;
+		this.p.textSize(10);
+		for (const message of messages) {
+			this.p.text(message, 50, yPos);
+			yPos += 10;
+		}
 	}
 
 	setMessage(value: string): void {
@@ -124,8 +153,8 @@ export class SpaceInvadersGame {
 		this.chatBox.sendMessage(this.devConsole);
 	}
 
-	getEntity(id: string): Entity | undefined {
-		return this.entityManager.allEntites().find((entity) => entity.id == id);
+	getEntity(id: number): Entity | undefined {
+		return this.entityManager.allEntites().find((entity) => entity.getId() == id);
 	}
 
 	getGameState(): GameState {
@@ -199,7 +228,7 @@ export class SpaceInvadersGame {
 			this.entityManager.getPlayers().flatMap((enemy) => enemy.getBullets())
 		).forEach((pair: [Entity, Bullet]) => {
 			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
-				pair[0].take_damage();
+				pair[0].takeDamage();
 			}
 		});
 

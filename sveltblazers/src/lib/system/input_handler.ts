@@ -39,7 +39,8 @@ export class InputHandler {
 		return this.lastDevCommandTime;
 	}
 
-	private shouldHandleDevCommand(timestamp: number): boolean {
+	// Switch back to private after debugging
+	public shouldHandleDevCommand(timestamp: number): boolean {
 		return timestamp - this.getLastDevCommandTime() > 200;
 	}
 
