@@ -99,6 +99,9 @@ pub enum LoginError {
     #[error("Unhandled error occurred")]
     Unhandled,
 
+    #[error("User input does not match expect format because: {0}")]
+    InvalidInputSentByUser(String),
+
     #[error(transparent)]
     SqlError(#[from] sqlx::Error),
 }

@@ -1,5 +1,5 @@
 use crate::database::db::decode_jwt;
-use crate::types::{DatabaseError, LoginDetails, Player, User};
+use crate::types::{DatabaseError, LoginDetails, LoginError, Player, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
@@ -31,6 +31,7 @@ pub fn all(
         .allow_credentials(true)
         .allow_headers(vec!["Content-Type", "*"])
         .allow_headers(vec!["Authorization", "*"])
+        .expose_header("Authorization") // TODO: is this safe?
         .allow_methods(vec!["GET", "POST", "PUT"]);
 
     index()
@@ -206,7 +207,16 @@ fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Reje
 }
 
 async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::Rejection> {
-    let jwt: &str = header_value.to_str().map_err(|_| warp::reject())?;
+    let jwt: &str = header_value
+        .to_str()
+        .map_err(|_| warp::reject())?
+        .split(" ")
+        .last()
+        .ok_or_else(|| {
+            LoginError::InvalidInputSentByUser(
+                "Invalid token format: Is it prefixed by `Bearer `?".to_string(),
+            )
+        })?;
 
     match decode_jwt(jwt) {
         Ok(_) => {

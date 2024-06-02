@@ -1,23 +1,30 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
-	import { jwtStore, checkJwt } from '../../store/auth';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { validateJwt } from '../../hooks/withJwt';
 	import { getToastStore } from '@skeletonlabs/skeleton';
+	import { jwtStore } from '../../store/auth';
 
 	const toastStore = getToastStore();
 
-	onMount(() => {
+	onMount(async () => {
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
 		// `goto()` cannot be called on the server
 		if (get(jwtStore) === undefined || get(jwtStore) == '') {
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
+		} else {
+			try {
+				await validateJwt();
+				console.log('JWT is valid');
+			} catch (error) {
+				console.error('Error checking JWT:', error);
+				goto('/login');
+			}
 		}
-
-		checkJwt();
 	});
 
 	let listBoxValue: string = 'account';
