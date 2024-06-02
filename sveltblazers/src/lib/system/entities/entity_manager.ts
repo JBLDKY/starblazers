@@ -12,7 +12,6 @@ export class EntityManager implements EntityEventHandler {
 	constructor() {}
 
 	public addEntity(entity: Entity): void {
-		console.log('Adding entity: ', entity);
 		const entityId = this.nextId();
 		entity.setId(entityId);
 		entity.setEntityManager(this);
@@ -78,9 +77,6 @@ export class EntityManager implements EntityEventHandler {
 	public cleanInactiveEntities(): void {
 		for (const [id, entity] of this.entities) {
 			if (!entity.active) {
-				console.log('following entity is inactive: ');
-				console.log(entity);
-				console.log('deleting: ', id, ' ', entity);
 				this.entities.delete(id);
 				this.freeId(id);
 			}

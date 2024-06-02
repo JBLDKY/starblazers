@@ -89,7 +89,6 @@ export abstract class Entity {
 
 	move(keyPresses: Record<string, boolean>): void {
 		const movement = { x: 0, y: 0 };
-		console.log(keyPresses);
 		Object.entries(keyToVectorMap).forEach(([key, vector]) => {
 			if (keyPresses[key]) {
 				movement.x += vector.x;

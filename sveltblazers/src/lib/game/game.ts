@@ -51,7 +51,7 @@ export class SpaceInvadersGame {
 
 		this.user = new User('');
 		this.chatBox = new ChatBox(this.user, this.websocket);
-		this.fpsManager = new FPSManager(this.p);
+		this.fpsManager = new FPSManager(0);
 		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
 		this.inputHandler = new InputHandler(this, this.devConsole);
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
@@ -99,7 +99,6 @@ export class SpaceInvadersGame {
 		this.clearCanvas();
 		this.drawBackground();
 		this.drawEntities();
-		this.drawFrameRate();
 		this.debugInfo();
 	}
 
@@ -115,14 +114,15 @@ export class SpaceInvadersGame {
 		this.entityManager.allEntites().forEach((entity: Entity) => entity.draw());
 	}
 
-	private drawFrameRate(): void {
-		this.p.text(Math.round(this.p.frameRate()), 5, 50);
-	}
-
 	private debugInfo(): void {
 		const debugMessages = [
-			'typing in chat: ' + this.isTypingInChat(),
-			'shouldHandleDevCommand: ' + this.inputHandler.shouldHandleDevCommand(this.lastTime)
+			'FPS: ' + Math.round(this.p.frameRate()),
+			'Chatting: ' + this.isTypingInChat(),
+			'Dev command: ' + this.inputHandler.shouldHandleDevCommand(this.lastTime),
+			'Last dev cmd time: ' + this.inputHandler.getLastDevCommandTime(),
+			'Debug: ' + DebugManager.debugMode,
+			'Frame: ' + this.fpsManager.getFrameCount(),
+			'IGT: ' + Math.trunc(this.fpsManager.getInGameTime() / 1000)
 		];
 
 		this.displayDebugInfo(debugMessages);

@@ -35,13 +35,14 @@ export class InputHandler {
 		this.lastDevCommandTime = timestamp;
 	}
 
-	private getLastDevCommandTime() {
+	// TODO: set to private
+	public getLastDevCommandTime() {
 		return this.lastDevCommandTime;
 	}
 
 	// Switch back to private after debugging
 	public shouldHandleDevCommand(timestamp: number): boolean {
-		return timestamp - this.getLastDevCommandTime() > 200;
+		return timestamp - this.getLastDevCommandTime() > 2000;
 	}
 
 	public handleInputWhileTyping() {
@@ -71,7 +72,6 @@ export class InputHandler {
 		}
 
 		if ((this.keyPresses['p'] || this.keyPresses['P']) && this.shouldHandleDevCommand(timestamp)) {
-			console.log('Spawning rock boss');
 			this.setLastDevCommandTime(timestamp);
 			this.devConsole.handleCommand('spawn 1 100 100 0');
 			return;
