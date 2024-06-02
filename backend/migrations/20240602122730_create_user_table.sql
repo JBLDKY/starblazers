@@ -1,10 +1,10 @@
 -- Add migration script here
-CREATE TABLE IF NOT EXISTS players (
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    games_played INTEGER DEFAULT 0,
+    uuid VARCHAR(255) NOT NULL,
     authority VARCHAR(255) NOT NULL DEFAULT 'user'
 );

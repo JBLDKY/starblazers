@@ -11,14 +11,21 @@ pub struct DatabaseError(pub sqlx::Error);
 impl Reject for DatabaseError {}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct Player {
+pub struct User {
     pub id: Option<i32>,
     pub email: String,
     pub username: String,
     pub password: String,
     pub creation_date: Option<chrono::NaiveDateTime>,
+    pub uuid: Option<String>,
+    pub authority: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct Player {
+    pub id: Option<i32>,
+    pub uuid: String,
     pub games_played: Option<i32>,
-    pub authority: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,15 +51,11 @@ impl fmt::Display for LoginMethod {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PasswordRecord {
-    pub password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct UserRecord {
     pub email: String,
     pub password: String,
     pub username: String,
+    pub uuid: String,
     pub authority: String,
 }
 

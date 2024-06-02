@@ -37,3 +37,8 @@ rand = "0.8.5"
 argon2 = "0.5.3"
 jsonwebtoken = "9.3.0"
 email_address = "0.2.4"
+uuid = { version = "1.8.0", features = [
+	"v4",                # Lets you generate random UUIDs
+	"fast-rng",          # Use a faster (but still sufficiently random) RNG
+	"macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+	]}
