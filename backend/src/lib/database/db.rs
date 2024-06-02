@@ -1,8 +1,7 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::TimeDelta;
 use email_address::EmailAddress;
-use jsonwebtoken::{encode, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -236,8 +235,19 @@ fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors
     )
 }
 
+pub fn decode_jwt(jwt: &str) -> Result<TokenData<Claims>, anyhow::Error> {
+    let secret = get_jwt_secret();
+
+    decode::<Claims>(
+        jwt,
+        &DecodingKey::from_secret(&secret),
+        &Validation::default(),
+    )
+    .map_err(|e| anyhow!(e))
+}
+
 #[inline]
-fn get_jwt_secret() -> Vec<u8> {
+pub fn get_jwt_secret() -> Vec<u8> {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is not set");
     secret.as_bytes().to_vec()
 }

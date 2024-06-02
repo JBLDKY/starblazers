@@ -1,17 +1,13 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use crate::types::{Claims, DatabaseError, LoginDetails, Player, User};
+use crate::database::db::decode_jwt;
+use crate::types::{DatabaseError, LoginDetails, Player, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
     websocket::{user_connected, Users, INDEX_HTML},
 };
-use chrono::TimeDelta;
-use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::reject::Rejection;
-use warp::{http::header::HeaderValue, Filter, Reply};
+use warp::{http::header::HeaderValue, http::Response, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
@@ -212,30 +208,24 @@ fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Reje
 async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::Rejection> {
     let jwt: &str = header_value.to_str().map_err(|_| warp::reject())?;
 
-    let token_message = decode::<Claims>(
-        jwt,
-        &DecodingKey::from_secret("secret".as_ref()),
-        &Validation::new(jsonwebtoken::Algorithm::HS256),
-    )
-    .ok();
-    // start debug
-    println!("{:?}", token_message);
-    //.unwrap()
-    //.claims;
-    let token_message = token_message.unwrap().claims;
-    // end debug
-    let now = chrono::Utc::now().timestamp();
-    if token_message.exp > now {
-        Ok(warp::reply::with_status(
-            warp::reply::json(&json!({})),
-            warp::http::StatusCode::UNAUTHORIZED,
-        ))
-    } else if token_message.exp <= now {
-        Ok(warp::reply::with_status(
-            warp::reply::json(&json!({})),
-            warp::http::StatusCode::OK,
-        ))
-    } else {
-        Err(warp::reject::reject())
+    match decode_jwt(jwt) {
+        Ok(_) => {
+            // TODO: Maybe add the succesful login to the database?
+            let response = Response::builder()
+                .header("Authorization", jwt)
+                .status(StatusCode::OK)
+                .body("");
+
+            Ok(response)
+        }
+        Err(e) => {
+            log::error!("Error validating jwt: {}", e);
+            // TODO: If expired, maybe send a new token?
+            let response = Response::builder()
+                .status(StatusCode::UNAUTHORIZED)
+                .body("");
+
+            Ok(response)
+        }
     }
 }
