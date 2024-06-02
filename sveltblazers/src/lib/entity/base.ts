@@ -13,7 +13,6 @@ const keyToVectorMap = {
 
 export abstract class Entity {
 	protected p: p5;
-	protected bullets: Bullet[] = [];
 	abstract entityKind: EntityIndex;
 
 	private id: number = -1; // The EntityManager should generate a unique ID for the entity
@@ -76,7 +75,7 @@ export abstract class Entity {
 
 		this.p.textSize(10);
 		this.p.text(
-			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nbullets: ${this.bullets.length}\nspeed: ${this.speed}`,
+			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nspeed: ${this.speed}`,
 			this.position.x + shape.dimensions.width,
 			this.position.y + shape.dimensions.height
 		);
@@ -90,6 +89,7 @@ export abstract class Entity {
 
 	move(keyPresses: Record<string, boolean>): void {
 		const movement = { x: 0, y: 0 };
+		console.log(keyPresses);
 		Object.entries(keyToVectorMap).forEach(([key, vector]) => {
 			if (keyPresses[key]) {
 				movement.x += vector.x;

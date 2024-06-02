@@ -23,7 +23,7 @@ export class Bullet extends Entity {
 	) {
 		super(p, position, speed);
 		this.yVelocity = 1;
-		this.direction = up ? 1 : -1;
+		this.direction = up ? -1 : 1;
 		this.color = color;
 		this.shooterId = shooterId;
 	}

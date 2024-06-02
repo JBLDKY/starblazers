@@ -6,6 +6,7 @@ import { Colors } from '../assets/color';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
 import type { Shooter } from './shooter';
+import { EntityEvent } from '$lib/system/entities/entity_event_handler';
 
 export class Player extends Entity implements Shooter {
 	entityKind: EntityIndex = EntityIndex.Player;
@@ -24,7 +25,8 @@ export class Player extends Entity implements Shooter {
 	}
 
 	update() {
-		if (this.bullets.length < this.maxBullets && this.cycles % this.fireRate == 0) {
+		const bullets = this.getBullets();
+		if (bullets.length < this.maxBullets) {
 			this.fire();
 		}
 
@@ -32,8 +34,6 @@ export class Player extends Entity implements Shooter {
 		this.position.y = Math.max(0, Math.min(this.position.y, this.p.height));
 
 		this.cycles += 1;
-
-		this.bullets.forEach((bullet) => bullet.update());
 	}
 
 	draw(): void {
@@ -50,8 +50,6 @@ export class Player extends Entity implements Shooter {
 			this.position.y + 20
 		);
 
-		this.bullets.forEach((bullet) => bullet.draw());
-
 		if (DebugManager.debugMode) {
 			this.drawDebug();
 		}
@@ -61,11 +59,18 @@ export class Player extends Entity implements Shooter {
 		return { pos: this.position, dimensions: { width: this.width, height: this.height } };
 	}
 
-	fire(): Bullet {
-		return this.newBullet();
+	fire(): void {
+		this.getEntityManager().notify(this, EntityEvent.Fire);
 	}
 
 	newBullet(): Bullet {
-		return new Bullet(this.p, this.position, 1, true, 'pink', this.getId());
+		return new Bullet(
+			this.p,
+			{ x: this.position.x, y: this.position.y },
+			1,
+			true,
+			'pink',
+			this.getId()
+		);
 	}
 }
