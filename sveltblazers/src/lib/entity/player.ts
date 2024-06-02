@@ -23,10 +23,6 @@ export class Player extends Entity implements Shooter {
 		this.uuid = uuid;
 	}
 
-	shape(): Rectangle {
-		return { pos: this.position, dimensions: { width: this.width, height: this.height } };
-	}
-
 	update() {
 		if (this.bullets.length < this.maxBullets && this.cycles % this.fireRate == 0) {
 			this.fire();
@@ -40,9 +36,6 @@ export class Player extends Entity implements Shooter {
 		this.bullets.forEach((bullet) => bullet.update());
 	}
 
-	public newBullet(): Bullet {
-		return new Bullet(this.p, this.position, 1, true, 'pink', this.getId());
-	}
 	draw(): void {
 		// Set the fill color
 		this.p.fill(Colors.PRIMARY);
@@ -64,7 +57,15 @@ export class Player extends Entity implements Shooter {
 		}
 	}
 
+	shape(): Rectangle {
+		return { pos: this.position, dimensions: { width: this.width, height: this.height } };
+	}
+
 	fire(): Bullet {
 		return this.newBullet();
+	}
+
+	public newBullet(): Bullet {
+		return new Bullet(this.p, this.position, 1, true, 'pink', this.getId());
 	}
 }
