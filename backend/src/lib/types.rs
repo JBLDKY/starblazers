@@ -10,6 +10,15 @@ pub struct DatabaseError(pub sqlx::Error);
 
 impl Reject for DatabaseError {}
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String,
+    pub exp: i64,
+    pub username: String,
+    pub authority_level: String,
+    pub uuid: String,
+}
+
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct User {
     pub id: Option<i32>,

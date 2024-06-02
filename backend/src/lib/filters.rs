@@ -1,13 +1,17 @@
-use crate::cookie::Cookie;
-use crate::types::{DatabaseError, LoginDetails, Player, User};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::types::{Claims, DatabaseError, LoginDetails, Player, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
     websocket::{user_connected, Users, INDEX_HTML},
 };
+use chrono::TimeDelta;
+use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::{Filter, Reply};
+use warp::reject::Rejection;
+use warp::{http::header::HeaderValue, Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
@@ -41,6 +45,7 @@ pub fn all(
         .or(login(db.clone()))
         .or(hello_world())
         .or(sign_up(db.clone()))
+        .or(verify_jwt())
         .with(cors)
 }
 
@@ -183,18 +188,54 @@ async fn handle_login(
         Ok(jwt) => {
             log::info!("Logged in!");
 
-            let mut cookie = Cookie::new("jwt".to_string(), jwt.clone());
-
-            cookie.set_max_age(3600).set_secure(false);
             Ok(warp::reply::with_header(
-                warp::reply::json(&json!({ "message": "Logged in", "jwt" : jwt })),
-                "Set-Cookie",
-                cookie.to_string(),
+                warp::reply::json(&json!({})),
+                "Authorization",
+                "Bearer ".to_owned() + &jwt,
             ))
         }
         Err(e) => {
             log::error!("Error during login: {}", e);
             Err(warp::reject::custom(e))
         }
+    }
+}
+
+/// POST /auth/verify_jwt
+fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("auth" / "verify_jwt")
+        .and(warp::post())
+        .and(warp::header::value("authorization"))
+        .and_then(verify_jwt_code)
+}
+
+async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::Rejection> {
+    let jwt: &str = header_value.to_str().map_err(|_| warp::reject())?;
+
+    let token_message = decode::<Claims>(
+        jwt,
+        &DecodingKey::from_secret("secret".as_ref()),
+        &Validation::new(jsonwebtoken::Algorithm::HS256),
+    )
+    .ok();
+    // start debug
+    println!("{:?}", token_message);
+    //.unwrap()
+    //.claims;
+    let token_message = token_message.unwrap().claims;
+    // end debug
+    let now = chrono::Utc::now().timestamp();
+    if token_message.exp > now {
+        Ok(warp::reply::with_status(
+            warp::reply::json(&json!({})),
+            warp::http::StatusCode::UNAUTHORIZED,
+        ))
+    } else if token_message.exp <= now {
+        Ok(warp::reply::with_status(
+            warp::reply::json(&json!({})),
+            warp::http::StatusCode::OK,
+        ))
+    } else {
+        Err(warp::reject::reject())
     }
 }

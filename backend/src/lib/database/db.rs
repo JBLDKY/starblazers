@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{
     database::queries::Table,
-    types::{LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
+    types::{Claims, LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
 };
 use sqlx::{postgres::PgPool, Postgres, Transaction};
 
@@ -212,15 +212,6 @@ impl DatabaseClient {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,
-    exp: usize,
-    username: String,
-    authority_level: String,
-    uuid: String,
-}
-
 /// Returns a result containing a JWT or an error
 fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = chrono::Utc::now()
@@ -230,7 +221,7 @@ fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors
 
     let claims = Claims {
         sub: user_details.email,
-        exp: expiration as usize,
+        exp: expiration,
         username: user_details.username,
         authority_level: user_details.authority, // level of authorization that user has
         uuid: user_details.uuid,                 // unique uuid for this player
