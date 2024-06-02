@@ -1,5 +1,5 @@
 use crate::cookie::Cookie;
-use crate::types::{DatabaseError, LoginDetails, Player};
+use crate::types::{DatabaseError, LoginDetails, Player, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
@@ -36,7 +36,7 @@ pub fn all(
     index()
         .or(chat())
         .or(players_all(db.clone()))
-        .or(players_create(db.clone()))
+        .or(users_all(db.clone()))
         .or(database_resettable(db.clone()))
         .or(login(db.clone()))
         .or(hello_world())
@@ -49,21 +49,20 @@ fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::I
     warp::any().map(move || db.clone())
 }
 
-/// POST /v2/auth/signup -> Returns TODO
+/// POST /auth/signup -> Returns TODO
 fn sign_up(
     db: ArcDb,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("v2" / "auth" / "signup")
+    warp::path!("auth" / "signup")
         .and(warp::post())
         .and(json_body())
         .and(with_db(db))
-        .and_then(register_player)
+        .and_then(register_user)
 }
 
-async fn register_player(player: Player, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
-    println!("Hi!");
-    match db.create_player(&player).await {
-        Ok(_) => Ok(warp::reply::json(&json!({"message:": player.username}))),
+async fn register_user(user: User, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+    match db.create_user(&user).await {
+        Ok(_) => Ok(warp::reply::json(&json!({"message:": user.username}))),
         Err(e) => Err(warp::reject::custom(DatabaseError(e))),
     }
 }
@@ -107,6 +106,28 @@ async fn fetch_all_players(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
     }
 }
 
+/// GET /users/all -> Returns all users
+fn users_all(
+    db: ArcDb,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("users" / "all")
+        .and(warp::get())
+        .and(with_db(db))
+        .and_then(fetch_all_users)
+}
+
+/// Returns all users from the users table
+async fn fetch_all_users(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+    let result: Result<Vec<User>, sqlx::Error> = sqlx::query_as!(User, "SELECT * FROM users",)
+        .fetch_all(&db.pool)
+        .await;
+
+    match result {
+        Ok(users) => Ok(warp::reply::json(&json!(users))),
+        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+    }
+}
+
 /// GET /chat -> websocket upgrade
 fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     // Keep track of all connected users, key is usize, value
@@ -141,26 +162,6 @@ async fn reset_table(table: Table, db: ArcDb) -> Result<impl Reply, warp::Reject
         Ok(v) => Ok(warp::reply::json(
             &json!({"deleted_records": &v.rows_affected()}),
         )),
-        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
-    }
-}
-
-/// POST /players/create -> Create a new player
-fn players_create(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("players" / "create")
-        .and(warp::post())
-        .and(json_body())
-        .and(with_db(db))
-        .and_then(create_player)
-}
-
-async fn create_player(player: Player, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
-    log::info!("Received player: `{:#?}`.", &player);
-
-    match db.create_player(&player).await {
-        Ok(_) => Ok(warp::reply::json(&json!({"message:": player.username}))),
         Err(e) => Err(warp::reject::custom(DatabaseError(e))),
     }
 }

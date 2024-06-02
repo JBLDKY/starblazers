@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT email, username, password, authority FROM players WHERE email = $1",
+  "query": "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
   "describe": {
     "columns": [
       {
@@ -20,8 +20,13 @@
       },
       {
         "ordinal": 3,
+        "name": "uuid",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
         "name": "authority",
-        "type_info": "Text"
+        "type_info": "Varchar"
       }
     ],
     "parameters": {
@@ -33,8 +38,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "13bd5bac0a93dea4513f93e8fae45bbd000e07da8a5b00aafc74fa0d965893ec"
+  "hash": "123ece0d03cfed7c6ba301e51c3c92c7b1c55aeb315c154ae5f7f15e1e992162"
 }

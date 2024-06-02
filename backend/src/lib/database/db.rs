@@ -4,12 +4,13 @@ use email_address::EmailAddress;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::{
     database::queries::Table,
-    types::{LoginDetails, LoginError, LoginMethod, Player, SignupError, UserRecord},
+    types::{LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
 };
-use sqlx::postgres::PgPool;
+use sqlx::{postgres::PgPool, Postgres, Transaction};
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -78,28 +79,25 @@ impl DatabaseClient {
         sqlx::query(sql).execute(&self.pool).await
     }
 
-    /// Create a new player with the provided parameters
-    pub async fn create_player(
-        &self,
-        player: &Player,
-    ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
+    /// Create a new user with the provided parameters
+    pub async fn create_user(&self, user: &User) -> Result<(), sqlx::Error> {
         log::info!("Creating new account....");
-        let creation_date = if let Some(creation_date) = player.creation_date {
+        let creation_date = if let Some(creation_date) = user.creation_date {
             creation_date // Use the provided value if provided
         } else {
             chrono::Utc::now().naive_utc() // Default is the current time
         };
 
-        if !EmailAddress::is_valid(&player.email) {
+        if !EmailAddress::is_valid(&user.email) {
             return Err(SignupError::InvalidEmail)
                 .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
         }
 
-        let games_played = player.games_played.unwrap_or_default();
+        let games_played = 0;
 
-        let authority = &player.authority;
+        let authority = "user";
 
-        let hashed_password = hash_password(&player.password).map_err(|e| {
+        let hashed_password = hash_password(&user.password).map_err(|e| {
             log::error!("Failed to hash password: {}", e);
 
             // convert error so the return type
@@ -107,15 +105,31 @@ impl DatabaseClient {
             sqlx::Error::Configuration(e.to_string().into())
         })?;
 
-        sqlx::query("INSERT INTO players (email, username, password, creation_date, games_played, authority) VALUES ($1, $2, $3, $4, $5, $6)")
-            .bind(&player.email)
-            .bind(&player.username)
+        // generate UUID for player identification
+        let uuid = Uuid::new_v4();
+
+        // Transaction started so that both queries execute successfully for db commits to be
+        // created
+        let mut transaction: Transaction<'_, Postgres> = self.pool.begin().await?;
+
+        // entry for client
+        sqlx::query("INSERT INTO users (email, username, password, creation_date, uuid, authority) VALUES ($1, $2, $3, $4, $5, $6)")
+            .bind(&user.email)
+            .bind(&user.username)
             .bind(&hashed_password)
             .bind(creation_date)
-            .bind(games_played)
+            .bind(uuid.to_string())
             .bind(authority)
-            .execute(&self.pool)
-            .await
+            .execute(&mut *transaction)
+            .await?;
+        // entry for player specific information
+        sqlx::query("INSERT INTO players (uuid, games_played) VALUES ($1, $2)")
+            .bind(uuid.to_string())
+            .bind(games_played)
+            .execute(&mut *transaction)
+            .await?;
+        transaction.commit().await?; // finish successful transacation or error
+        Ok(())
     }
 
     /// Run the authentication process.
@@ -177,7 +191,7 @@ impl DatabaseClient {
             // obtain data using email
             LoginMethod::Email => sqlx::query_as!(
                 UserRecord,
-                "SELECT email, username, password, authority FROM players WHERE email = $1",
+                "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
                 login_details.email,
             )
             .fetch_one(&self.pool)
@@ -186,7 +200,7 @@ impl DatabaseClient {
             // obtain data using username
             LoginMethod::Username => sqlx::query_as!(
                 UserRecord,
-                "SELECT email, username, password, authority FROM players WHERE username = $1",
+                "SELECT email, username, password, uuid, authority FROM users WHERE username = $1",
                 login_details.username,
             )
             .fetch_one(&self.pool)
@@ -204,6 +218,7 @@ struct Claims {
     exp: usize,
     username: String,
     authority_level: String,
+    uuid: String,
 }
 
 /// Returns a result containing a JWT or an error
@@ -218,6 +233,7 @@ fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors
         exp: expiration as usize,
         username: user_details.username,
         authority_level: user_details.authority, // level of authorization that user has
+        uuid: user_details.uuid,                 // unique uuid for this player
     };
 
     let secret = get_jwt_secret();
