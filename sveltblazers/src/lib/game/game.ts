@@ -30,7 +30,6 @@ export class SpaceInvadersGame {
 	private websocket: WebSocketManager;
 	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
-	private lastTime: number = 0;
 	private user: User;
 	private state: GameState = GameState.MENU;
 	private currentMenu: BaseMenu | null;
@@ -51,7 +50,7 @@ export class SpaceInvadersGame {
 
 		this.user = new User('');
 		this.chatBox = new ChatBox(this.user, this.websocket);
-		this.fpsManager = new FPSManager(0);
+		this.fpsManager = new FPSManager();
 		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
 		this.inputHandler = new InputHandler(this, this.devConsole);
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
@@ -73,7 +72,7 @@ export class SpaceInvadersGame {
 		this.startWebsocket();
 
 		// Run gameloop through p
-		requestAnimationFrame(() => this.gameLoop(this.lastTime));
+		requestAnimationFrame(() => this.gameLoop(0));
 	}
 
 	/**
@@ -118,7 +117,7 @@ export class SpaceInvadersGame {
 		const debugMessages = [
 			'FPS: ' + Math.round(this.p.frameRate()),
 			'Chatting: ' + this.isTypingInChat(),
-			'Dev command: ' + this.inputHandler.shouldHandleDevCommand(this.lastTime),
+			'Dev command: ' + this.inputHandler.shouldHandleDevCommand(this.fpsManager.getInGameTime()),
 			'Last dev cmd time: ' + this.inputHandler.getLastDevCommandTime(),
 			'Debug: ' + DebugManager.debugMode,
 			'Frame: ' + this.fpsManager.getFrameCount(),
@@ -195,7 +194,9 @@ export class SpaceInvadersGame {
 	 * The main game loop. Updates game state and draws our background frames.
 	 */
 	private gameLoop(timestamp: number): void {
-		requestAnimationFrame((newTimestamp) => this.gameLoop(newTimestamp));
+		requestAnimationFrame((newTimestamp) => {
+			this.gameLoop(newTimestamp);
+		});
 
 		if (this.fpsManager.shouldDraw(timestamp)) {
 			switch (this.state) {

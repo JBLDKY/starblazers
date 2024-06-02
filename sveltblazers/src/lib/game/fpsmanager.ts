@@ -2,7 +2,7 @@
  * Manages the Frames Per Second (FPS) display and control for the game.
  */
 export class FPSManager {
-	private gameStartFrameTime: number;
+	private gameStartFrameTime: number = 0;
 	private lastFrameTime: number = 0;
 	private frameCount: number = 0;
 	private fpsDisplayTime: number = 0;
@@ -13,9 +13,7 @@ export class FPSManager {
 	/**
 	 * Creates an FPSManager instance.
 	 */
-	constructor(timestamp: number) {
-		this.gameStartFrameTime = timestamp;
-	}
+	constructor() {}
 
 	/**
 	 * Updates the frame count and calculates the FPS.
