@@ -221,21 +221,12 @@ async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::
     match decode_jwt(jwt) {
         Ok(_) => {
             // TODO: Maybe add the succesful login to the database?
-            let response = Response::builder()
-                .header("Authorization", jwt)
-                .status(StatusCode::OK)
-                .body("");
-
-            Ok(response)
+            Ok(StatusCode::OK)
         }
         Err(e) => {
             log::error!("Error validating jwt: {}", e);
-            // TODO: If expired, maybe send a new token?
-            let response = Response::builder()
-                .status(StatusCode::UNAUTHORIZED)
-                .body("");
 
-            Ok(response)
+            Ok(StatusCode::UNAUTHORIZED)
         }
     }
 }
