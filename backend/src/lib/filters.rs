@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use crate::claims::{Claims, TokenError};
 use crate::types::{DatabaseError, LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{
@@ -6,7 +8,7 @@ use crate::{
     websocket::{user_connected, Users, INDEX_HTML},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use warp::{http::header::HeaderValue, http::response::Builder, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
@@ -15,7 +17,7 @@ fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
     warp::body::content_length_limit(1024 * 16).and(warp::body::json())
 }
 
-/// Parse the authorization header into Claims
+/// Parses the authorization header into Claims
 fn with_decoded_jwt(header_value: HeaderValue) -> Result<Claims, TokenError> {
     Claims::from_header_value(header_value)
 }
@@ -227,7 +229,10 @@ async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::
     }
 }
 
-/// GET /players/player
+/// Creates the warp filter for the GET /players/player endpoint.
+///
+/// This filter extracts the authorization header, decodes it into claims, and retrieves player
+/// information based on those claims from the database.
 fn player_info(
     db: ArcDb,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
@@ -239,18 +244,47 @@ fn player_info(
         .and_then(get_player_info)
 }
 
+/// Retrieves player information based on the provided JWT in the header.
+///
+/// Returns a 401 status code if the JWT is invalid or expired.
+/// Returns a 404 status code if the user cannot be found in the database.
 async fn get_player_info(
     claims: Result<Claims, TokenError>,
     db: ArcDb,
 ) -> Result<impl Reply, warp::Rejection> {
-    let email = claims?.sub;
+    // Token is expired or otherwise invalid - 401
+    let (email, uuid) = match claims {
+        Ok(claims) => (claims.sub, claims.uuid),
+        Err(e) => {
+            log::info!("Invalid JWT attempted to access user information: {}", e);
+            return json_with_status(&json!({"error": "Unauthorized"}), StatusCode::UNAUTHORIZED);
+        }
+    };
 
-    let public_user: PublicUserRecord = db
+    let query_result = db
         .get_details_by_login_method(&LoginMethod::Email(email))
-        .await?
-        .into();
+        .await;
 
-    let response = warp::reply::json(&json!(public_user));
+    match query_result {
+        Ok(user_record) => {
+            // Happy path: Found the UserRecord and removed the password.
+            let public_user_record: PublicUserRecord = user_record.into();
+            json_with_status(&json!(public_user_record), StatusCode::OK)
+        }
+        Err(_) => {
+            // Could not find a user for this email in the database. Should not happen unless the
+            // token contains a faked email.
+            log::info!("Could not find user with UUID: {}", uuid);
+            json_with_status(&json!({"error": "User not found"}), StatusCode::NOT_FOUND)
+        }
+    }
+}
 
-    Ok(response)
+/// Constructs a JSON response with a specific status code.
+#[inline(always)]
+fn json_with_status(
+    json: &serde_json::Value,
+    status: StatusCode,
+) -> Result<warp::reply::WithStatus<warp::reply::Json>, warp::Rejection> {
+    Ok(warp::reply::with_status(warp::reply::json(json), status))
 }
