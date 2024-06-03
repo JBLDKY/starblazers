@@ -176,31 +176,34 @@ impl DatabaseClient {
     }
 
     /// Searches the database for a password matching the provided login method (email or username) , returns all detail
-    async fn get_details_by_login_method(
+    pub async fn get_details_by_login_method(
         &self,
         login_method: &LoginMethod,
     ) -> Result<UserRecord, LoginError> {
         let user_data = match login_method {
             // obtain data using email
-            LoginMethod::Email(email) => sqlx::query_as!(
-                UserRecord,
-                "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
-                email,
-            )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|_| LoginError::UserDoesntExist)?,
+            LoginMethod::Email(email) => {
+                sqlx::query_as!(
+                    UserRecord,
+                    "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
+                    email,
+                )
+                .fetch_one(&self.pool)
+                .await
+            }
+
             // obtain data using username
-            LoginMethod::Username(username) => sqlx::query_as!(
+            LoginMethod::Username(username) => {
+                sqlx::query_as!(
                 UserRecord,
                 "SELECT email, username, password, uuid, authority FROM users WHERE username = $1",
                 username,
             )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|_| LoginError::UserDoesntExist)?,
+                .fetch_one(&self.pool)
+                .await
+            }
         };
 
-        Ok(user_data)
+        user_data.map_err(|_| LoginError::UserDoesntExist)
     }
 }

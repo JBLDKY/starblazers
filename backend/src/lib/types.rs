@@ -60,6 +60,25 @@ pub struct UserRecord {
     pub authority: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PublicUserRecord {
+    pub email: String,
+    pub username: String,
+    pub uuid: String,
+    pub authority: String,
+}
+
+impl From<UserRecord> for PublicUserRecord {
+    fn from(user_record: UserRecord) -> PublicUserRecord {
+        PublicUserRecord {
+            email: user_record.email,
+            username: user_record.username,
+            uuid: user_record.uuid,
+            authority: user_record.authority,
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum SignupError {
     #[error("Username already in use")]

@@ -1,5 +1,5 @@
 use crate::claims::{Claims, TokenError};
-use crate::types::{DatabaseError, LoginDetails, Player, User};
+use crate::types::{DatabaseError, LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
@@ -7,7 +7,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
+use warp::{http::header::HeaderValue, http::response::Builder, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
@@ -243,5 +243,14 @@ async fn get_player_info(
     claims: Result<Claims, TokenError>,
     db: ArcDb,
 ) -> Result<impl Reply, warp::Rejection> {
-    Ok(StatusCode::INTERNAL_SERVER_ERROR)
+    let email = claims?.sub;
+
+    let public_user: PublicUserRecord = db
+        .get_details_by_login_method(&LoginMethod::Email(email))
+        .await?
+        .into();
+
+    let response = warp::reply::json(&json!(public_user));
+
+    Ok(response)
 }
