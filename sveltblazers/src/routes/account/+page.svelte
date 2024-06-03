@@ -22,6 +22,7 @@
 				console.log('JWT is valid');
 			} catch (error) {
 				console.error('Error checking JWT:', error);
+				toastStore.trigger({ message: 'Session expired' });
 				goto('/login');
 			}
 		}
