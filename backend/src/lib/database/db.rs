@@ -140,15 +140,13 @@ impl DatabaseClient {
         // Determine if username or password was used
         // Right now the Ok below is unused, only really checking the error
         let login_method = match (&login_details.email, &login_details.username) {
-            (Some(_email), _) => Ok(LoginMethod::Email),
-            (None, Some(_username)) => Ok(LoginMethod::Username),
+            (Some(email), _) => Ok(LoginMethod::Email(email.to_string())),
+            (None, Some(username)) => Ok(LoginMethod::Username(username.to_string())),
             (None, None) => Err(LoginError::MissingCredentials),
         }?;
 
         // Get user data
-        let user_details = self
-            .get_details_by_login_method(&login_method, login_details)
-            .await?;
+        let user_details = self.get_details_by_login_method(&login_method).await?;
 
         // Verify the password using Argon2
         let is_valid = verify_password(&user_details.password, &login_details.password);
@@ -181,23 +179,22 @@ impl DatabaseClient {
     async fn get_details_by_login_method(
         &self,
         login_method: &LoginMethod,
-        login_details: &LoginDetails,
     ) -> Result<UserRecord, LoginError> {
         let user_data = match login_method {
             // obtain data using email
-            LoginMethod::Email => sqlx::query_as!(
+            LoginMethod::Email(email) => sqlx::query_as!(
                 UserRecord,
                 "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
-                login_details.email,
+                email,
             )
             .fetch_one(&self.pool)
             .await
             .map_err(|_| LoginError::UserDoesntExist)?,
             // obtain data using username
-            LoginMethod::Username => sqlx::query_as!(
+            LoginMethod::Username(username) => sqlx::query_as!(
                 UserRecord,
                 "SELECT email, username, password, uuid, authority FROM users WHERE username = $1",
-                login_details.username,
+                username,
             )
             .fetch_one(&self.pool)
             .await

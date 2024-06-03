@@ -35,17 +35,18 @@ pub struct LoginDetails {
     pub password: String,
 }
 
+/// A login method enum constructed with the actual value for email or username
 #[derive(Serialize, Deserialize, Debug)]
 pub enum LoginMethod {
-    Email,
-    Username,
+    Email(String),
+    Username(String),
 }
 
 impl fmt::Display for LoginMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LoginMethod::Email => write!(f, "email"),
-            LoginMethod::Username => write!(f, "username"),
+            LoginMethod::Email(_) => write!(f, "email"),
+            LoginMethod::Username(_) => write!(f, "username"),
         }
     }
 }
