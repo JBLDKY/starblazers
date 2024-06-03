@@ -1,13 +1,12 @@
-use anyhow::{anyhow, Result};
-use chrono::TimeDelta;
+use anyhow::Result;
 use email_address::EmailAddress;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
+    claims::Claims,
     database::queries::Table,
-    types::{Claims, LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
+    types::{LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
 };
 use sqlx::{postgres::PgPool, Postgres, Transaction};
 
@@ -17,8 +16,6 @@ use argon2::{
 };
 
 pub type ArcDb = Arc<DatabaseClient>;
-
-const JWT_EXPIRY: std::option::Option<chrono::TimeDelta> = TimeDelta::try_minutes(30);
 
 #[derive(Clone)]
 pub struct DatabaseClient {
@@ -174,7 +171,7 @@ impl DatabaseClient {
 
         // Since we early return in the case of a wrong password,
         // we should create a JWT cuz the password seems valid
-        let jwt = generate_jwt(user_details);
+        let jwt = Claims::generate_jwt(user_details);
 
         // Convert the error to a LoginError
         jwt.map_err(|e| LoginError::Catchall(e.to_string()))
@@ -209,45 +206,4 @@ impl DatabaseClient {
 
         Ok(user_data)
     }
-}
-
-/// Returns a result containing a JWT or an error
-fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors::Error> {
-    let expiration = chrono::Utc::now()
-        .checked_add_signed(JWT_EXPIRY.expect("TimeDelta is none!"))
-        .expect("valid timestamp")
-        .timestamp();
-
-    let claims = Claims {
-        sub: user_details.email,
-        exp: expiration,
-        username: user_details.username,
-        authority_level: user_details.authority, // level of authorization that user has
-        uuid: user_details.uuid,                 // unique uuid for this player
-    };
-
-    let secret = get_jwt_secret();
-
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(&secret),
-    )
-}
-
-pub fn decode_jwt(jwt: &str) -> Result<TokenData<Claims>, anyhow::Error> {
-    let secret = get_jwt_secret();
-
-    decode::<Claims>(
-        jwt,
-        &DecodingKey::from_secret(&secret),
-        &Validation::default(),
-    )
-    .map_err(|e| anyhow!(e))
-}
-
-#[inline]
-pub fn get_jwt_secret() -> Vec<u8> {
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is not set");
-    secret.as_bytes().to_vec()
 }

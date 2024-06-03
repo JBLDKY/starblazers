@@ -1,5 +1,5 @@
-use crate::database::db::decode_jwt;
-use crate::types::{DatabaseError, LoginDetails, LoginError, Player, User};
+use crate::claims::{Claims, TokenError};
+use crate::types::{DatabaseError, LoginDetails, Player, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
@@ -13,6 +13,11 @@ use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 ) -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
     warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+}
+
+/// Parse the authorization header into Claims
+fn with_decoded_jwt(header_value: HeaderValue) -> Result<Claims, TokenError> {
+    Claims::from_header_value(header_value)
 }
 
 /// Returns all the current filters
@@ -209,18 +214,7 @@ fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Reje
 }
 
 async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::Rejection> {
-    let jwt: &str = header_value
-        .to_str()
-        .map_err(|_| warp::reject())?
-        .split(" ")
-        .last()
-        .ok_or_else(|| {
-            LoginError::InvalidInputSentByUser(
-                "Invalid token format: Is it prefixed by `Bearer `?".to_string(),
-            )
-        })?;
-
-    match decode_jwt(jwt) {
+    match Claims::from_header_value(header_value) {
         Ok(_) => {
             // TODO: Maybe add the succesful login to the database?
             Ok(StatusCode::OK)
@@ -240,20 +234,14 @@ fn player_info(
     warp::path!("players" / "player")
         .and(warp::get())
         .and(warp::header::value("authorization"))
-        .map(verify_jwt_code)
+        .map(with_decoded_jwt)
         .and(with_db(db))
         .and_then(get_player_info)
 }
 
 async fn get_player_info(
-    jwt_auth: impl futures_util::Future<Output = std::result::Result<impl warp::Reply, warp::Rejection>>,
+    claims: Result<Claims, TokenError>,
     db: ArcDb,
 ) -> Result<impl Reply, warp::Rejection> {
-    let jwt_is_valid = jwt_auth.await?.into_response();
-
-    if jwt_is_valid.status() != StatusCode::OK {
-        return Ok(jwt_is_valid.status());
-    }
-
     Ok(StatusCode::INTERNAL_SERVER_ERROR)
 }
