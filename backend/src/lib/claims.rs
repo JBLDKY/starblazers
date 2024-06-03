@@ -62,10 +62,10 @@ impl Claims {
             .map_err(|_| TokenError::ValueError)?
             .split(" ")
             .last()
-            .ok_or_else(|| TokenError::ParseError)?
+            .ok_or(TokenError::ParseError)?
             .to_string();
 
-        return Self::decode(&jwt_string);
+        Self::decode(&jwt_string)
     }
 
     /// Returns a result containing a JWT or an error
