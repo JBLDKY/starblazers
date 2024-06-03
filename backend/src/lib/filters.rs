@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use crate::claims::{Claims, TokenError};
 use crate::types::{DatabaseError, LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{
@@ -8,8 +6,8 @@ use crate::{
     websocket::{user_connected, Users, INDEX_HTML},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use warp::{http::header::HeaderValue, http::response::Builder, http::StatusCode, Filter, Reply};
+use serde_json::json;
+use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
