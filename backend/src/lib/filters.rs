@@ -22,6 +22,7 @@ fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 /// POST /database/resettable - database_resettable - Drop the provided table
 /// POST /auth/login - login - start authenticating the login request
 /// GET /helloworld - helloworld - for sanity checks / testing warp things
+/// GET /auth/verify_jwt
 ///
 pub fn all(
     db: ArcDb,
@@ -198,7 +199,7 @@ async fn handle_login(
     }
 }
 
-/// POST /auth/verify_jwt
+/// GET /auth/verify_jwt
 fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("auth" / "verify_jwt")
         .and(warp::get())
