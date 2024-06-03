@@ -7,10 +7,9 @@ export const validateJwt = async () => {
 
 	try {
 		const response = await fetch(VERIFY_JWT_SERVER_URL, {
-			method: 'POST',
+			method: 'GET',
 			mode: 'cors', // no-cors, *cors, same-origin
 			headers: {
-				'Content-Type': 'application/json',
 				Authorization: jwt
 			}
 		});

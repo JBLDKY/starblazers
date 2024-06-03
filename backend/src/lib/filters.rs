@@ -7,7 +7,7 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::{http::header::HeaderValue, http::Response, http::StatusCode, Filter, Reply};
+use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
@@ -201,7 +201,7 @@ async fn handle_login(
 /// POST /auth/verify_jwt
 fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("auth" / "verify_jwt")
-        .and(warp::post())
+        .and(warp::get())
         .and(warp::header::value("authorization"))
         .and_then(verify_jwt_code)
 }
