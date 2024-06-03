@@ -44,6 +44,7 @@ pub fn all(
         .or(hello_world())
         .or(sign_up(db.clone()))
         .or(verify_jwt())
+        .or(player_info(db.clone()))
         .with(cors)
 }
 
@@ -230,4 +231,29 @@ async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::
             Ok(StatusCode::UNAUTHORIZED)
         }
     }
+}
+
+/// GET /players/player
+fn player_info(
+    db: ArcDb,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("players" / "player")
+        .and(warp::get())
+        .and(warp::header::value("authorization"))
+        .map(verify_jwt_code)
+        .and(with_db(db))
+        .and_then(get_player_info)
+}
+
+async fn get_player_info(
+    jwt_auth: impl futures_util::Future<Output = std::result::Result<impl warp::Reply, warp::Rejection>>,
+    db: ArcDb,
+) -> Result<impl Reply, warp::Rejection> {
+    let jwt_is_valid = jwt_auth.await?.into_response();
+
+    if jwt_is_valid.status() != StatusCode::OK {
+        return Ok(jwt_is_valid.status());
+    }
+
+    Ok(StatusCode::INTERNAL_SERVER_ERROR)
 }
