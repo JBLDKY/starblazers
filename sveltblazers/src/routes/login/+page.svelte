@@ -2,7 +2,7 @@
 	import LoginForm from './loginForm.svelte';
 	import { writable, get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { ProgressRadial } from '@skeletonlabs/skeleton';
+	import { ProgressRadial, getToastStore } from '@skeletonlabs/skeleton';
 	import { jwtStore } from '../../store/auth';
 	import {
 		loginMessages,
@@ -12,6 +12,26 @@
 	} from '../../constants';
 	import { form_div_wrapper_tw, button_tw, result_text } from '../../tailwind_presets';
 	import RegisterForm from './registerForm.svelte';
+	import { validateJwt } from '../../hooks/withJwt';
+	import { onMount } from 'svelte';
+
+	const toastStore = getToastStore();
+	onMount(async () => {
+		// This is a protected page; login is required
+		// If this is not inside onMount(), it will raise an error that
+		// `goto()` cannot be called on the server
+		if (get(jwtStore) === undefined || get(jwtStore) == '') {
+			toastStore.trigger({ message: 'You are not logged in!' });
+			goto('/login');
+		} else {
+			try {
+				await validateJwt();
+				goto('/account');
+			} catch (error) {
+				console.log('Re-directing to log in because token is not valid');
+			}
+		}
+	});
 
 	async function test() {
 		try {
@@ -80,13 +100,15 @@
 		});
 		// Give user time to read funni msg
 		await delay(LOGIN_DELAY);
-		let text = await response.json();
 
-		jwtStore.set(text.jwt);
+		const jwt = response.headers.get('Authorization');
+		if (jwt === undefined || jwt === null) {
+			throw new Error('Did not receive jwt from server');
+		}
+		jwtStore.set(jwt);
 
 		// Upon succesful login, redirect to the account page
 		goto('/account');
-		return text;
 	}
 
 	function submitHandler() {
@@ -127,7 +149,7 @@
 				<div class={result_text}><span>{randomFunnyMessage}</span></div>
 			{:then value}
 				{#if $showLoginForm}
-					<div class={result_text}><span>{value.message}</span></div>
+					<div class={result_text}><span>{value}</span></div>
 				{:else}
 					<div class={result_text}>
 						<span>Welcome {username}, your ship is being readied.</span>

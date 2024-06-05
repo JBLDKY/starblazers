@@ -11,14 +11,21 @@ pub struct DatabaseError(pub sqlx::Error);
 impl Reject for DatabaseError {}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
-pub struct Player {
+pub struct User {
     pub id: Option<i32>,
     pub email: String,
     pub username: String,
     pub password: String,
     pub creation_date: Option<chrono::NaiveDateTime>,
+    pub uuid: Option<String>,
+    pub authority: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+pub struct Player {
+    pub id: Option<i32>,
+    pub uuid: String,
     pub games_played: Option<i32>,
-    pub authority: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -28,24 +35,20 @@ pub struct LoginDetails {
     pub password: String,
 }
 
+/// A login method enum constructed with the actual value for email or username
 #[derive(Serialize, Deserialize, Debug)]
 pub enum LoginMethod {
-    Email,
-    Username,
+    Email(String),
+    Username(String),
 }
 
 impl fmt::Display for LoginMethod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LoginMethod::Email => write!(f, "email"),
-            LoginMethod::Username => write!(f, "username"),
+            LoginMethod::Email(_) => write!(f, "email"),
+            LoginMethod::Username(_) => write!(f, "username"),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PasswordRecord {
-    pub password: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -53,7 +56,27 @@ pub struct UserRecord {
     pub email: String,
     pub password: String,
     pub username: String,
+    pub uuid: String,
     pub authority: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PublicUserRecord {
+    pub email: String,
+    pub username: String,
+    pub uuid: String,
+    pub authority: String,
+}
+
+impl From<UserRecord> for PublicUserRecord {
+    fn from(user_record: UserRecord) -> PublicUserRecord {
+        PublicUserRecord {
+            email: user_record.email,
+            username: user_record.username,
+            uuid: user_record.uuid,
+            authority: user_record.authority,
+        }
+    }
 }
 
 #[derive(Error, Debug)]
@@ -86,6 +109,9 @@ pub enum LoginError {
 
     #[error("Unhandled error occurred")]
     Unhandled,
+
+    #[error("User input does not match expect format because: {0}")]
+    InvalidInputSentByUser(String),
 
     #[error(transparent)]
     SqlError(#[from] sqlx::Error),

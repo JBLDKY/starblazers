@@ -1,5 +1,5 @@
-use crate::cookie::Cookie;
-use crate::types::{DatabaseError, LoginDetails, Player};
+use crate::claims::{Claims, TokenError};
+use crate::types::{DatabaseError, LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
@@ -7,12 +7,17 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use warp::{Filter, Reply};
+use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 ) -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
     warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+}
+
+/// Parses the authorization header into Claims
+fn with_decoded_jwt(header_value: HeaderValue) -> Result<Claims, TokenError> {
+    Claims::from_header_value(header_value)
 }
 
 /// Returns all the current filters
@@ -22,6 +27,7 @@ fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 /// POST /database/resettable - database_resettable - Drop the provided table
 /// POST /auth/login - login - start authenticating the login request
 /// GET /helloworld - helloworld - for sanity checks / testing warp things
+/// GET /auth/verify_jwt
 ///
 pub fn all(
     db: ArcDb,
@@ -31,16 +37,19 @@ pub fn all(
         .allow_credentials(true)
         .allow_headers(vec!["Content-Type", "*"])
         .allow_headers(vec!["Authorization", "*"])
+        .expose_header("Authorization") // TODO: is this safe?
         .allow_methods(vec!["GET", "POST", "PUT"]);
 
     index()
         .or(chat())
         .or(players_all(db.clone()))
-        .or(players_create(db.clone()))
+        .or(users_all(db.clone()))
         .or(database_resettable(db.clone()))
         .or(login(db.clone()))
         .or(hello_world())
         .or(sign_up(db.clone()))
+        .or(verify_jwt())
+        .or(player_info(db.clone()))
         .with(cors)
 }
 
@@ -49,21 +58,20 @@ fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::I
     warp::any().map(move || db.clone())
 }
 
-/// POST /v2/auth/signup -> Returns TODO
+/// POST /auth/signup -> Returns TODO
 fn sign_up(
     db: ArcDb,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("v2" / "auth" / "signup")
+    warp::path!("auth" / "signup")
         .and(warp::post())
         .and(json_body())
         .and(with_db(db))
-        .and_then(register_player)
+        .and_then(register_user)
 }
 
-async fn register_player(player: Player, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
-    println!("Hi!");
-    match db.create_player(&player).await {
-        Ok(_) => Ok(warp::reply::json(&json!({"message:": player.username}))),
+async fn register_user(user: User, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+    match db.create_user(&user).await {
+        Ok(_) => Ok(warp::reply::json(&json!({"message:": user.username}))),
         Err(e) => Err(warp::reject::custom(DatabaseError(e))),
     }
 }
@@ -107,6 +115,28 @@ async fn fetch_all_players(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
     }
 }
 
+/// GET /users/all -> Returns all users
+fn users_all(
+    db: ArcDb,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("users" / "all")
+        .and(warp::get())
+        .and(with_db(db))
+        .and_then(fetch_all_users)
+}
+
+/// Returns all users from the users table
+async fn fetch_all_users(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+    let result: Result<Vec<User>, sqlx::Error> = sqlx::query_as!(User, "SELECT * FROM users",)
+        .fetch_all(&db.pool)
+        .await;
+
+    match result {
+        Ok(users) => Ok(warp::reply::json(&json!(users))),
+        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+    }
+}
+
 /// GET /chat -> websocket upgrade
 fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     // Keep track of all connected users, key is usize, value
@@ -145,26 +175,6 @@ async fn reset_table(table: Table, db: ArcDb) -> Result<impl Reply, warp::Reject
     }
 }
 
-/// POST /players/create -> Create a new player
-fn players_create(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("players" / "create")
-        .and(warp::post())
-        .and(json_body())
-        .and(with_db(db))
-        .and_then(create_player)
-}
-
-async fn create_player(player: Player, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
-    log::info!("Received player: `{:#?}`.", &player);
-
-    match db.create_player(&player).await {
-        Ok(_) => Ok(warp::reply::json(&json!({"message:": player.username}))),
-        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
-    }
-}
-
 /// POST /auth/login -> Try to login
 fn login(db: ArcDb) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("auth" / "login")
@@ -182,13 +192,10 @@ async fn handle_login(
         Ok(jwt) => {
             log::info!("Logged in!");
 
-            let mut cookie = Cookie::new("jwt".to_string(), jwt.clone());
-
-            cookie.set_max_age(3600).set_secure(false);
             Ok(warp::reply::with_header(
-                warp::reply::json(&json!({ "message": "Logged in", "jwt" : jwt })),
-                "Set-Cookie",
-                cookie.to_string(),
+                warp::reply::json(&json!({})),
+                "Authorization",
+                "Bearer ".to_owned() + &jwt,
             ))
         }
         Err(e) => {
@@ -196,4 +203,86 @@ async fn handle_login(
             Err(warp::reject::custom(e))
         }
     }
+}
+
+/// GET /auth/verify_jwt
+fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("auth" / "verify_jwt")
+        .and(warp::get())
+        .and(warp::header::value("authorization"))
+        .and_then(verify_jwt_code)
+}
+
+async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::Rejection> {
+    match Claims::from_header_value(header_value) {
+        Ok(_) => {
+            // TODO: Maybe add the succesful login to the database?
+            Ok(StatusCode::OK)
+        }
+        Err(e) => {
+            log::error!("Error validating jwt: {}", e);
+
+            Ok(StatusCode::UNAUTHORIZED)
+        }
+    }
+}
+
+/// Creates the warp filter for the GET /players/player endpoint.
+///
+/// This filter extracts the authorization header, decodes it into claims, and retrieves player
+/// information based on those claims from the database.
+fn player_info(
+    db: ArcDb,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("players" / "player")
+        .and(warp::get())
+        .and(warp::header::value("authorization"))
+        .map(with_decoded_jwt)
+        .and(with_db(db))
+        .and_then(get_player_info)
+}
+
+/// Retrieves player information based on the provided JWT in the header.
+///
+/// Returns a 401 status code if the JWT is invalid or expired.
+/// Returns a 404 status code if the user cannot be found in the database.
+async fn get_player_info(
+    claims: Result<Claims, TokenError>,
+    db: ArcDb,
+) -> Result<impl Reply, warp::Rejection> {
+    // Token is expired or otherwise invalid - 401
+    let (email, uuid) = match claims {
+        Ok(claims) => (claims.sub, claims.uuid),
+        Err(e) => {
+            log::info!("Invalid JWT attempted to access user information: {}", e);
+            return json_with_status(&json!({"error": "Unauthorized"}), StatusCode::UNAUTHORIZED);
+        }
+    };
+
+    let query_result = db
+        .get_details_by_login_method(&LoginMethod::Email(email))
+        .await;
+
+    match query_result {
+        Ok(user_record) => {
+            // Happy path: Found the UserRecord and removed the password.
+            let public_user_record: PublicUserRecord = user_record.into();
+            json_with_status(&json!(public_user_record), StatusCode::OK)
+        }
+        Err(_) => {
+            // Could not find a user for this email in the database. Should not happen unless the
+            // token contains a faked email.
+            log::info!("Could not find user with UUID: {}", uuid);
+            json_with_status(&json!({"error": "User not found"}), StatusCode::NOT_FOUND)
+        }
+    }
+}
+
+/// Constructs a JSON response with a specific status code.
+#[inline(always)]
+fn json_with_status(
+    json: &serde_json::Value,
+    status: StatusCode,
+) -> Result<warp::reply::WithStatus<warp::reply::Json>, warp::Rejection> {
+    Ok(warp::reply::with_status(warp::reply::json(json), status))
 }

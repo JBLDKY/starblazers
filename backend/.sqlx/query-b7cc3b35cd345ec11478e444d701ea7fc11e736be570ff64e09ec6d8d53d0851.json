@@ -10,33 +10,13 @@
       },
       {
         "ordinal": 1,
-        "name": "email",
+        "name": "uuid",
         "type_info": "Varchar"
       },
       {
         "ordinal": 2,
-        "name": "username",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 3,
-        "name": "password",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 4,
-        "name": "creation_date",
-        "type_info": "Timestamp"
-      },
-      {
-        "ordinal": 5,
         "name": "games_played",
         "type_info": "Int4"
-      },
-      {
-        "ordinal": 6,
-        "name": "authority",
-        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -45,11 +25,7 @@
     "nullable": [
       false,
       false,
-      false,
-      false,
-      false,
-      true,
-      false
+      true
     ]
   },
   "hash": "b7cc3b35cd345ec11478e444d701ea7fc11e736be570ff64e09ec6d8d53d0851"

@@ -7,18 +7,30 @@
 	import { goto } from '$app/navigation';
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import ChatBox from './ChatBox.svelte';
+	import { validateJwt } from '../../hooks/withJwt';
 
 	const toastStore = getToastStore();
 	let spaceInvadersGame: SpaceInvadersGame;
 
-	onMount(() => {
+	onMount(async () => {
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
-		// `goto()` cannot be called on the server.
+		// `goto()` cannot be called on the server
 		if (get(jwtStore) === undefined || get(jwtStore) == '') {
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
+		} else {
+			try {
+				await validateJwt();
+				console.log('JWT is valid');
+			} catch (error) {
+				console.error('Error checking JWT:', error);
+				toastStore.trigger({ message: 'Session expired' });
+				goto('/login');
+			}
 		}
+
+		// FIXME: Event if this fails, the game loads and actually creates a websocket connection
 	});
 
 	const sketch: Sketch = (p) => {
