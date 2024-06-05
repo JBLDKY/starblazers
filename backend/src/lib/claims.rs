@@ -60,7 +60,7 @@ impl Claims {
         let jwt_string = header_value
             .to_str()
             .map_err(|_| TokenError::ValueError)?
-            .split(" ")
+            .split(' ')
             .last()
             .ok_or(TokenError::ParseError)?
             .to_string();
