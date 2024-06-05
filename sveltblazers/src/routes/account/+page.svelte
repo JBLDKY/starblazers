@@ -6,8 +6,10 @@
 	import { validateJwt } from '../../hooks/withJwt';
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import { jwtStore } from '../../store/auth';
+	import { account_page_input_field } from '../../tailwind_presets';
 
 	const toastStore = getToastStore();
+	let player_info: object = get_player_info();
 
 	onMount(async () => {
 		// This is a protected page; login is required
@@ -28,6 +30,21 @@
 		}
 	});
 
+	async function get_player_info(): Promise<object> {
+		const res = await fetch('http://localhost:3030/players/player', {
+			method: 'GET',
+			headers: {
+				authorization: get(jwtStore)
+			}
+		});
+
+		if (res.ok) {
+			return res.json();
+		} else {
+			throw new Error(await res.text());
+		}
+	}
+
 	let listBoxValue: string = 'account';
 </script>
 
@@ -44,25 +61,41 @@
 	</div>
 
 	<div class="flex-1 p-8">
-		{#if listBoxValue === 'account'}
-			<div class="flex-1 space-y-4">
-				<label class="flex items-center">
-					<span class="block w-1/3 text-sm font-medium text-tertiary-500">Username:</span>
-					<input
-						type="text"
-						class="placeholder-opacity-400 flex-2 w-400 rounded-md bg-tertiary-500 px-3 py-2 text-primary-700 placeholder-primary-600 focus:border-primary-500 focus:bg-tertiary-600 focus:outline-1 focus:outline-secondary-900 focus:ring-primary-500"
-						placeholder="<PLAYER USERNAME>"
-					/>
-				</label>
+		{#await player_info}
+			<div class="ml-1/2 mr-1/2 absolute mb-40"></div>
+		{:then player_info}
+			{#if listBoxValue === 'account'}
+				<div class="flex-1 space-y-4">
+					<label class="flex items-center">
+						<span class="block w-1/3 text-sm font-medium text-tertiary-500">Username: </span>
+						<input type="text" class={account_page_input_field} value={player_info['username']} />
+					</label>
+					<label class="flex items-center">
+						<span class="block w-1/3 text-sm font-medium text-tertiary-500">Authority: </span>
+						<input type="text" class={account_page_input_field} value={player_info['authority']} />
+					</label>
+					<label class="flex items-center">
+						<span class="block w-1/3 text-sm font-medium text-tertiary-500">Email: </span>
+						<input type="text" class={account_page_input_field} value={player_info['email']} />
+					</label>
+					<label class="flex items-center">
+						<span class="block w-1/3 text-sm font-medium text-tertiary-500">uuid: </span>
+						<input type="text" class={account_page_input_field} value={player_info['uuid']} />
+					</label>
+				</div>
+			{:else if listBoxValue === 'privacy'}
+				<div>Privacy Settings</div>
+			{:else if listBoxValue === 'security'}
+				<div>Security Settings</div>
+			{:else if listBoxValue === 'game'}
+				<div>Game Settings</div>
+			{:else if listBoxValue === 'stats'}
+				<div>Stats</div>
+			{/if}
+		{:catch error}
+			<div>
+				<span>Could not authenticate: {error.message} </span>
 			</div>
-		{:else if listBoxValue === 'privacy'}
-			<div>Privacy Settings</div>
-		{:else if listBoxValue === 'security'}
-			<div>Security Settings</div>
-		{:else if listBoxValue === 'game'}
-			<div>Game Settings</div>
-		{:else if listBoxValue === 'stats'}
-			<div>Stats</div>
-		{/if}
+		{/await}
 	</div>
 </div>
