@@ -130,6 +130,7 @@ export class SpaceInvadersGame {
 	private displayDebugInfo(messages: string[]): void {
 		let yPos = 400;
 		this.p.textSize(10);
+		this.p.fill('white');
 		for (const message of messages) {
 			this.p.text(message, 50, yPos);
 			yPos += 10;
