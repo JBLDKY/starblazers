@@ -64,11 +64,7 @@ export class slowStraightShootingAlien extends Entity implements Shooter {
 			this.moveDown = true;
 		}
 
-		if (
-			this.bullets.length < this.maxBullets &&
-			this.cycle % this.fireRate == 0 &&
-			Math.random() < 1
-		) {
+		if (this.cycle % this.fireRate == 0 && Math.random() < 1) {
 			this.fire();
 		}
 
@@ -77,7 +73,6 @@ export class slowStraightShootingAlien extends Entity implements Shooter {
 
 	draw() {
 		this.p.image(this.image, this.position.x, this.position.y);
-		this.bullets.forEach((bullet) => bullet.draw());
 
 		if (DebugManager.debugMode) {
 			this.drawDebug();

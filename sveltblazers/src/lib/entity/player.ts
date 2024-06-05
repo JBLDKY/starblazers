@@ -67,7 +67,7 @@ export class Player extends Entity implements Shooter {
 		return new Bullet(
 			this.p,
 			{ x: this.position.x, y: this.position.y },
-			1,
+			10,
 			true,
 			'pink',
 			this.getId()
