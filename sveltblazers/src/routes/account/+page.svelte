@@ -8,8 +8,15 @@
 	import { jwtStore } from '../../store/auth';
 	import { account_page_input_field } from '../../tailwind_presets';
 
+	interface PublicPlayerData {
+		authority: string;
+		email: string;
+		username: string;
+		uuid: string;
+	}
+
 	const toastStore = getToastStore();
-	let player_info: object = get_player_info();
+	let player_info: Promise<PublicPlayerData> = get_player_info();
 
 	onMount(async () => {
 		// This is a protected page; login is required
@@ -30,7 +37,7 @@
 		}
 	});
 
-	async function get_player_info(): Promise<object> {
+	async function get_player_info(): Promise<PublicPlayerData> {
 		const res = await fetch('http://localhost:3030/players/player', {
 			method: 'GET',
 			headers: {
