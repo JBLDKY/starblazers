@@ -89,19 +89,20 @@ export class MainMenu extends BaseMenu {
 
 		if (cachedKeyPresses['Enter']) {
 			cachedKeyPresses['Enter'] = false;
+
 			const selected = this.navigator.currentItem();
 			if (selected != null) {
 				return selected.getLabel();
-			} else {
-				console.error(
-					'selected an empty menu item at index: ',
-					this.index,
-					' available range: ',
-					0,
-					' ',
-					this.items.length - 1
-				);
 			}
+
+			console.error(
+				'selected an empty menu item at index: ',
+				this.index,
+				' available range: ',
+				0,
+				' ',
+				this.items.length - 1
+			);
 		}
 
 		return '';
