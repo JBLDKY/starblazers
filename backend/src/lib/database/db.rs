@@ -1,12 +1,10 @@
 use anyhow::Result;
-use chrono::TimeDelta;
 use email_address::EmailAddress;
-use jsonwebtoken::{encode, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{
+    claims::Claims,
     database::queries::Table,
     types::{LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
 };
@@ -18,8 +16,6 @@ use argon2::{
 };
 
 pub type ArcDb = Arc<DatabaseClient>;
-
-const JWT_EXPIRY: std::option::Option<chrono::TimeDelta> = TimeDelta::try_minutes(30);
 
 #[derive(Clone)]
 pub struct DatabaseClient {
@@ -144,15 +140,13 @@ impl DatabaseClient {
         // Determine if username or password was used
         // Right now the Ok below is unused, only really checking the error
         let login_method = match (&login_details.email, &login_details.username) {
-            (Some(_email), _) => Ok(LoginMethod::Email),
-            (None, Some(_username)) => Ok(LoginMethod::Username),
+            (Some(email), _) => Ok(LoginMethod::Email(email.to_string())),
+            (None, Some(username)) => Ok(LoginMethod::Username(username.to_string())),
             (None, None) => Err(LoginError::MissingCredentials),
         }?;
 
         // Get user data
-        let user_details = self
-            .get_details_by_login_method(&login_method, login_details)
-            .await?;
+        let user_details = self.get_details_by_login_method(&login_method).await?;
 
         // Verify the password using Argon2
         let is_valid = verify_password(&user_details.password, &login_details.password);
@@ -175,78 +169,41 @@ impl DatabaseClient {
 
         // Since we early return in the case of a wrong password,
         // we should create a JWT cuz the password seems valid
-        let jwt = generate_jwt(user_details);
+        let jwt = Claims::generate_jwt(user_details);
 
         // Convert the error to a LoginError
         jwt.map_err(|e| LoginError::Catchall(e.to_string()))
     }
 
     /// Searches the database for a password matching the provided login method (email or username) , returns all detail
-    async fn get_details_by_login_method(
+    pub async fn get_details_by_login_method(
         &self,
         login_method: &LoginMethod,
-        login_details: &LoginDetails,
     ) -> Result<UserRecord, LoginError> {
         let user_data = match login_method {
             // obtain data using email
-            LoginMethod::Email => sqlx::query_as!(
-                UserRecord,
-                "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
-                login_details.email,
-            )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|_| LoginError::UserDoesntExist)?,
+            LoginMethod::Email(email) => {
+                sqlx::query_as!(
+                    UserRecord,
+                    "SELECT email, username, password, uuid, authority FROM users WHERE email = $1",
+                    email,
+                )
+                .fetch_one(&self.pool)
+                .await
+            }
+
             // obtain data using username
-            LoginMethod::Username => sqlx::query_as!(
+            LoginMethod::Username(username) => {
+                sqlx::query_as!(
                 UserRecord,
                 "SELECT email, username, password, uuid, authority FROM users WHERE username = $1",
-                login_details.username,
+                username,
             )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|_| LoginError::UserDoesntExist)?,
+                .fetch_one(&self.pool)
+                .await
+            }
         };
 
-        Ok(user_data)
+        user_data.map_err(|_| LoginError::UserDoesntExist)
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,
-    exp: usize,
-    username: String,
-    authority_level: String,
-    uuid: String,
-}
-
-/// Returns a result containing a JWT or an error
-fn generate_jwt(user_details: UserRecord) -> Result<String, jsonwebtoken::errors::Error> {
-    let expiration = chrono::Utc::now()
-        .checked_add_signed(JWT_EXPIRY.expect("TimeDelta is none!"))
-        .expect("valid timestamp")
-        .timestamp();
-
-    let claims = Claims {
-        sub: user_details.email,
-        exp: expiration as usize,
-        username: user_details.username,
-        authority_level: user_details.authority, // level of authorization that user has
-        uuid: user_details.uuid,                 // unique uuid for this player
-    };
-
-    let secret = get_jwt_secret();
-
-    encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(&secret),
-    )
-}
-
-#[inline]
-fn get_jwt_secret() -> Vec<u8> {
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is not set");
-    secret.as_bytes().to_vec()
 }

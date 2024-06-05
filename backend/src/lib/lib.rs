@@ -1,3 +1,4 @@
+pub mod claims;
 pub mod cli;
 pub mod cookie;
 pub mod database;

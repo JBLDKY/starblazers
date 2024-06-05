@@ -11,3 +11,5 @@ export const result_text = 'text-surface-50 text-r font-medium mt-10';
 export const button_spacer = 'flex justify-between items-center';
 export const link_tw = 'text-tertiary-500 hover:text-blue-600 cursor-pointer text-sm font-medium';
 export const title_text_tw = 'text-tertiary-500 text-m font-medium';
+export const account_page_input_field =
+	'placeholder-opacity-400 flex-2 w-400 rounded-md bg-tertiary-500 px-3 py-2 text-primary-700 placeholder-primary-600 focus:border-primary-500 focus:bg-tertiary-600 focus:outline-1 focus:outline-secondary-900 focus:ring-primary-500';
