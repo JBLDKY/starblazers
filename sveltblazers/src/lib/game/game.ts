@@ -62,11 +62,7 @@ export class SpaceInvadersGame {
 	 */
 	public start(): void {
 		// Create player
-		this.spawnHandler.spawn_player(
-			{ x: this.p.width / 2, y: this.p.height - 30 },
-			5,
-			this.user.uuid
-		);
+		this.spawnHandler.spawn_player(this.p.createVector(640, 730), this.user.uuid);
 
 		// Start websocket
 		this.startWebsocket();

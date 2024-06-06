@@ -20,14 +20,14 @@ export abstract class Entity {
 	private debug: boolean = false;
 
 	maxBullets: number = 1;
-	position: Position;
-	speed: number;
+	position: p5.Vector;
+	velocity: p5.Vector;
 	active: boolean = true;
 
-	constructor(p: p5, position: Position, speed: number) {
+	constructor(p: p5, position: p5.Vector) {
 		this.p = p;
 		this.position = position;
-		this.speed = speed;
+		this.velocity = this.p.createVector();
 	}
 
 	abstract draw(): void;
@@ -92,7 +92,7 @@ export abstract class Entity {
 
 		this.p.textSize(10);
 		this.p.text(
-			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nspeed: ${this.speed}`,
+			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nspeed: ${this.velocity}`,
 			this.position.x + shape.dimensions.width,
 			this.position.y + shape.dimensions.height
 		);
@@ -113,8 +113,7 @@ export abstract class Entity {
 			}
 		});
 
-		this.position.x += movement.x * this.speed;
-		this.position.y += movement.y * this.speed;
+		this.position.add(this.velocity);
 	}
 
 	setProperty(property: string, value: string) {
@@ -145,7 +144,7 @@ export abstract class Entity {
 			value = Number.parseInt(value);
 		}
 
-		this.speed = value;
+		this.velocity = value;
 	}
 
 	setXPos(value: string | number) {

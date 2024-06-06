@@ -16,8 +16,8 @@ export class SpawnHandler {
 		this.entityManager = entityManager;
 	}
 
-	public spawn_player(position: Position, speed: number, id: string): void {
-		this.entityManager.addEntity(new Player(this.p, position, speed, id));
+	public spawn_player(position: Position, id: string): void {
+		this.entityManager.addEntity(new Player(this.p, position, id));
 	}
 
 	public getNewId(): string {

@@ -1,6 +1,6 @@
 import type p5 from 'p5';
 import { Entity } from './base';
-import type { Position, Rectangle } from '../types';
+import { Key, type Rectangle } from '../types';
 import { Bullet } from './bullet';
 import { Colors } from '../assets/color';
 import { EntityIndex } from './entity_index';
@@ -16,11 +16,12 @@ export class Player extends Entity implements Shooter {
 	height: number = 20;
 	width: number = 20;
 
-	constructor(p: p5, position: Position, speed: number, uuid: string) {
-		super(p, position, speed);
+	constructor(p: p5, position: p5.Vector, uuid: string) {
+		super(p, position);
 		this.fireRate = 5;
 		this.cycles = 0;
 		this.uuid = uuid;
+		this.velocity = this.p.createVector();
 	}
 
 	update() {
@@ -29,8 +30,21 @@ export class Player extends Entity implements Shooter {
 			this.fire();
 		}
 
-		this.position.x = Math.max(0, Math.min(this.position.x, this.p.width));
-		this.position.y = Math.max(0, Math.min(this.position.y, this.p.height));
+		if (this.p.keyIsDown(Key.W)) {
+			this.velocity.add(0, -1);
+		}
+		if (this.p.keyIsDown(Key.A)) {
+			this.velocity.add(-1, 0);
+		}
+		if (this.p.keyIsDown(Key.S)) {
+			this.velocity.add(0, 1);
+		}
+		if (this.p.keyIsDown(Key.D)) {
+			this.velocity.add(1, 0);
+		}
+
+		this.position.add(this.velocity);
+		this.velocity = this.p.createVector();
 
 		this.cycles += 1;
 	}
