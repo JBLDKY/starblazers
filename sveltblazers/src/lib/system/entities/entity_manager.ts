@@ -83,7 +83,51 @@ export class EntityManager implements EntityEventHandler {
 		}
 	}
 
-	public allEntites(): Entity[] {
+	public allEntities(): Entity[] {
 		return [...this.entities.values()];
+	}
+
+	public debugEntities(): void {
+		for (const entity of this.allEntities()) {
+			entity.enableDebug();
+		}
+	}
+
+	public disableDebugForAll(): void {
+		for (const entity of this.allEntities()) {
+			entity.disableDebug();
+		}
+	}
+
+	// Enable debug for a specific entity by ID
+	public enableDebugById(id: number): void {
+		const entity = this.getEntityByIndex(id);
+		if (entity) {
+			entity.enableDebug();
+		}
+	}
+
+	// Disable debug for a specific entity by ID
+	public disableDebugById(id: number): void {
+		const entity = this.getEntityByIndex(id);
+		if (entity) {
+			entity.disableDebug();
+		}
+	}
+
+	// Enable debug for entities by kind
+	public enableDebugByKind(kind: EntityIndex): void {
+		const entities = this.getEntityByKind(kind);
+		for (const entity of entities) {
+			entity.disableDebug();
+		}
+	}
+
+	// Disable debug for entities by kind
+	public disableDebugByKind(kind: EntityIndex): void {
+		const entities = this.getEntityByKind(kind);
+		for (const entity of entities) {
+			entity.disableDebug();
+		}
 	}
 }

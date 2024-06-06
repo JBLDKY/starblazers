@@ -90,6 +90,13 @@ export class slowStraightShootingAlien extends Entity implements Shooter {
 
 	// FIXME: Bullet speed somehow influences the direction the parent moves in...
 	newBullet(): Bullet {
-		return new Bullet(this.p, this.position, 0, false, 'orange', this.getId());
+		return new Bullet(
+			this.p,
+			{ x: this.position.x, y: this.position.y },
+			100,
+			false,
+			'orange',
+			this.getId()
+		);
 	}
 }

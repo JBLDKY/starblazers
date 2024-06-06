@@ -17,6 +17,7 @@ export abstract class Entity {
 
 	private id: number = -1; // The EntityManager should generate a unique ID for the entity
 	private entityManager: EntityManager | null = null;
+	private debug: boolean = false;
 
 	maxBullets: number = 1;
 	position: Position;
@@ -33,6 +34,22 @@ export abstract class Entity {
 	abstract update(): void;
 	abstract shape(): Shape;
 	abstract newBullet(): Bullet;
+
+	isDebugEnabled(): boolean {
+		return this.debug;
+	}
+
+	toggleDebug() {
+		this.debug = !this.debug;
+	}
+
+	enableDebug() {
+		this.debug = true;
+	}
+
+	disableDebug() {
+		this.debug = false;
+	}
 
 	protected getEntityManager(): EntityManager {
 		if (!this.entityManager) {

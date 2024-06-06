@@ -88,7 +88,7 @@ export class SpaceInvadersGame {
 		this.entityManager.cleanInactiveEntities();
 		this.collisions();
 
-		this.entityManager.allEntites().forEach((entity) => entity.update());
+		this.entityManager.allEntities().forEach((entity) => entity.update());
 	}
 
 	/**
@@ -110,7 +110,12 @@ export class SpaceInvadersGame {
 	}
 
 	private drawEntities(): void {
-		this.entityManager.allEntites().forEach((entity: Entity) => entity.draw());
+		this.entityManager.allEntities().forEach((entity: Entity) => {
+			entity.draw();
+			if (entity.isDebugEnabled()) {
+				entity.drawDebug();
+			}
+		});
 	}
 
 	private debugInfo(): void {
@@ -121,7 +126,8 @@ export class SpaceInvadersGame {
 			'Last dev cmd time: ' + this.inputHandler.getLastDevCommandTime(),
 			'Debug: ' + DebugManager.debugMode,
 			'Frame: ' + this.fpsManager.getFrameCount(),
-			'IGT: ' + Math.trunc(this.fpsManager.getInGameTime() / 1000)
+			'IGT: ' + Math.trunc(this.fpsManager.getInGameTime() / 1000),
+			'Entit count: ' + this.entityManager.allEntities().length
 		];
 
 		this.displayDebugInfo(debugMessages);
@@ -154,7 +160,7 @@ export class SpaceInvadersGame {
 	}
 
 	getEntity(id: number): Entity | undefined {
-		return this.entityManager.allEntites().find((entity) => entity.getId() == id);
+		return this.entityManager.allEntities().find((entity) => entity.getId() == id);
 	}
 
 	getGameState(): GameState {
@@ -243,5 +249,9 @@ export class SpaceInvadersGame {
 				pair[0].active = false;
 			}
 		});
+	}
+
+	getEnemies(): Entity[] {
+		return this.entityManager.getEntityByKind(EntityIndex.slowStraightShootingAlien);
 	}
 }

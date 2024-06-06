@@ -7,6 +7,8 @@
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import { jwtStore } from '../../store/auth';
 	import { account_page_input_field } from '../../tailwind_presets';
+	import type { Readable } from 'svelte/store';
+	import { readable } from 'svelte/store';
 
 	interface PublicPlayerData {
 		authority: string;
@@ -14,6 +16,8 @@
 		username: string;
 		uuid: string;
 	}
+
+	let publicUserData: Readable<PublicPlayerData>;
 
 	const toastStore = getToastStore();
 	let player_info: Promise<PublicPlayerData> = get_player_info();
@@ -35,6 +39,7 @@
 				goto('/login');
 			}
 		}
+		publicUserData = readable(get_player_info());
 	});
 
 	async function get_player_info(): Promise<PublicPlayerData> {
