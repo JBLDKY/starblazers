@@ -1,18 +1,15 @@
 use crate::claims::{Claims, TokenError};
-use crate::types::{DatabaseError, LoginDetails, LoginMethod, Player, PublicUserRecord, User};
+use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{
     database::db::ArcDb,
     database::queries::Table,
     websocket::{user_connected, Users, INDEX_HTML},
 };
-use actix_web::dev::Server;
 use actix_web::http::header::ContentType;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer};
-use serde::{Deserialize, Serialize};
+use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use serde_json::json;
-use sqlx::PgPool;
 use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
-
+/*
 /// Generically parse a json body into a struct
 fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 ) -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
@@ -23,52 +20,27 @@ fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
 fn with_decoded_jwt(header_value: HeaderValue) -> Result<Claims, TokenError> {
     Claims::from_header_value(header_value)
 }
-
-/// Returns all the current filters
-///
+*/
+/// TODO update
 /// GET /players/all - players_all - Returns all players
 /// POST /players/create - players_create - Create a new player
 /// POST /database/resettable - database_resettable - Drop the provided table
 /// POST /auth/login - login - start authenticating the login request
 /// GET /helloworld - helloworld - for sanity checks / testing warp things
 /// GET /auth/verify_jwt
-///
-/*pub fn all(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    let cors = warp::cors()
-        .allow_origin("http://localhost:5173")
-        .allow_credentials(true)
-        .allow_headers(vec!["Content-Type", "*"])
-        .allow_headers(vec!["Authorization", "*"])
-        .expose_header("Authorization") // TODO: is this safe?
-        .allow_methods(vec!["GET", "POST", "PUT"]);
-
-    index()
-        .or(chat())
-        .or(players_all(db.clone()))
-        .or(users_all(db.clone()))
-        .or(database_resettable(db.clone()))
-        .or(login(db.clone()))
-        .or(hello_world())
-        .or(sign_up(db.clone()))
-        .or(verify_jwt())
-        .or(player_info(db.clone()))
-        .with(cors)
-}*/
 
 /// Configure the server services
 pub fn config_server(cfg: &mut web::ServiceConfig) {
     cfg.service(index)
         //.service(chat)
-        .service(players_all);
-    /*.service(users_all)
-    .service(database_resettable)
-    .service(login)
-    .service(hello_world)
-    .service(sign_up)
-    .service(verify_jwt)
-    .service(player_info);*/
+        .service(players_all)
+        .service(users_all)
+        .service(database_resettable)
+        .service(login)
+        .service(sign_up)
+        .service(hello_world)
+        .service(verify_jwt);
+    //.service(player_info);
 }
 
 // Utility to pass the database pool into Warp filters
@@ -77,32 +49,21 @@ fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::I
 }
 
 /// POST /auth/signup -> Returns TODO
-fn sign_up(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("auth" / "signup")
-        .and(warp::post())
-        .and(json_body())
-        .and(with_db(db))
-        .and_then(register_user)
-}
-
-async fn register_user(user: User, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+#[post("/auth/signup")]
+async fn sign_up(
+    db: web::Data<ArcDb>,
+    user: web::Json<User>,
+) -> Result<HttpResponse, actix_web::Error> {
     match db.create_user(&user).await {
-        Ok(_) => Ok(warp::reply::json(&json!({"message:": user.username}))),
-        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+        Ok(_) => Ok(HttpResponse::Ok().json(&json!({"message:": user.username}))),
+        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
     }
 }
 
-/// GET /helloworld  ->  Returns {"message": "Hello World"}
-fn hello_world() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("helloworld")
-        .and(warp::get())
-        .and(warp::header::headers_cloned())
-        .map(|h| {
-            println!("{:#?}", h);
-            "hello"
-        })
+/// GET /helloworld
+#[get("/helloworld")]
+async fn hello_world() -> String {
+    format!("{:#?}", "Hi there!".to_owned())
 }
 
 #[get("/")]
@@ -128,25 +89,16 @@ async fn players_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Er
     }
 }
 
-/// GET /users/all -> Returns all users
-fn users_all(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("users" / "all")
-        .and(warp::get())
-        .and(with_db(db))
-        .and_then(fetch_all_users)
-}
-
-/// Returns all users from the users table
-async fn fetch_all_users(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+/// Returns all users from the Users table
+#[get("/users/all")]
+async fn users_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Error> {
     let result: Result<Vec<User>, sqlx::Error> = sqlx::query_as!(User, "SELECT * FROM users",)
         .fetch_all(&db.pool)
         .await;
 
     match result {
-        Ok(users) => Ok(warp::reply::json(&json!(users))),
-        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+        Ok(users) => Ok(HttpResponse::Ok().json(users)),
+        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
     }
 }
 
@@ -169,73 +121,60 @@ fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection>
 }
 
 /// POST /database/resettable -> drop(?) a table
-fn database_resettable(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("database" / "resettable")
-        .and(warp::post())
-        .and(json_body())
-        .and(with_db(db))
-        .and_then(reset_table)
-}
-
-async fn reset_table(table: Table, db: ArcDb) -> Result<impl Reply, warp::Rejection> {
-    match db.reset_table(&table).await {
-        Ok(v) => Ok(warp::reply::json(
-            &json!({"deleted_records": &v.rows_affected()}),
-        )),
-        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+#[post("/database/resettable")]
+async fn database_resettable(
+    db: web::Data<ArcDb>,
+    body: actix_web::web::Json<Table>,
+) -> Result<HttpResponse, actix_web::Error> {
+    match db.reset_table(&body).await {
+        Ok(v) => Ok(HttpResponse::Ok().json(&json!({"deleted_records": &v.rows_affected()}))),
+        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
     }
 }
 
 /// POST /auth/login -> Try to login
-fn login(db: ArcDb) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("auth" / "login")
-        .and(warp::post())
-        .and(json_body())
-        .and(with_db(db))
-        .and_then(handle_login)
-}
-
-async fn handle_login(
-    login_details: LoginDetails,
-    db: ArcDb,
-) -> Result<impl Reply, warp::Rejection> {
+#[post("/auth/login")]
+async fn login(
+    db: web::Data<ArcDb>,
+    login_details: actix_web::web::Json<LoginDetails>,
+) -> Result<HttpResponse, actix_web::Error> {
     match db.check_login_details(&login_details).await {
         Ok(jwt) => {
             log::info!("Logged in!");
 
-            Ok(warp::reply::with_header(
-                warp::reply::json(&json!({})),
-                "Authorization",
-                "Bearer ".to_owned() + &jwt,
-            ))
+            Ok(HttpResponse::Ok()
+                .insert_header(("Authorization", "Bearer".to_owned() + &jwt))
+                .finish())
         }
         Err(e) => {
             log::error!("Error during login: {}", e);
-            Err(warp::reject::custom(e))
+            Err(actix_web::error::ErrorImATeapot(e))
         }
     }
 }
 
 /// GET /auth/verify_jwt
-fn verify_jwt() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("auth" / "verify_jwt")
-        .and(warp::get())
-        .and(warp::header::value("authorization"))
-        .and_then(verify_jwt_code)
-}
+#[get("/auth/verify_jwt")]
+async fn verify_jwt(req: HttpRequest) -> Result<HttpResponse, actix_web::Error> {
+    let header_value: Option<&HeaderValue> = req.headers().get("authorization");
 
-async fn verify_jwt_code(header_value: HeaderValue) -> Result<impl Reply, warp::Rejection> {
-    match Claims::from_header_value(header_value) {
-        Ok(_) => {
-            // TODO: Maybe add the succesful login to the database?
-            Ok(StatusCode::OK)
+    match header_value {
+        Some(header_value) => {
+            match Claims::from_header_value(header_value.clone()) {
+                Ok(_) => {
+                    // TODO: Maybe add the succesful login to the database?
+                    Ok(HttpResponse::Ok().body("JWT Valid"))
+                }
+                Err(e) => {
+                    log::error!("Error validating jwt: {}", e);
+
+                    Ok(HttpResponse::Unauthorized().finish())
+                }
+            }
         }
-        Err(e) => {
-            log::error!("Error validating jwt: {}", e);
-
-            Ok(StatusCode::UNAUTHORIZED)
+        None => {
+            log::error!("Authorization header not found!");
+            Ok(HttpResponse::Unauthorized().finish())
         }
     }
 }

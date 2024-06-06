@@ -6,18 +6,21 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, ValueEnum, Clone, Serialize, Deserialize)]
 pub enum TableName {
     Players,
+    Users,
 }
 
 impl TableName {
     pub fn create(&self) -> &str {
         match self {
             TableName::Players => CREATE_PLAYERS_TABLE,
+            TableName::Users => CREATE_USERS_TABLE,
         }
     }
 
-    pub fn drop(&self) -> &str {
+    pub fn reset(&self) -> &str {
         match self {
-            TableName::Players => DROP_PLAYERS_TABLE,
+            TableName::Players => RESET_PLAYERS_TABLE,
+            TableName::Users => RESET_USERS_TABLE,
         }
     }
 }
@@ -25,20 +28,32 @@ impl TableName {
 pub const CREATE_PLAYERS_TABLE: &str = r#"
         CREATE TABLE IF NOT EXISTS players (
             id SERIAL PRIMARY KEY,
+            uuid VARCHAR(255) NOT NULL,
+            games_played INTEGER DEFAULT 0
+            );
+    "#;
+
+pub const CREATE_USERS_TABLE: &str = r#"
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
             email VARCHAR(255) UNIQUE NOT NULL,
             username VARCHAR(255) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            games_played INTEGER DEFAULT 0
+            uuid VARCHAR(255) NOT NULL,
+            authority VARCHAR(255) NOT NULL DEFAULT 'user'
         );
     "#;
 
-pub const DROP_PLAYERS_TABLE: &str = "DROP TABLE IF EXISTS players;";
+pub const RESET_PLAYERS_TABLE: &str = "TRUNCATE players RESTART IDENTITY;";
+
+pub const RESET_USERS_TABLE: &str = "TRUNCATE users RESTART IDENTITY;";
 
 impl fmt::Display for TableName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TableName::Players => write!(f, "Players"),
+            TableName::Users => write!(f, "Users"),
         }
     }
 }
@@ -53,8 +68,8 @@ impl Table {
         self.name.create()
     }
 
-    pub fn drop(&self) -> &str {
-        self.name.drop()
+    pub fn reset(&self) -> &str {
+        self.name.reset()
     }
 }
 

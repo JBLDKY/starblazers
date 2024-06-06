@@ -71,7 +71,7 @@ impl DatabaseClient {
         &self,
         table: &Table,
     ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
-        let sql = table.drop();
+        let sql = table.reset();
         sqlx::query(sql).execute(&self.pool).await
     }
 
