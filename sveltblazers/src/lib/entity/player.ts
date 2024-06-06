@@ -3,7 +3,6 @@ import { Entity } from './base';
 import type { Position, Rectangle } from '../types';
 import { Bullet } from './bullet';
 import { Colors } from '../assets/color';
-import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
 import type { Shooter } from './shooter';
 import { EntityEvent } from '$lib/system/entities/entity_event_handler';
@@ -50,7 +49,7 @@ export class Player extends Entity implements Shooter {
 			this.position.y + 20
 		);
 
-		if (DebugManager.debugMode) {
+		if (this.isDebugEnabled()) {
 			this.drawDebug();
 		}
 	}

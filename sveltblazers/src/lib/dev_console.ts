@@ -36,6 +36,11 @@ export class DevConsole {
 				this.game.getEnemies().forEach((entity) => entity.enableDebug());
 				break;
 
+			case 'printenemies':
+				console.log('printing enemies');
+				this.game.getEnemies().forEach((entity) => console.log(entity));
+				break;
+
 			case 'spawn':
 				this.game.spawnHandler.spawn(restArgs);
 				break;

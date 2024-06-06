@@ -2,7 +2,6 @@ import type p5 from 'p5';
 import { Entity } from './base';
 import { Circle, type Position } from '../types';
 import { Colors } from '../assets/color';
-import DebugManager from '$lib/system/debug_manager';
 import { EntityIndex } from './entity_index';
 import { Bullet } from './bullet';
 import type { Shooter } from './shooter';
@@ -53,7 +52,7 @@ export class Alien extends Entity implements Shooter {
 		this.p.fill(Colors.SECONDARY); // Fill first or else one will be the wrong color
 		this.p.circle(this.position.x, this.position.y, this.radius);
 
-		if (DebugManager.debugMode) {
+		if (this.isDebugEnabled()) {
 			this.drawDebug();
 		}
 	}

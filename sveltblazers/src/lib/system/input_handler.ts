@@ -73,7 +73,7 @@ export class InputHandler {
 
 		if ((this.keyPresses['p'] || this.keyPresses['P']) && this.shouldHandleDevCommand(timestamp)) {
 			this.setLastDevCommandTime(timestamp);
-			this.devConsole.handleCommand('spawn 1 100 100 0');
+			this.devConsole.handleCommand('spawn 1 540 100 0');
 			return;
 		}
 

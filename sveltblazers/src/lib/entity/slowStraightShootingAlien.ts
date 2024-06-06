@@ -2,7 +2,6 @@ import type p5 from 'p5';
 import { Entity } from './base';
 import { Circle } from '../types';
 import type { Position } from '../types';
-import DebugManager from '../system/debug_manager'; // Adjust path as necessary
 import { EntityIndex } from './entity_index';
 import type { Shooter } from './shooter';
 import { EntityEvent } from '$lib/system/entities/entity_event_handler';
@@ -74,7 +73,7 @@ export class slowStraightShootingAlien extends Entity implements Shooter {
 	draw() {
 		this.p.image(this.image, this.position.x, this.position.y);
 
-		if (DebugManager.debugMode) {
+		if (this.isDebugEnabled()) {
 			this.drawDebug();
 		}
 	}
@@ -88,7 +87,6 @@ export class slowStraightShootingAlien extends Entity implements Shooter {
 		this.getEntityManager().notify(this, EntityEvent.Fire);
 	}
 
-	// FIXME: Bullet speed somehow influences the direction the parent moves in...
 	newBullet(): Bullet {
 		return new Bullet(
 			this.p,
