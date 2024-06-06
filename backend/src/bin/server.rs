@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
-use service::database::db::DatabaseClient;
-use service::filters::all;
+use service::{database::db::DatabaseClient, filters::config_server};
 
-#[tokio::main]
-async fn main() {
+use actix_web::{dev::Server, get, post, web, App, HttpResponse, HttpServer, Responder};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     if dotenv::dotenv().is_err() {
         log::error!("Warning: Did not find .env file in current working directory!");
     }
@@ -15,7 +16,17 @@ async fn main() {
 
     db.test().await;
 
-    let filters = all(Arc::new(db));
+    //let filters = all(Arc::new(db));
 
-    warp::serve(filters).run(([127, 0, 0, 1], 3030)).await;
+    //warp::serve(filters).run(([127, 0, 0, 1], 3030)).await;
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(Arc::new(db.clone())))
+            .configure(config_server)
+    })
+    .bind(("127.0.0.1", 3030))?
+    .run()
+    .await
+    //http_server(Arc::new(db)).await
 }

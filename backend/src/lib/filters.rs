@@ -5,8 +5,12 @@ use crate::{
     database::queries::Table,
     websocket::{user_connected, Users, INDEX_HTML},
 };
+use actix_web::dev::Server;
+use actix_web::http::header::ContentType;
+use actix_web::{get, post, web, App, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sqlx::PgPool;
 use warp::{http::header::HeaderValue, http::StatusCode, Filter, Reply};
 
 /// Generically parse a json body into a struct
@@ -29,7 +33,7 @@ fn with_decoded_jwt(header_value: HeaderValue) -> Result<Claims, TokenError> {
 /// GET /helloworld - helloworld - for sanity checks / testing warp things
 /// GET /auth/verify_jwt
 ///
-pub fn all(
+/*pub fn all(
     db: ArcDb,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     let cors = warp::cors()
@@ -51,6 +55,20 @@ pub fn all(
         .or(verify_jwt())
         .or(player_info(db.clone()))
         .with(cors)
+}*/
+
+/// Configure the server services
+pub fn config_server(cfg: &mut web::ServiceConfig) {
+    cfg.service(index)
+        //.service(chat)
+        .service(players_all);
+    /*.service(users_all)
+    .service(database_resettable)
+    .service(login)
+    .service(hello_world)
+    .service(sign_up)
+    .service(verify_jwt)
+    .service(player_info);*/
 }
 
 // Utility to pass the database pool into Warp filters
@@ -87,31 +105,26 @@ fn hello_world() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rej
         })
 }
 
-/// GET / -> index html
-fn index() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path::end().map(|| warp::reply::html(INDEX_HTML))
-}
-
-/// GET /players/all -> Returns all players
-fn players_all(
-    db: ArcDb,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("players" / "all")
-        .and(warp::get())
-        .and(with_db(db))
-        .and_then(fetch_all_players)
+#[get("/")]
+async fn index() -> HttpResponse {
+    //warp::path::end().map(|| warp::reply::html(INDEX_HTML))
+    HttpResponse::Ok()
+        .content_type(ContentType::plaintext())
+        .insert_header(("X-Hdr", "sample"))
+        .body(INDEX_HTML)
 }
 
 /// Returns all players from the Players table
-async fn fetch_all_players(db: ArcDb) -> Result<impl Reply, warp::Rejection> {
+#[get("/players/all")]
+async fn players_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Error> {
     let result: Result<Vec<Player>, sqlx::Error> =
         sqlx::query_as!(Player, "SELECT * FROM players",)
             .fetch_all(&db.pool)
             .await;
 
     match result {
-        Ok(players) => Ok(warp::reply::json(&json!(players))),
-        Err(e) => Err(warp::reject::custom(DatabaseError(e))),
+        Ok(players) => Ok(HttpResponse::Ok().json(players)),
+        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
     }
 }
 
