@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use service::{database::db::DatabaseClient, filters::config_server};
 
-use actix_web::{dev::Server, get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{web, App, HttpServer};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

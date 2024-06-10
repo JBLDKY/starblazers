@@ -19,7 +19,7 @@ pub struct Claims {
 
 impl Reject for TokenError {}
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Deserialize, Serialize)]
 pub enum TokenError {
     #[error("Could not parse jwt string.")]
     ParseError,
