@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use actix_cors::Cors;
 use service::{database::db::DatabaseClient, filters::config_server};
 
-use actix_web::{web, App, HttpServer};
+use actix_web::{http::header, web, App, HttpServer};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -17,7 +18,14 @@ async fn main() -> std::io::Result<()> {
     db.test().await;
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5173")
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .allowed_header(header::CONTENT_TYPE);
+
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(Arc::new(db.clone())))
             .configure(config_server)
     })
