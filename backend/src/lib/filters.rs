@@ -1,12 +1,10 @@
 use crate::claims::{Claims, TokenError};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
-use crate::{
-    database::db::ArcDb,
-    database::queries::Table,
-    websocket::{user_connected, Users, INDEX_HTML},
-};
+use crate::websocket::MyWebSocket;
+use crate::{database::db::ArcDb, database::queries::Table, websocket::INDEX_HTML};
 use actix_web::http::header::ContentType;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use actix_web_actors::ws;
 use serde_json::json;
 use warp::{http::header::HeaderValue, http::StatusCode, Filter};
 
@@ -22,6 +20,7 @@ use warp::{http::header::HeaderValue, http::StatusCode, Filter};
 pub fn config_server(cfg: &mut web::ServiceConfig) {
     cfg.service(index)
         //.service(chat)
+        .service(web::resource("/ws").route(web::get().to(echo_websocket)))
         .service(players_all)
         .service(users_all)
         .service(database_resettable)
@@ -30,6 +29,18 @@ pub fn config_server(cfg: &mut web::ServiceConfig) {
         .service(hello_world)
         .service(verify_jwt)
         .service(player_info);
+}
+
+// Utility to pass the database pool into Warp filters
+/*fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || db.clone())
+}*/
+
+async fn echo_websocket(
+    req: HttpRequest,
+    stream: web::Payload,
+) -> Result<HttpResponse, actix_web::Error> {
+    ws::start(MyWebSocket::new(), &req, stream)
 }
 
 /// POST /auth/signup -> Returns TODO
@@ -85,7 +96,7 @@ async fn users_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Erro
 }
 
 /// GET /chat -> websocket upgrade
-fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+/*fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     // Keep track of all connected users, key is usize, value
     // is a websocket sender.
     let users = Users::default();
@@ -100,7 +111,7 @@ fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection>
             // This will call our function if the handshake succeeds.
             ws.on_upgrade(move |socket| user_connected(socket, users))
         })
-}
+}*/
 
 /// POST /database/resettable -> drop(?) a table
 #[post("/database/resettable")]

@@ -44,3 +44,5 @@ uuid = { version = "1.8.0", features = [
 	]}
 actix-web = "4"
 actix-cors = "0.7.0"
+actix = "0.13.5"
+actix-web-actors = "4.3.0"
