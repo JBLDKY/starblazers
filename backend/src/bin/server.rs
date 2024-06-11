@@ -16,10 +16,6 @@ async fn main() -> std::io::Result<()> {
 
     db.test().await;
 
-    //let filters = all(Arc::new(db));
-
-    //warp::serve(filters).run(([127, 0, 0, 1], 3030)).await;
-
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(Arc::new(db.clone())))
@@ -28,5 +24,4 @@ async fn main() -> std::io::Result<()> {
     .bind(("127.0.0.1", 3030))?
     .run()
     .await
-    //http_server(Arc::new(db)).await
 }
