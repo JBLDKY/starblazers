@@ -22,6 +22,7 @@ async fn main() -> std::io::Result<()> {
             .allowed_origin("http://localhost:5173")
             .allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+            .expose_headers(vec![header::AUTHORIZATION])
             .allowed_header(header::CONTENT_TYPE);
 
         App::new()
