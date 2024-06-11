@@ -56,7 +56,7 @@ impl Claims {
         }
     }
 
-    pub fn from_header_value(header_value: HeaderValue) -> Result<Claims, TokenError> {
+    pub fn from_header_value(header_value: &HeaderValue) -> Result<Claims, TokenError> {
         let jwt_string = header_value
             .to_str()
             .map_err(|_| TokenError::ValueError)?

@@ -9,18 +9,7 @@ use actix_web::http::header::ContentType;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use serde_json::json;
 use warp::{http::header::HeaderValue, http::StatusCode, Filter};
-/*
-/// Generically parse a json body into a struct
-fn json_body<T: Serialize + for<'a> Deserialize<'a> + Send + Sync>(
-) -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
-    warp::body::content_length_limit(1024 * 16).and(warp::body::json())
-}
 
-/// Parses the authorization header into Claims
-fn with_decoded_jwt(header_value: HeaderValue) -> Result<Claims, TokenError> {
-    Claims::from_header_value(header_value)
-}
-*/
 /// TODO update
 /// GET /players/all - players_all - Returns all players
 /// POST /players/create - players_create - Create a new player
@@ -42,11 +31,6 @@ pub fn config_server(cfg: &mut web::ServiceConfig) {
         .service(verify_jwt)
         .service(player_info);
 }
-
-// Utility to pass the database pool into Warp filters
-/*fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::Infallible> + Clone {
-    warp::any().map(move || db.clone())
-}*/
 
 /// POST /auth/signup -> Returns TODO
 #[post("/auth/signup")]
@@ -157,7 +141,7 @@ async fn verify_jwt(req: HttpRequest) -> Result<HttpResponse, actix_web::Error> 
 
     match header_value {
         Some(header_value) => {
-            match Claims::from_header_value(header_value.clone()) {
+            match Claims::from_header_value(header_value) {
                 Ok(_) => {
                     // TODO: Maybe add the succesful login to the database?
                     Ok(HttpResponse::Ok().body("JWT Valid"))
@@ -182,11 +166,19 @@ async fn verify_jwt(req: HttpRequest) -> Result<HttpResponse, actix_web::Error> 
 /// information based on those claims from the database.
 #[get("/players/player")]
 async fn player_info(
-    body: web::Bytes,
+    req: HttpRequest,
     db: web::Data<ArcDb>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    // Token is expired or otherwise invalid - 401
-    let claims = serde_json::from_slice::<Result<Claims, TokenError>>(&body)?;
+    let header_value: Option<&HeaderValue> = req.headers().get("authorization");
+
+    // Token is not in the headers
+    if header_value.is_none() {
+        log::error!("Authorization header not found!");
+        return Ok(HttpResponse::Unauthorized().finish());
+    }
+
+    let claims = Claims::from_header_value(header_value.unwrap());
+
     let (email, uuid) = match claims {
         Ok(claims) => (claims.sub, claims.uuid),
         Err(e) => {
@@ -225,6 +217,5 @@ fn json_with_status(
     json: &serde_json::Value,
     status: StatusCode,
 ) -> Result<HttpResponse, actix_web::Error> {
-    //Ok(warp::reply::with_status(warp::reply::json(json), status))
     Ok(HttpResponse::build(status).json(json))
 }
