@@ -6,7 +6,7 @@ use std::net::TcpListener;
 use std::sync::Arc;
 
 use crate::database::db::DatabaseClient;
-use crate::filters::config_server;
+use crate::routes::config_server;
 
 pub struct Application {
     server: Server,
