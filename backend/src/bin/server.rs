@@ -10,7 +10,6 @@ async fn main() -> Result<(), std::io::Error> {
     pretty_env_logger::init();
 
     let settings = get_settings();
-    dbg!(&settings);
 
     let app = Application::build(settings.expect("Failed to get settings file")).await?;
     app.start().await?;
