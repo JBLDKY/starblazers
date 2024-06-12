@@ -1,4 +1,5 @@
 use service::application::Application;
+use service::configuration::get_settings;
 
 #[actix_web::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -8,7 +9,10 @@ async fn main() -> Result<(), std::io::Error> {
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
 
-    let app = Application::build("127.0.0.1", "3030").await?;
+    let settings = get_settings();
+    dbg!(&settings);
+
+    let app = Application::build(settings.expect("Failed to get settings file")).await?;
     app.start().await?;
 
     Ok(())

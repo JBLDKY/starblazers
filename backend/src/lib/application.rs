@@ -5,6 +5,7 @@ use actix_web::{web, App, HttpServer};
 use std::net::TcpListener;
 use std::sync::Arc;
 
+use crate::configuration::Settings;
 use crate::database::db::DatabaseClient;
 use crate::routes::config_server;
 
@@ -14,8 +15,11 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(host: &str, port: &str) -> Result<Self, std::io::Error> {
-        let address = format!("{}:{}", host, port);
+    pub async fn build(settings: Settings) -> Result<Self, std::io::Error> {
+        let address = format!(
+            "{}:{}",
+            settings.application.host, settings.application.port
+        );
         let listener = TcpListener::bind(address).expect("Failed to bind to random port");
         let port = listener.local_addr().unwrap().port();
         dbg!(port);

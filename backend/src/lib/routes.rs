@@ -1,12 +1,12 @@
-use crate::claims::{Claims, TokenError};
+use crate::claims::Claims;
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::websocket::MyWebSocket;
 use crate::{database::db::ArcDb, database::queries::Table, websocket::INDEX_HTML};
-use actix_web::http::header::ContentType;
+use actix_web::http::header::{ContentType, HeaderValue};
+use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use serde_json::json;
-use warp::{http::header::HeaderValue, http::StatusCode, Filter};
 
 /// TODO update
 /// GET /players/all - players_all - Returns all players
@@ -48,7 +48,7 @@ async fn echo_websocket(
 async fn sign_up(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, actix_web::Error> {
     let user = serde_json::from_slice::<User>(&body)?;
     match db.create_user(&user).await {
-        Ok(_) => Ok(HttpResponse::Ok().json(&json!({"message:": user.username}))),
+        Ok(_) => Ok(HttpResponse::Ok().json(json!({"message:": user.username}))),
         Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
     }
 }
