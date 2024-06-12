@@ -8,3 +8,4 @@ port = 5432
 username = "postgres"
 password = "password"
 database_name = "test-starblazers"
+

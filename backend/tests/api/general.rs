@@ -1,3 +1,4 @@
+use service::types::User;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
@@ -10,6 +11,24 @@ use service::database::db::DatabaseClient;
 pub struct TestApp {
     pub address: String,
     pub db_client: DatabaseClient,
+}
+
+impl TestApp {
+    pub async fn new_test_user(&self) -> Result<User, sqlx::Error> {
+        let user = User {
+            id: None,
+            email: "test@test.com".to_string(),
+            username: "test".to_string(),
+            password: "test".to_string(),
+            authority: None,
+            creation_date: None,
+            uuid: None,
+        };
+
+        self.db_client.create_user(&user).await?;
+
+        Ok(user)
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -29,6 +48,8 @@ pub async fn spawn_app() -> TestApp {
     let address = format!("http://127.0.0.1:{}", app.port());
 
     let _ = tokio::spawn(app.start());
+
+    std::env::set_var("JWT_SECRET", "my-256-bit-secret");
 
     TestApp {
         address,
