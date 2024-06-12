@@ -1,12 +1,14 @@
+use actix_cors::Cors;
+use actix_web::dev::Server;
+use actix_web::http::header;
+use actix_web::{web, App, HttpServer};
+use service::database::db::DatabaseClient;
+use service::filters::config_server;
+use std::net::TcpListener;
 use std::sync::Arc;
 
-use actix_cors::Cors;
-use service::{database::db::DatabaseClient, filters::config_server};
-
-use actix_web::{http::header, web, App, HttpServer};
-
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), std::io::Error> {
     if dotenv::dotenv().is_err() {
         log::error!("Warning: Did not find .env file in current working directory!");
     }
@@ -17,7 +19,20 @@ async fn main() -> std::io::Result<()> {
 
     db.test().await;
 
-    HttpServer::new(move || {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind to random port");
+
+    let port = listener.local_addr().unwrap().port();
+    dbg!(port);
+
+    run(listener, db)?.await;
+
+    Ok(())
+}
+
+fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::io::Error> {
+    let db_client = web::Data::new(Arc::new(db_client));
+
+    let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:5173")
             .allowed_methods(vec!["GET", "POST"])
@@ -27,10 +42,11 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .app_data(web::Data::new(Arc::new(db.clone())))
+            .app_data(db_client.clone())
             .configure(config_server)
     })
-    .bind(("127.0.0.1", 3030))?
-    .run()
-    .await
+    .listen(listener)?
+    .run();
+
+    Ok(server)
 }
