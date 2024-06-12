@@ -22,7 +22,6 @@ impl Application {
         );
         let listener = TcpListener::bind(address).expect("Failed to bind to random port");
         let port = listener.local_addr().unwrap().port();
-        dbg!(port);
 
         let db = DatabaseClient::new().await;
 
