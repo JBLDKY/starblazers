@@ -1,7 +1,7 @@
 use crate::claims::Claims;
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::websocket::MyWebSocket;
-use crate::{database::db::ArcDb, database::queries::Table, websocket::INDEX_HTML};
+use crate::{database::db::ArcDb, websocket::INDEX_HTML};
 use actix_web::http::header::{ContentType, HeaderValue};
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
@@ -23,18 +23,12 @@ pub fn config_server(cfg: &mut web::ServiceConfig) {
         .service(web::resource("/ws").route(web::get().to(echo_websocket)))
         .service(players_all)
         .service(users_all)
-        .service(database_resettable)
         .service(login)
         .service(sign_up)
         .service(hello_world)
         .service(verify_jwt)
         .service(player_info);
 }
-
-// Utility to pass the database pool into Warp filters
-/*fn with_db(db: ArcDb) -> impl Filter<Extract = (ArcDb,), Error = std::convert::Infallible> + Clone {
-    warp::any().map(move || db.clone())
-}*/
 
 async fn echo_websocket(
     req: HttpRequest,
@@ -91,37 +85,6 @@ async fn users_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Erro
 
     match result {
         Ok(users) => Ok(HttpResponse::Ok().json(users)),
-        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
-    }
-}
-
-/// GET /chat -> websocket upgrade
-/*fn chat() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    // Keep track of all connected users, key is usize, value
-    // is a websocket sender.
-    let users = Users::default();
-    // Turn our "state" into a new Filter...
-    let users = warp::any().map(move || users.clone());
-
-    warp::path("chat")
-        // The `ws()` filter will prepare Websocket handshake...
-        .and(warp::ws())
-        .and(users)
-        .map(|ws: warp::ws::Ws, users| {
-            // This will call our function if the handshake succeeds.
-            ws.on_upgrade(move |socket| user_connected(socket, users))
-        })
-}*/
-
-/// POST /database/resettable -> drop(?) a table
-#[post("/database/resettable")]
-async fn database_resettable(
-    db: web::Data<ArcDb>,
-    body: web::Bytes,
-) -> Result<HttpResponse, actix_web::Error> {
-    let table = serde_json::from_slice::<Table>(&body)?;
-    match db.reset_table(&table).await {
-        Ok(v) => Ok(HttpResponse::Ok().json(&json!({"deleted_records": &v.rows_affected()}))),
         Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
     }
 }

@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::{
     claims::Claims,
-    database::queries::Table,
     types::{LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
 };
 use sqlx::{postgres::PgPool, Postgres, Transaction};
@@ -64,15 +63,6 @@ impl DatabaseClient {
         if row.is_err() {
             log::warn!("Error establishing connection to the database.");
         }
-    }
-
-    /// Resets a provided table
-    pub async fn reset_table(
-        &self,
-        table: &Table,
-    ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
-        let sql = table.reset();
-        sqlx::query(sql).execute(&self.pool).await
     }
 
     /// Create a new user with the provided parameters
