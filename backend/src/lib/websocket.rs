@@ -8,6 +8,8 @@ use std::time::{Duration, Instant};
 use actix::prelude::*;
 use actix_web_actors::ws;
 
+use crate::claims::{Claims, TokenError};
+
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -531,12 +533,17 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                         }
                         _ => ctx.text(format!("!!! unknown command: {m:?}")),
                     }
+                } else if m.starts_with('{') {
+                    let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
+                        .expect("Invalid websocket auth jwt format");
+                    dbg!(auth.claims().unwrap());
                 } else {
                     let msg = if let Some(ref name) = self.name {
                         format!("{name}: {m}")
                     } else {
                         m.to_owned()
                     };
+                    log::warn!("{}", &msg);
                     // send message to chat server
                     self.addr.do_send(ClientMessage {
                         id: self.id,
@@ -555,5 +562,16 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             }
             ws::Message::Nop => (),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct WebsocketAuthJwt {
+    r#type: String,
+    jwt: String,
+}
+impl WebsocketAuthJwt {
+    fn claims(&self) -> Result<Claims, TokenError> {
+        Claims::decode(self.jwt.split(' ').last().ok_or(TokenError::ParseError)?)
     }
 }

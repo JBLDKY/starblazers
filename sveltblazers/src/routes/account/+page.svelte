@@ -22,7 +22,9 @@
 		let ws = new WebSocket('ws://localhost:3030/lobby');
 
 		ws.onopen = () => {
+			const jwt = get(jwtStore);
 			console.log('lobby connection established');
+			ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
 		};
 
 		ws.onmessage = (event) => {
