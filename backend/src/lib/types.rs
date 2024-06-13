@@ -86,6 +86,12 @@ pub enum SignupError {
 
     #[error("Invalid email")]
     InvalidEmail,
+
+    #[error("Username cannot be empty")]
+    InvalidUsername,
+
+    #[error("Password cannot be empty")]
+    InvalidPassword,
 }
 
 impl Reject for LoginError {}

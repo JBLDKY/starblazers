@@ -41,9 +41,10 @@ async fn echo_websocket(
 #[post("/auth/signup")]
 async fn sign_up(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, actix_web::Error> {
     let user = serde_json::from_slice::<User>(&body)?;
+    dbg!(&user);
     match db.create_user(&user).await {
         Ok(_) => Ok(HttpResponse::Ok().json(json!({"message:": user.username}))),
-        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
+        Err(e) => Err(actix_web::error::ErrorBadRequest(e)),
     }
 }
 

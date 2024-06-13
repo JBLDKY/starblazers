@@ -74,8 +74,24 @@ impl DatabaseClient {
             chrono::Utc::now().naive_utc() // Default is the current time
         };
 
+        // valid format email check
         if !EmailAddress::is_valid(&user.email) {
+            log::error!("Email address is invalid");
             return Err(SignupError::InvalidEmail)
+                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+        }
+
+        // check non-empty username
+        if user.username.is_empty() {
+            log::error!("Username is empty");
+            return Err(SignupError::InvalidUsername)
+                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+        }
+
+        // check non-empty password
+        if user.password.is_empty() {
+            log::error!("Password is empty");
+            return Err(SignupError::InvalidPassword)
                 .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
         }
 
