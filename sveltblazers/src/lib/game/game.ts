@@ -37,6 +37,7 @@ export class SpaceInvadersGame {
 	private devConsole: DevConsole = new DevConsole(this);
 	private entityManager: EntityManager = new EntityManager();
 	private inputHandler: InputHandler;
+	private data: string = '';
 
 	public debugManager: DebugManager = new DebugManager();
 	public spawnHandler: SpawnHandler;
@@ -57,10 +58,14 @@ export class SpaceInvadersGame {
 		this.inputHandler = new InputHandler(this, this.devConsole);
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
 		this.collisionManager = new CollisionManager();
+
+		this.getGameStateData = this.getGameStateData.bind(this);
+		this.setGameStateData = this.setGameStateData.bind(this);
+
 		this.gameStateManager = new GameStateManager(
 			this.websocket,
-			this.getGameState,
-			this.setGameState
+			this.getGameStateData,
+			this.setGameStateData
 		);
 	}
 
@@ -257,5 +262,13 @@ export class SpaceInvadersGame {
 
 	getEnemies(): Entity[] {
 		return this.entityManager.getEntityByKind(EntityIndex.slowStraightShootingAlien);
+	}
+
+	getGameStateData(): number {
+		return this.getCurrentPlayer().getPosition();
+	}
+
+	setGameStateData(data: string): void {
+		this.data = data;
 	}
 }

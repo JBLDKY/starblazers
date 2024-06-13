@@ -3,8 +3,17 @@ import type { WebSocketManager } from '$lib/websocketmanager';
 export class GameStateManager {
 	private websocket: WebSocketManager;
 
-	constructor(websocket: WebSocketManager) {
+	private getGameState: () => any;
+	private setGameState: (state: any) => void;
+
+	constructor(
+		websocket: WebSocketManager,
+		getGameState: () => any,
+		setGameState: (state: any) => void
+	) {
 		this.websocket = websocket;
+		this.getGameState = getGameState;
+		this.setGameState = setGameState;
 
 		this.websocket.onMessage('gameStateUpdate', (data) => this.handleGameStateUpdate(data));
 
@@ -16,6 +25,6 @@ export class GameStateManager {
 	}
 
 	public sendGameState(): void {
-		this.websocket.sendMessage('gameStateUpdate', 'player is moving');
+		this.websocket.sendMessage('gameStateUpdate', this.getGameState());
 	}
 }
