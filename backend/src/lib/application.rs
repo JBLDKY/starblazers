@@ -1,13 +1,18 @@
+use actix::{Actor, Addr};
 use actix_cors::Cors;
 use actix_web::dev::Server;
 use actix_web::http::header;
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web_actors::ws;
 use std::net::TcpListener;
+use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::configuration::Settings;
 use crate::database::db::DatabaseClient;
 use crate::routes::config_server;
+use crate::websocket::{LobbyServer, WsLobbySession};
 
 pub struct Application {
     server: Server,
@@ -39,8 +44,29 @@ impl Application {
     }
 }
 
+async fn lobby_websocket(
+    req: HttpRequest,
+    stream: web::Payload,
+    srv: actix_web::web::Data<Addr<LobbyServer>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    ws::start(
+        WsLobbySession {
+            id: 0,
+            hb: Instant::now(),
+            lobby: "main".to_owned(),
+            name: Some("name".to_string()),
+            addr: srv.get_ref().clone(),
+        },
+        &req,
+        stream,
+    )
+}
+
 fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::io::Error> {
     let db_client = web::Data::new(Arc::new(db_client));
+
+    let lobby_state = Arc::new(AtomicUsize::new(0));
+    let lobby_server = LobbyServer::new(lobby_state.clone()).start();
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
@@ -53,7 +79,9 @@ fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::
         App::new()
             .wrap(cors)
             .app_data(db_client.clone())
+            .app_data(lobby_server.clone())
             .configure(config_server)
+            .route("/lobby", web::get().to(lobby_websocket))
     })
     .listen(listener)?
     .run();
