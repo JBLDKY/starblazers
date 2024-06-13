@@ -47,7 +47,7 @@ pub async fn spawn_app() -> TestApp {
 
     let address = format!("http://127.0.0.1:{}", app.port());
 
-    let _ = tokio::spawn(app.start());
+    tokio::spawn(app.start());
 
     std::env::set_var("JWT_SECRET", "my-256-bit-secret");
 
