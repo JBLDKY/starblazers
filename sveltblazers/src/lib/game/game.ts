@@ -138,7 +138,7 @@ export class SpaceInvadersGame {
 			'Debug: ' + DebugManager.debugMode,
 			'Frame: ' + this.fpsManager.getFrameCount(),
 			'IGT: ' + Math.trunc(this.fpsManager.getInGameTime() / 1000),
-			'Entit count: ' + this.entityManager.allEntities().length
+			'Entity count: ' + this.entityManager.allEntities().length
 		];
 
 		this.displayDebugInfo(debugMessages);

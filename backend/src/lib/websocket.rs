@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use actix::prelude::*;
@@ -63,7 +65,6 @@ impl Actor for MyWebSocket {
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         // process websocket messages
-        println!("WS: {msg:?}");
         match msg {
             Ok(ws::Message::Ping(msg)) => {
                 self.hb = Instant::now();
@@ -72,7 +73,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
             Ok(ws::Message::Pong(_)) => {
                 self.hb = Instant::now();
             }
-            Ok(ws::Message::Text(text)) => ctx.text(text),
+            Ok(ws::Message::Text(text)) => {
+                // parse
+                // verify
+                // send back
+                let json = serde_json::from_str::<GameState>(&text)
+                    .expect("could not parse into gamestate");
+                log::info!("{}", text);
+                ctx.text(format!("verified: {}", text));
+            }
             Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
@@ -100,3 +109,9 @@ pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
     </body>
 </html>
 "#;
+
+#[derive(Serialize, Deserialize, Default, Debug)]
+struct GameState {
+    r#type: String,
+    data: HashMap<String, usize>,
+}

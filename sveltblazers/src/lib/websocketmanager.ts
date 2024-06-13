@@ -22,7 +22,7 @@ export class WebSocketManager {
 
 		this.ws.onmessage = (event) => {
 			// create callback?
-			this.messages.push(event.data);
+			// this.messages.push(event.data);
 			const handler = this.messageHandlers[event.type];
 			if (handler) {
 				handler(event.data);
@@ -45,12 +45,13 @@ export class WebSocketManager {
 	}
 
 	sendMessage(type: string, data: any) {
-		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			const message = JSON.stringify({ type, data });
-			this.ws.send(message);
-		} else {
+		if (!this.ws || !this.ws.readyState === WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
+			return;
 		}
+
+		const message = JSON.stringify({ type, data });
+		this.ws.send(message);
 	}
 
 	close() {
