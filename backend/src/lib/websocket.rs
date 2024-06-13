@@ -270,7 +270,13 @@ impl Handler<Connect> for LobbyServer {
         let count = self
             .player_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
         self.send_message("main", &format!("Total visitors {count}"), 0);
+        self.send_message(
+            "main",
+            &format!("Current players {:?}", self.player_count.as_ref()),
+            0,
+        );
 
         // send id back
         id
@@ -288,6 +294,16 @@ impl Handler<Disconnect> for LobbyServer {
 
         // remove address
         if self.sessions.remove(&msg.id).is_some() {
+            let count = self
+                .player_count
+                .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
+
+            self.send_message(
+                "main",
+                &format!("Current players after someone left: {count}"),
+                0,
+            );
+
             // remove session from all lobbies
             for (name, sessions) in &mut self.lobbies {
                 if sessions.remove(&msg.id) {

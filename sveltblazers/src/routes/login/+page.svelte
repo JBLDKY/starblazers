@@ -20,23 +20,6 @@
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
 		// `goto()` cannot be called on the server
-		let ws = new WebSocket('ws://localhost:3030/lobby');
-
-		ws.onopen = () => {
-			console.log('lobby connection established');
-		};
-
-		ws.onmessage = (event) => {
-			console.log(event);
-		};
-
-		ws.onclose = (event) => {
-			console.log('WebSocket connection closed', event.code, event.reason);
-		};
-
-		ws.onerror = (error) => {
-			console.error('WebSocket error', error);
-		};
 		if (get(jwtStore) === undefined || get(jwtStore) == '') {
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
