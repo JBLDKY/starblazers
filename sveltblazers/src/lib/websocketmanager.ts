@@ -4,7 +4,7 @@ export class WebSocketManager {
 	public messages: string[];
 
 	constructor() {
-		this.url = 'ws://localhost:3030/chat';
+		this.url = 'ws://localhost:3030/ws';
 		this.messages = [];
 	}
 
