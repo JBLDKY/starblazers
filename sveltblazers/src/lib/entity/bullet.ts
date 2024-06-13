@@ -11,14 +11,29 @@ export class Bullet extends Entity {
 	height: number = 10;
 	direction: number;
 	color: string;
-	id: string;
+	shooterId: number;
 
-	constructor(p: p5, position: Position, speed: number, up: boolean, color: string, id: string) {
-		super(p, position, speed, id);
+	constructor(
+		p: p5,
+		position: Position,
+		speed: number,
+		up: boolean,
+		color: string,
+		shooterId: number
+	) {
+		super(p, position, speed);
 		this.yVelocity = 1;
-		this.direction = up ? 1 : -1;
+		this.direction = up ? -1 : 1;
 		this.color = color;
-		this.id = id;
+		this.shooterId = shooterId;
+	}
+
+	shape(): Rectangle {
+		return this.rect();
+	}
+
+	newBullet(): Bullet {
+		return this;
 	}
 
 	rect(): Rectangle {
@@ -28,6 +43,10 @@ export class Bullet extends Entity {
 	draw() {
 		this.p.fill(this.color);
 		this.p.rect(this.position.x, this.position.y, this.width, this.height);
+
+		if (DebugManager.debugMode) {
+			this.drawDebug();
+		}
 	}
 
 	update() {
@@ -35,10 +54,6 @@ export class Bullet extends Entity {
 
 		if (this.position.y < 0 || this.position.y > 800) {
 			this.kill();
-		}
-
-		if (DebugManager.debugMode) {
-			// this.drawDebug();
 		}
 	}
 }

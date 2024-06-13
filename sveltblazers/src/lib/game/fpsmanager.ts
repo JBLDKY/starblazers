@@ -1,10 +1,9 @@
-import type p5 from 'p5';
 /**
  * Manages the Frames Per Second (FPS) display and control for the game.
  */
 export class FPSManager {
+	private gameStartFrameTime: number = 0;
 	private lastFrameTime: number = 0;
-	private fps: number = 0;
 	private frameCount: number = 0;
 	private fpsDisplayTime: number = 0;
 	private readonly fpsInterval: number = 1000 / 60;
@@ -13,9 +12,8 @@ export class FPSManager {
 
 	/**
 	 * Creates an FPSManager instance.
-	 * @param {p} p - The canvas rendering context to draw the FPS display.
 	 */
-	constructor(private p: p5) {}
+	constructor() {}
 
 	/**
 	 * Updates the frame count and calculates the FPS.
@@ -23,12 +21,9 @@ export class FPSManager {
 	 */
 	public update(timestamp: number): void {
 		if (timestamp - this.fpsDisplayTime > 1000) {
-			this.fps = this.frameCount;
 			this.frameCount = 0;
 			this.fpsDisplayTime = timestamp;
 		}
-		// TODO: What happens when values like these exceed their capacity in javascript?
-		// TODO: Can values like these be set to wrap?
 		this.frameCount++;
 	}
 
@@ -64,11 +59,11 @@ export class FPSManager {
 		return false; // Return false if the interval has not yet been exceeded
 	}
 
-	/**
-	 * Draws the FPS value on the canvas.
-	 */
-	// public draw(): void {
-	// this.p.fill('white');
-	// this.p.text(`FPS: ${this.fps}`, 10, 30);
-	// }
+	public getFrameCount(): number {
+		return this.frameCount;
+	}
+
+	public getInGameTime(): number {
+		return this.lastFrameTime - this.gameStartFrameTime;
+	}
 }

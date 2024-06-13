@@ -2,18 +2,17 @@ import type p5 from 'p5';
 import { Entity } from './base';
 import { Circle } from '../types';
 import type { Position } from '../types';
-import { Bullet } from './bullet';
-import DebugManager from '../system/debug_manager'; // Adjust path as necessary
 import { EntityIndex } from './entity_index';
+import type { Shooter } from './shooter';
+import { EntityEvent } from '$lib/system/entities/entity_event_handler';
+import { Bullet } from './bullet';
 
-export class slowStraightShootingAlien extends Entity {
+export class slowStraightShootingAlien extends Entity implements Shooter {
 	entityKind: EntityIndex = EntityIndex.slowStraightShootingAlien;
 	cycle: number = 0;
 	radius: number;
 	moveDown: boolean;
 	xVelocity: number;
-	active: boolean;
-	isSlowStraighShootingAlien: boolean = true;
 	fireRate: number = 30;
 	maxBullets: number = 10;
 	image: p5.Image;
@@ -21,10 +20,9 @@ export class slowStraightShootingAlien extends Entity {
 	idle: p5.Image;
 	damage_frame: number | null;
 	size: number;
-	id: string;
 
-	constructor(p: p5, position: Position, speed: number, id: string) {
-		super(p, position, speed, id);
+	constructor(p: p5, position: Position, speed: number) {
+		super(p, position, speed);
 
 		this.idle = p.loadImage('/sprites/rock_boss_trimmed.png');
 		this.damaged = p.loadImage('/sprites/rock_boss_trimmed_damaged.png');
@@ -33,12 +31,10 @@ export class slowStraightShootingAlien extends Entity {
 		this.cycle = 0;
 		this.moveDown = false;
 		this.xVelocity = 10;
-		this.active = false;
 
 		this.radius = this.image.width / 2;
 		this.size = this.image.width / 2;
 		this.damage_frame = null;
-		this.id = id;
 	}
 
 	shape(): Circle {
@@ -67,11 +63,7 @@ export class slowStraightShootingAlien extends Entity {
 			this.moveDown = true;
 		}
 
-		if (
-			this.bullets.length < this.maxBullets &&
-			this.cycle % this.fireRate == 0 &&
-			Math.random() < 1
-		) {
+		if (this.cycle % this.fireRate == 0 && Math.random() < 1) {
 			this.fire();
 		}
 
@@ -80,21 +72,29 @@ export class slowStraightShootingAlien extends Entity {
 
 	draw() {
 		this.p.image(this.image, this.position.x, this.position.y);
-		this.bullets.forEach((bullet) => bullet.draw());
 
-		if (DebugManager.debugMode) {
+		if (this.isDebugEnabled()) {
 			this.drawDebug();
 		}
 	}
 
-	take_damage() {
+	takeDamage() {
 		this.image = this.damaged;
 		this.damage_frame = this.cycle;
 	}
 
-	fire(): void {
-		this.bullets.push(
-			new Bullet(this.p, { x: this.position.x, y: this.position.y }, 20, true, 'pink', 0)
+	public fire(): void {
+		this.getEntityManager().notify(this, EntityEvent.Fire);
+	}
+
+	newBullet(): Bullet {
+		return new Bullet(
+			this.p,
+			{ x: this.position.x, y: this.position.y },
+			100,
+			false,
+			'orange',
+			this.getId()
 		);
 	}
 }

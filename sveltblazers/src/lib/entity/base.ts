@@ -1,7 +1,8 @@
 import type p5 from 'p5';
 import type { Position, Shape } from '../types';
 import type { Bullet } from './bullet';
-import type { EntityIndex } from './entity_index';
+import { EntityIndex } from './entity_index';
+import type { EntityManager } from '$lib/system/entities/entity_manager';
 
 const keyToVectorMap = {
 	w: { x: 0, y: -1 },
@@ -12,36 +13,76 @@ const keyToVectorMap = {
 
 export abstract class Entity {
 	protected p: p5;
-	protected bullets: Bullet[] = [];
-	readonly id: string;
 	abstract entityKind: EntityIndex;
 
+	private id: number = -1; // The EntityManager should generate a unique ID for the entity
+	private entityManager: EntityManager | null = null;
+	private debug: boolean = false;
+
 	maxBullets: number = 1;
-	position: Position;
-	speed: number;
+	position: p5.Vector;
+	velocity: p5.Vector;
 	active: boolean = true;
 
-	constructor(p: p5, position: Position, speed: number, id: string) {
+	constructor(p: p5, position: p5.Vector) {
 		this.p = p;
-		this.id = id;
 		this.position = position;
-		this.speed = speed;
-		this.active = true;
+		this.velocity = this.p.createVector();
 	}
 
 	abstract draw(): void;
 	abstract update(): void;
 	abstract shape(): Shape;
+	abstract newBullet(): Bullet;
 
-	getBullets(): Bullet[] {
-		return this.bullets;
+	isDebugEnabled(): boolean {
+		return this.debug;
 	}
-	cleanBullets(): void {
-		this.bullets = this.bullets.filter((bullet) => bullet.active);
+
+	toggleDebug() {
+		this.debug = !this.debug;
+	}
+
+	enableDebug() {
+		this.debug = true;
+	}
+
+	disableDebug() {
+		this.debug = false;
+	}
+
+	protected getEntityManager(): EntityManager {
+		if (!this.entityManager) {
+			throw new Error('Mediator is not set');
+		}
+		return this.entityManager;
+	}
+
+	setEntityManager(entityManager: EntityManager): void {
+		this.entityManager = entityManager;
+	}
+
+	setId(id: number): void {
+		this.id = id;
+	}
+
+	getId(): number {
+		if (this.id === -1) {
+			throw new Error('ID is not set');
+		}
+		return this.id;
 	}
 
 	getPosition(): Position {
 		return { x: this.position.x, y: this.position.y };
+	}
+
+	getBullets(): Bullet[] {
+		if (this.entityManager == null) {
+			throw new Error(`No entitymanager set on entity with ID: ${this.id}`);
+		}
+
+		return this.entityManager.getBulletsByShooterId(this.id);
 	}
 
 	drawDebug() {
@@ -51,13 +92,13 @@ export abstract class Entity {
 
 		this.p.textSize(10);
 		this.p.text(
-			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nbullets: ${this.bullets.length}\nspeed: ${this.speed}`,
+			`id: ${this.id}\nposition: x: ${this.position.x}, y: ${this.position.y}\nspeed: ${this.velocity}`,
 			this.position.x + shape.dimensions.width,
 			this.position.y + shape.dimensions.height
 		);
 	}
 
-	take_damage() {}
+	takeDamage() {}
 
 	kill() {
 		this.active = false;
@@ -72,8 +113,7 @@ export abstract class Entity {
 			}
 		});
 
-		this.position.x += movement.x * this.speed;
-		this.position.y += movement.y * this.speed;
+		this.position.add(this.velocity);
 	}
 
 	setProperty(property: string, value: string) {
@@ -104,7 +144,7 @@ export abstract class Entity {
 			value = Number.parseInt(value);
 		}
 
-		this.speed = value;
+		this.velocity = value;
 	}
 
 	setXPos(value: string | number) {

@@ -12,11 +12,11 @@ import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
 import type { Entity } from '$lib/entity/base';
 import { DevConsole } from '$lib/dev_console';
-import { SpawnHandler } from '$lib/system/spawn_handler';
+import { SpawnHandler } from '$lib/system/entities/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
-import { EntityManager } from '$lib/system/entity_manager';
+import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
-import { MenuFactory, MenuIndex } from '$lib/entity/entity_index';
+import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -30,7 +30,6 @@ export class SpaceInvadersGame {
 	private websocket: WebSocketManager;
 	private chatBox: ChatBox;
 	private fpsManager: FPSManager;
-	private lastTime: number = 0;
 	private user: User;
 	private state: GameState = GameState.MENU;
 	private currentMenu: BaseMenu | null;
@@ -51,7 +50,7 @@ export class SpaceInvadersGame {
 
 		this.user = new User('');
 		this.chatBox = new ChatBox(this.user, this.websocket);
-		this.fpsManager = new FPSManager(this.p);
+		this.fpsManager = new FPSManager();
 		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
 		this.inputHandler = new InputHandler(this, this.devConsole);
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
@@ -63,43 +62,81 @@ export class SpaceInvadersGame {
 	 */
 	public start(): void {
 		// Create player
-		this.spawnHandler.spawn_player(
-			{ x: this.p.width / 2, y: this.p.height - 30 },
-			5,
-			this.user.uuid
-		);
+		this.spawnHandler.spawn_player(this.p.createVector(640, 730), this.user.uuid);
 
 		// Start websocket
 		this.startWebsocket();
 
 		// Run gameloop through p
-		requestAnimationFrame(() => this.gameLoop(this.lastTime));
+		requestAnimationFrame(() => this.gameLoop(0));
 	}
 
 	/**
 	 * Updates the state of all game entities every loop/frame.
 	 */
-	public update(): void {
-		this.handleInput();
+	public update(timestamp: number): void {
+		if (!this.isTypingInChat()) {
+			this.handleInput(timestamp);
+		} else {
+			this.handleInputWhileTyping();
+		}
 
 		this.entityManager.cleanInactiveEntities();
 		this.collisions();
 
-		this.entityManager.allEntites().forEach((entity) => entity.update());
+		this.entityManager.allEntities().forEach((entity) => entity.update());
 	}
 
 	/**
 	 * Draws all game entities to the p.
 	 */
 	public draw(): void {
-		// Clear p
+		this.clearCanvas();
+		this.drawBackground();
+		this.drawEntities();
+		this.debugInfo();
+	}
+
+	private clearCanvas(): void {
 		this.p.clear();
+	}
+
+	private drawBackground(): void {
 		this.p.background(Colors.BACKGROUND);
+	}
 
-		this.entityManager.allEntites().forEach((entity) => entity.draw());
+	private drawEntities(): void {
+		this.entityManager.allEntities().forEach((entity: Entity) => {
+			entity.draw();
+			if (entity.isDebugEnabled()) {
+				entity.drawDebug();
+			}
+		});
+	}
 
-		// Draw FPS counter TODO: fix
-		this.p.text(Math.round(this.p.frameRate()), 50, 50);
+	private debugInfo(): void {
+		const debugMessages = [
+			'FPS: ' + Math.round(this.p.frameRate()),
+			'Chatting: ' + this.isTypingInChat(),
+			'Dev command: ' + this.inputHandler.shouldHandleDevCommand(this.fpsManager.getInGameTime()),
+			'Last dev cmd time: ' + this.inputHandler.getLastDevCommandTime(),
+			'Debug: ' + DebugManager.debugMode,
+			'Frame: ' + this.fpsManager.getFrameCount(),
+			'IGT: ' + Math.trunc(this.fpsManager.getInGameTime() / 1000),
+			'Entit count: ' + this.entityManager.allEntities().length
+		];
+
+		this.displayDebugInfo(debugMessages);
+	}
+
+	private displayDebugInfo(messages: string[]): void {
+		let yPos = 400;
+		this.p.textSize(10);
+		this.p.fill('white');
+		for (const message of messages) {
+			this.p.text(message, 50, yPos);
+			yPos += 10;
+		}
 	}
 
 	setMessage(value: string): void {
@@ -118,8 +155,8 @@ export class SpaceInvadersGame {
 		this.chatBox.sendMessage(this.devConsole);
 	}
 
-	getEntity(id: string): Entity | undefined {
-		return this.entityManager.allEntites().find((entity) => entity.id == id);
+	getEntity(id: number): Entity | undefined {
+		return this.entityManager.allEntities().find((entity) => entity.getId() == id);
 	}
 
 	getGameState(): GameState {
@@ -130,16 +167,26 @@ export class SpaceInvadersGame {
 		this.state = state;
 	}
 
-	handleInput(): void {
-		this.inputHandler.handleInput();
+	handleInput(timestamp: number): void {
+		this.inputHandler.handleInput(timestamp);
+	}
+
+	handleInputWhileTyping(): void {
+		this.inputHandler.handleInputWhileTyping();
 	}
 
 	setCurrentMenu(menuIndex: MenuIndex): void {
 		this.currentMenu = new MenuFactory().newMenu(this.p, menuIndex, this.inputHandler);
 	}
 
+	isTypingInChat(): boolean {
+		return this.chatBox.isTypingInChat();
+	}
+
 	public getCurrentPlayer(): Player {
-		return this.entityManager.getPlayers().filter((player) => this.user.uuid == player.uuid)[0];
+		return this.entityManager
+			.getEntityByKind(EntityIndex.Player)
+			.filter((player: Player) => this.user.uuid == player.uuid)[0];
 	}
 
 	private startWebsocket() {
@@ -150,16 +197,18 @@ export class SpaceInvadersGame {
 	 * The main game loop. Updates game state and draws our background frames.
 	 */
 	private gameLoop(timestamp: number): void {
-		requestAnimationFrame((newTimestamp) => this.gameLoop(newTimestamp));
+		requestAnimationFrame((newTimestamp) => {
+			this.gameLoop(newTimestamp);
+		});
 
 		if (this.fpsManager.shouldDraw(timestamp)) {
 			switch (this.state) {
 				case GameState.RUN:
-					this.update();
+					this.update(timestamp);
 					this.draw();
 					break;
 				case GameState.PAUSE:
-					this.handleInput(); // TODO: why
+					this.handleInput(timestamp); // TODO: why
 					break;
 				case GameState.MENU:
 					if (this.currentMenu !== null && this.fpsManager.shouldProcessMenuInput(timestamp)) {
@@ -179,22 +228,26 @@ export class SpaceInvadersGame {
 	private collisions(): void {
 		// Check if any players are hit by creating a cartesian product of all players and enemy bullets
 		cartesian(
-			this.entityManager.getEnemies(),
+			this.entityManager.getAliens(),
 			this.entityManager.getPlayers().flatMap((enemy) => enemy.getBullets())
 		).forEach((pair: [Entity, Bullet]) => {
 			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
-				pair[0].take_damage();
+				pair[0].takeDamage();
 			}
 		});
 
 		// Check if any players are hit by creating a cartesian product of all players and enemy bullets
 		cartesian(
 			this.entityManager.getPlayers(),
-			this.entityManager.getEnemies().flatMap((enemy) => enemy.getBullets())
+			this.entityManager.getAliens().flatMap((enemy) => enemy.getBullets())
 		).forEach((pair: [Player, Bullet]) => {
 			if (this.collisionManager.checkCollision(pair[0], pair[1])) {
 				pair[0].active = false;
 			}
 		});
+	}
+
+	getEnemies(): Entity[] {
+		return this.entityManager.getEntityByKind(EntityIndex.slowStraightShootingAlien);
 	}
 }

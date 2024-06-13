@@ -16,8 +16,8 @@ export class SpawnHandler {
 		this.entityManager = entityManager;
 	}
 
-	public spawn_player(position: Position, speed: number, id: string): void {
-		this.entityManager.addPlayer(new Player(this.p, position, speed, id));
+	public spawn_player(position: Position, id: string): void {
+		this.entityManager.addEntity(new Player(this.p, position, id));
 	}
 
 	public getNewId(): string {
@@ -37,12 +37,10 @@ export class SpawnHandler {
 
 		switch (typeId) {
 			case 0:
-				this.entityManager.addEnemy(new Alien(this.p, position, speed, this.getNewId()));
+				this.entityManager.addEntity(new Alien(this.p, position, speed));
 				break;
 			case 1:
-				this.entityManager.addEnemy(
-					new slowStraightShootingAlien(this.p, position, speed, this.getNewId())
-				);
+				this.entityManager.addEntity(new slowStraightShootingAlien(this.p, position, speed));
 				break;
 			case 2:
 				// this.alive.push(

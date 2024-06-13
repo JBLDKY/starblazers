@@ -3,7 +3,6 @@ export class DebugManager {
 
 	static toggleDebugMode() {
 		DebugManager.debugMode = !DebugManager.debugMode;
-		console.log(`Debug mode is now ${DebugManager.debugMode ? 'ON' : 'OFF'}`);
 	}
 }
 
