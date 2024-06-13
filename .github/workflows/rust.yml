@@ -8,16 +8,47 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  SQLX_VERSION: 0.7.4
+  SQLX_FEATURES: "rustls,postgres"
 
 jobs:
-  build:
+  test:
+    name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
     steps:
     - uses: actions/checkout@v3
     - uses: dtolnay/rust-toolchain@stable
     - uses: Swatinem/rust-cache@v2
+      with:
+       key: sqlx-${{ env.SQLX_VERSION }}
+    - name: Install sqlx-cli
+      run:
+          cargo install sqlx-cli
+          --version=${{ env.SQLX_VERSION }}
+          --features ${{ env.SQLX_FEATURES }}
+          --no-default-features
+          --locked
+      working-directory: ./backend
+    - name: Migrate database
+      run: |
+        sudo apt-get install libpq-dev -y
+        SKIP_DOCKER=true ./scripts/docker_db.sh
+      working-directory: ./backend
+    - name: Check sqlx-data.json is up-to-date
+      run: |
+        cargo sqlx prepare --workspace --check
+      working-directory: ./backend
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
       working-directory: ./backend
       
   cargo-fmt:
