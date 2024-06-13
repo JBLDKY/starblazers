@@ -1,7 +1,8 @@
+pub mod application;
 pub mod claims;
 pub mod cli;
-pub mod cookie;
+pub mod configuration;
 pub mod database;
-pub mod filters;
+pub mod routes;
 pub mod types;
 pub mod websocket;

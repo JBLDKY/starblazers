@@ -72,7 +72,6 @@
 
 	async function createNewAccount() {
 		const body = { username: username, email: email, password: password };
-		console.log('body: ', body);
 		let response = await fetch(CREATE_NEW_SERVER_URL, {
 			method: 'POST',
 			mode: 'cors', // no-cors, *cors, same-origin,
@@ -83,14 +82,19 @@
 		});
 		// Give user time to read funni msg
 		await delay(LOGIN_DELAY);
+
 		let text = await response.json();
+
+		let loginResponse = await loginRequest(body.email, body.password);
+
+		// Redirects to account
+		handleLoginResponse(loginResponse);
 		return text;
 	}
 
-	async function authenticate() {
-		const body = { email: email, password: password };
-		console.log(body);
-		let response = await fetch(AUTH_SERVER_URL, {
+	async function loginRequest(email_addr: string, pw: string): Promise<Response> {
+		const body = { email: email_addr, password: pw };
+		return fetch(AUTH_SERVER_URL, {
 			method: 'POST',
 			mode: 'cors',
 			headers: {
@@ -98,14 +102,25 @@
 			},
 			body: JSON.stringify(body)
 		});
-		// Give user time to read funni msg
-		await delay(LOGIN_DELAY);
+	}
 
-		const jwt = response.headers.get('Authorization');
+	async function handleLoginResponse(res: Response) {
+		const jwt = res.headers.get('Authorization');
 		if (jwt === undefined || jwt === null) {
 			throw new Error('Did not receive jwt from server');
 		}
 		jwtStore.set(jwt);
+
+		// Upon succesful login, redirect to the account page
+		goto('/account');
+	}
+
+	async function authenticate() {
+		let response = await loginRequest(email, password);
+		// Give user time to read funni msg
+		await delay(LOGIN_DELAY);
+
+		handleLoginResponse(response);
 
 		// Upon succesful login, redirect to the account page
 		goto('/account');

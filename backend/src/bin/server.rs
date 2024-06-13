@@ -1,21 +1,18 @@
-use std::sync::Arc;
+use service::application::Application;
+use service::configuration::get_settings;
 
-use service::database::db::DatabaseClient;
-use service::filters::all;
-
-#[tokio::main]
-async fn main() {
+#[actix_web::main]
+async fn main() -> Result<(), std::io::Error> {
     if dotenv::dotenv().is_err() {
         log::error!("Warning: Did not find .env file in current working directory!");
     }
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
 
-    let db = DatabaseClient::new().await;
+    let settings = get_settings();
 
-    db.test().await;
+    let app = Application::build(settings.expect("Failed to get settings file")).await?;
+    app.start().await?;
 
-    let filters = all(Arc::new(db));
-
-    warp::serve(filters).run(([127, 0, 0, 1], 3030)).await;
+    Ok(())
 }

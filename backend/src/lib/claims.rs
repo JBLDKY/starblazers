@@ -19,7 +19,7 @@ pub struct Claims {
 
 impl Reject for TokenError {}
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Deserialize, Serialize)]
 pub enum TokenError {
     #[error("Could not parse jwt string.")]
     ParseError,
@@ -56,7 +56,7 @@ impl Claims {
         }
     }
 
-    pub fn from_header_value(header_value: HeaderValue) -> Result<Claims, TokenError> {
+    pub fn from_header_value(header_value: &HeaderValue) -> Result<Claims, TokenError> {
         let jwt_string = header_value
             .to_str()
             .map_err(|_| TokenError::ValueError)?

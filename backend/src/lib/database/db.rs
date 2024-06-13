@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::{
     claims::Claims,
-    database::queries::Table,
     types::{LoginDetails, LoginError, LoginMethod, SignupError, User, UserRecord},
 };
 use sqlx::{postgres::PgPool, Postgres, Transaction};
@@ -66,15 +65,6 @@ impl DatabaseClient {
         }
     }
 
-    /// Resets a provided table
-    pub async fn reset_table(
-        &self,
-        table: &Table,
-    ) -> Result<sqlx::postgres::PgQueryResult, sqlx::Error> {
-        let sql = table.drop();
-        sqlx::query(sql).execute(&self.pool).await
-    }
-
     /// Create a new user with the provided parameters
     pub async fn create_user(&self, user: &User) -> Result<(), sqlx::Error> {
         log::info!("Creating new account....");
@@ -84,8 +74,24 @@ impl DatabaseClient {
             chrono::Utc::now().naive_utc() // Default is the current time
         };
 
+        // valid format email check
         if !EmailAddress::is_valid(&user.email) {
+            log::error!("Email address is invalid");
             return Err(SignupError::InvalidEmail)
+                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+        }
+
+        // check non-empty username
+        if user.username.is_empty() {
+            log::error!("Username is empty");
+            return Err(SignupError::InvalidUsername)
+                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+        }
+
+        // check non-empty password
+        if user.password.is_empty() {
+            log::error!("Password is empty");
+            return Err(SignupError::InvalidPassword)
                 .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
         }
 
