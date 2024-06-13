@@ -66,7 +66,7 @@ fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::
     let db_client = web::Data::new(Arc::new(db_client));
 
     let lobby_state = Arc::new(AtomicUsize::new(0));
-    let lobby_server = LobbyServer::new(lobby_state.clone()).start();
+    let lobby_server = web::Data::new(LobbyServer::new(lobby_state.clone()).start());
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
