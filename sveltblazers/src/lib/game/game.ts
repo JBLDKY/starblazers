@@ -59,6 +59,9 @@ export class SpaceInvadersGame {
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
 		this.collisionManager = new CollisionManager();
 
+		// These methods are passed to gameStateManager who calls them
+		// to get and set gamestate. They must be bound to this class
+		// because methods called inside of these might not exist on gamestatemanager
 		this.getGameStateData = this.getGameStateData.bind(this);
 		this.setGameStateData = this.setGameStateData.bind(this);
 
