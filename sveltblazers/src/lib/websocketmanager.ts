@@ -2,6 +2,7 @@ export class WebSocketManager {
 	private url: string;
 	private ws: WebSocket | null = null;
 	public messages: string[];
+	private messageHandlers: { [key: string]: (data: any) => void } = {};
 
 	constructor() {
 		this.url = 'ws://localhost:3030/ws';
@@ -22,6 +23,12 @@ export class WebSocketManager {
 		this.ws.onmessage = (event) => {
 			// create callback?
 			this.messages.push(event.data);
+			const handler = this.messageHandlers[event.type];
+			if (handler) {
+				handler(event.data);
+			} else {
+				console.warn(`No handler for message type: ${event.type}`);
+			}
 		};
 
 		this.ws.onclose = (event) => {
@@ -33,9 +40,13 @@ export class WebSocketManager {
 		};
 	}
 
-	sendMessage(message: string) {
+	onMessage(type: string, handler: (data: any) => void) {
+		this.messageHandlers[type] = handler;
+	}
+
+	sendMessage(type: string, data: any) {
 		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			this.messages.push(message);
+			const message = JSON.stringify({ type, data });
 			this.ws.send(message);
 		} else {
 			console.error('WebSocket is not connected');

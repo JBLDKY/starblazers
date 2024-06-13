@@ -17,6 +17,7 @@ import DebugManager from '$lib/system/debug_manager';
 import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
+import { GameStateManager } from '$lib/system/game_state_manager';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -39,6 +40,7 @@ export class SpaceInvadersGame {
 
 	public debugManager: DebugManager = new DebugManager();
 	public spawnHandler: SpawnHandler;
+	public gameStateManager: GameStateManager;
 
 	/**
 	 * Initializes the game with a given p5 canvas.
@@ -55,6 +57,11 @@ export class SpaceInvadersGame {
 		this.inputHandler = new InputHandler(this, this.devConsole);
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
 		this.collisionManager = new CollisionManager();
+		this.gameStateManager = new GameStateManager(
+			this.websocket,
+			this.getGameState,
+			this.setGameState
+		);
 	}
 
 	/**
@@ -206,6 +213,7 @@ export class SpaceInvadersGame {
 				case GameState.RUN:
 					this.update(timestamp);
 					this.draw();
+					this.gameStateManager.sendGameState(); // Send game state update
 					break;
 				case GameState.PAUSE:
 					this.handleInput(timestamp); // TODO: why
@@ -218,7 +226,7 @@ export class SpaceInvadersGame {
 					break;
 			}
 		}
-		this.chatBox.receiveMessage();
+		// this.chatBox.receiveMessage();
 		this.fpsManager.update(timestamp);
 	}
 
