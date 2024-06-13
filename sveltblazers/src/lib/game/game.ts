@@ -272,6 +272,10 @@ export class SpaceInvadersGame {
 	}
 
 	setGameStateData(data: string): void {
-		this.data = data;
+		console.log(data);
+		let player = this.getCurrentPlayer();
+
+		player.setXPos(data.data.x);
+		player.setYPos(data.data.y);
 	}
 }

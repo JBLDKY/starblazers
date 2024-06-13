@@ -77,10 +77,20 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
                 // parse
                 // verify
                 // send back
-                let json = serde_json::from_str::<GameState>(&text)
-                    .expect("could not parse into gamestate");
-                log::info!("{}", text);
-                ctx.text(format!("verified: {}", text));
+                let json = serde_json::from_str::<GameState>(&text);
+
+                if json.is_err() {
+                    ctx.text("invalid json");
+                    return;
+                }
+
+                let mut res = json.unwrap();
+                res.move_up();
+
+                ctx.text(format!(
+                    "gameStateVerified: {}",
+                    serde_json::to_value(res).unwrap()
+                ));
             }
             Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
             Ok(ws::Message::Close(reason)) => {
@@ -114,4 +124,28 @@ pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
 struct GameState {
     r#type: String,
     data: HashMap<String, usize>,
+}
+
+#[allow(dead_code)]
+impl GameState {
+    fn move_up(&mut self) {
+        if let Some(y) = self.data.get_mut("y") {
+            *y -= 1;
+        }
+    }
+    fn move_down(&mut self) {
+        if let Some(y) = self.data.get_mut("y") {
+            *y += 1;
+        }
+    }
+    fn move_left(&mut self) {
+        if let Some(x) = self.data.get_mut("x") {
+            *x -= 1;
+        }
+    }
+    fn move_right(&mut self) {
+        if let Some(x) = self.data.get_mut("x") {
+            *x += 1;
+        }
+    }
 }

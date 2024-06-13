@@ -17,11 +17,18 @@ export class GameStateManager {
 
 		this.websocket.onMessage('gameStateUpdate', (data) => this.handleGameStateUpdate(data));
 
-		this.websocket.onMessage('message', (data) => console.log(data));
+		this.websocket.onMessage('message', (data) => this.handleGameStateUpdate(data));
 	}
 
 	private handleGameStateUpdate(data: string): void {
-		console.log('setting gamestate: ', data);
+		console.log(data);
+
+		if (data == 'invalid json') {
+			return;
+		}
+
+		const gamestate = JSON.parse(data.split(' ')[1]);
+		this.setGameState(gamestate);
 	}
 
 	public sendGameState(): void {
