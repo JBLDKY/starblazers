@@ -161,16 +161,17 @@ pub struct Message(pub String);
 
 /// New chat session is created
 #[derive(Message)]
-#[rtype(usize)]
+#[rtype(String)]
 pub struct Connect {
     pub addr: Recipient<Message>,
+    pub claims: Claims,
 }
 
 /// Session is disconnected
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct Disconnect {
-    pub id: usize,
+    pub id: String,
 }
 /// Send message to specific room
 #[derive(Message)]
@@ -204,8 +205,8 @@ pub struct Join {
 
 #[derive(Debug)]
 pub struct LobbyServer {
-    sessions: HashMap<usize, Recipient<Message>>,
-    lobbies: HashMap<String, HashSet<usize>>,
+    sessions: HashMap<String, Recipient<Message>>,
+    lobbies: HashMap<String, HashSet<String>>,
     rng: ThreadRng,
     player_count: Arc<AtomicUsize>,
 }
@@ -227,7 +228,7 @@ impl LobbyServer {
 
 impl LobbyServer {
     /// Send message to all users in the room
-    fn send_message(&self, room: &str, message: &str, skip_id: usize) {
+    fn send_message(&self, room: &str, message: &str, skip_id: String) {
         if let Some(sessions) = self.lobbies.get(room) {
             for id in sessions {
                 if *id != skip_id {
@@ -251,33 +252,33 @@ impl Actor for LobbyServer {
 ///
 /// Register new session and assign unique id to this session
 impl Handler<Connect> for LobbyServer {
-    type Result = usize;
+    type Result = String;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
         println!("Someone joined");
 
         // notify all users in same room
-        self.send_message("main", "Someone joined", 0);
+        self.send_message("main", "Someone joined", "0".to_string());
 
         // register session with random id
-        let id = self.rng.gen::<usize>();
-        self.sessions.insert(id, msg.addr);
+        let id = msg.claims.uuid.clone();
+        self.sessions.insert(id.clone(), msg.addr);
 
         // auto join session to main room
         self.lobbies
             .entry("main".to_owned())
             .or_default()
-            .insert(id);
+            .insert(msg.claims.uuid.clone());
 
         let count = self
             .player_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-        self.send_message("main", &format!("Total visitors {count}"), 0);
+        self.send_message("main", &format!("Total visitors {count}"), "0".to_string());
         self.send_message(
             "main",
             &format!("Current players {:?}", self.player_count.as_ref()),
-            0,
+            "0".to_string(),
         );
 
         // send id back
@@ -303,7 +304,7 @@ impl Handler<Disconnect> for LobbyServer {
             self.send_message(
                 "main",
                 &format!("Current players after someone left: {count}"),
-                0,
+                "0".to_string(),
             );
 
             // remove session from all lobbies
@@ -315,7 +316,7 @@ impl Handler<Disconnect> for LobbyServer {
         }
         // send message to other users
         for room in lobbies {
-            self.send_message(&room, "Someone disconnected", 0);
+            self.send_message(&room, "Someone disconnected", "0".to_string());
         }
     }
 }
@@ -325,7 +326,7 @@ impl Handler<ClientMessage> for LobbyServer {
     type Result = ();
 
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-        self.send_message(&msg.lobby, msg.msg.as_str(), msg.id);
+        self.send_message(&msg.lobby, msg.msg.as_str(), msg.id.to_string());
     }
 }
 
@@ -355,18 +356,21 @@ impl Handler<Join> for LobbyServer {
 
         // remove session from all lobbies
         for (n, sessions) in &mut self.lobbies {
-            if sessions.remove(&id) {
+            if sessions.remove(&id.to_string()) {
                 lobbies.push(n.to_owned());
             }
         }
         // send message to other users
         for room in lobbies {
-            self.send_message(&room, "Someone disconnected", 0);
+            self.send_message(&room, "Someone disconnected", "0".to_string());
         }
 
-        self.lobbies.entry(name.clone()).or_default().insert(id);
+        self.lobbies
+            .entry(name.clone())
+            .or_default()
+            .insert(id.to_string());
 
-        self.send_message(&name, "Someone connected", id);
+        self.send_message(&name, "Someone connected", id.to_string());
     }
 }
 
@@ -401,7 +405,9 @@ impl WsLobbySession {
                 println!("Websocket Client heartbeat failed, disconnecting!");
 
                 // notify chat server
-                act.addr.do_send(Disconnect { id: act.id });
+                act.addr.do_send(Disconnect {
+                    id: act.id.to_string(),
+                });
 
                 // stop actor
                 ctx.stop();
@@ -429,26 +435,28 @@ impl Actor for WsLobbySession {
         // before processing any other events.
         // HttpContext::state() is instance of WsLobbySessionState, state is shared
         // across all routes within application
-        let addr = ctx.address();
-        self.addr
-            .send(Connect {
-                addr: addr.recipient(),
-            })
-            .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(res) => act.id = res,
-                    // something is wrong with chat server
-                    _ => ctx.stop(),
-                }
-                fut::ready(())
-            })
-            .wait(ctx);
+        // let addr = ctx.address();
+        // self.addr
+        //     .send(Connect {
+        //         addr: addr.recipient(),
+        //     })
+        //     .into_actor(self)
+        //     .then(|res, act, ctx| {
+        //         match res {
+        //             Ok(res) => act.id = res,
+        //             // something is wrong with chat server
+        //             _ => ctx.stop(),
+        //         }
+        //         fut::ready(())
+        //     })
+        //     .wait(ctx);
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         // notify chat server
-        self.addr.do_send(Disconnect { id: self.id });
+        self.addr.do_send(Disconnect {
+            id: self.id.to_string(),
+        });
         Running::Stop
     }
 }
@@ -536,7 +544,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                 } else if m.starts_with('{') {
                     let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
                         .expect("Invalid websocket auth jwt format");
-                    dbg!(auth.claims().unwrap());
+                    let claims = auth.claims().expect("Failed to parse claims");
+
+                    let addr = ctx.address().into();
+                    self.addr.do_send(Connect { addr, claims });
                 } else {
                     let msg = if let Some(ref name) = self.name {
                         format!("{name}: {m}")
