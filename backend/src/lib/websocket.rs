@@ -554,4 +554,13 @@ impl<T, const S: usize> RingBuffer<T, S> {
             end: 0,
         }
     }
+
+    fn push(&mut self, item: T) {
+        self.buffer[self.end] = Some(item);
+        self.end = (self.end + 1) % S;
+
+        if self.end == self.start {
+            self.start = (self.start + 1) % S
+        }
+    }
 }
