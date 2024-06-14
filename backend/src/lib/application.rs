@@ -1,10 +1,9 @@
 use actix::{Actor, Addr};
 use actix_cors::Cors;
 use actix_web::dev::Server;
-use actix_web::http::header::{self, HeaderValue};
+use actix_web::http::header::{self};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use serde::{Deserialize, Serialize};
 use std::net::TcpListener;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
