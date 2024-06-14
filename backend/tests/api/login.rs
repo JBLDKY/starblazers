@@ -1,7 +1,7 @@
 use crate::general::spawn_app;
 use std::collections::HashMap;
 
-#[tokio::test]
+#[actix_web::test]
 async fn login_works() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
@@ -33,7 +33,7 @@ async fn login_works() {
         .starts_with("Bearer "));
 }
 
-#[tokio::test]
+#[actix_web::test]
 async fn login_returns_a_jwt() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();

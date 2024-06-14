@@ -1,7 +1,7 @@
 use crate::general::spawn_app;
 use service::{claims::Claims, types::LoginMethod};
 
-#[tokio::test]
+#[actix_web::test]
 async fn verify_jwt_works() {
     let app = spawn_app().await;
 

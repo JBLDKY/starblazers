@@ -1,7 +1,7 @@
 use crate::general::spawn_app;
 use std::collections::HashMap;
 
-#[tokio::test]
+#[actix_web::test]
 async fn signup_works() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
@@ -21,7 +21,7 @@ async fn signup_works() {
     assert!(response.status().is_success());
 }
 
-#[tokio::test]
+#[actix_web::test]
 async fn signup_does_not_work_if_a_field_is_empty() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();

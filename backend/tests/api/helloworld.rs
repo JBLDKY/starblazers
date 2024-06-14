@@ -1,6 +1,6 @@
 use crate::general::spawn_app;
 
-#[tokio::test]
+#[actix_web::test]
 async fn helloworld_works() {
     let app = spawn_app().await;
     let client = reqwest::Client::new();
