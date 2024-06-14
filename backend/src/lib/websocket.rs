@@ -490,61 +490,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             ws::Message::Text(text) => {
                 let m = text.trim();
                 // we check for /sss type of messages
-                if m.starts_with('/') {
-                    let v: Vec<&str> = m.splitn(2, ' ').collect();
-                    match v[0] {
-                        "/list" => {
-                            // Send ListLobbies message to chat server and wait for
-                            // response
-                            println!("List lobbies");
-                            self.addr
-                                .send(ListLobbies)
-                                .into_actor(self)
-                                .then(|res, _, ctx| {
-                                    match res {
-                                        Ok(lobbies) => {
-                                            for lobby in lobbies {
-                                                ctx.text(lobby);
-                                            }
-                                        }
-                                        _ => println!("Something is wrong"),
-                                    }
-                                    fut::ready(())
-                                })
-                                .wait(ctx)
-                            // .wait(ctx) pauses all events in context,
-                            // so actor wont receive any new messages until it get list
-                            // of rooms back
-                        }
-                        "/join" => {
-                            if v.len() == 2 {
-                                v[1].clone_into(&mut self.lobby);
-                                self.addr.do_send(Join {
-                                    id: self.id,
-                                    name: self.lobby.clone(),
-                                });
-
-                                ctx.text("joined");
-                            } else {
-                                ctx.text("!!! room name is required");
-                            }
-                        }
-                        "/name" => {
-                            if v.len() == 2 {
-                                self.name = Some(v[1].to_owned());
-                            } else {
-                                ctx.text("!!! name is required");
-                            }
-                        }
-                        _ => ctx.text(format!("!!! unknown command: {m:?}")),
-                    }
-                } else if m.starts_with('{') {
+                if m.starts_with("{\"type\":\"auth\"}") {
                     let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
                         .expect("Invalid websocket auth jwt format");
                     let claims = auth.claims().expect("Failed to parse claims");
 
                     let addr = ctx.address().into();
                     self.addr.do_send(Connect { addr, claims });
+                } else if m.starts_with("{\"type\":\"gamestate\"}") {
+                    log::warn!("received game info: {}", m);
                 } else {
                     let msg = if let Some(ref name) = self.name {
                         format!("{name}: {m}")
@@ -581,5 +535,23 @@ struct WebsocketAuthJwt {
 impl WebsocketAuthJwt {
     fn claims(&self) -> Result<Claims, TokenError> {
         Claims::decode(self.jwt.split(' ').last().ok_or(TokenError::ParseError)?)
+    }
+}
+
+struct RingBuffer<T, const S: usize> {
+    buffer: [Option<T>; S],
+    start: usize,
+    end: usize,
+}
+
+impl<T, const S: usize> RingBuffer<T, S> {
+    fn new() -> Self {
+        // Initialize the buffer with None values.
+        // Using .map() here instead of [None; S] lifts the restriction that T must implement copy
+        Self {
+            buffer: [(); S].map(|_| None),
+            start: 0,
+            end: 0,
+        }
     }
 }
