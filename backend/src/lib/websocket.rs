@@ -207,7 +207,6 @@ pub struct Join {
 pub struct LobbyServer {
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: HashMap<String, HashSet<String>>,
-    rng: ThreadRng,
     player_count: Arc<AtomicUsize>,
 }
 
@@ -220,7 +219,6 @@ impl LobbyServer {
         LobbyServer {
             sessions: HashMap::new(),
             lobbies,
-            rng: rand::thread_rng(),
             player_count,
         }
     }
