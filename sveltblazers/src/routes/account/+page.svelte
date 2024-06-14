@@ -6,7 +6,9 @@
 	import { validateJwt } from '../../hooks/withJwt';
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import { jwtStore } from '../../store/auth';
-	import { account_page_input_field } from '../../tailwind_presets';
+	import { account_page_input_field, button_tw } from '../../tailwind_presets';
+
+	let ws: WebSocket;
 
 	interface PublicPlayerData {
 		authority: string;
@@ -19,7 +21,7 @@
 	let player_info: Promise<PublicPlayerData> = get_player_info();
 
 	onMount(async () => {
-		let ws = new WebSocket('ws://localhost:3030/lobby');
+		ws = new WebSocket('ws://localhost:3030/lobby');
 
 		ws.onopen = () => {
 			const jwt = get(jwtStore);
@@ -28,7 +30,7 @@
 		};
 
 		ws.onmessage = (event) => {
-			console.log(event);
+			console.log('received: ', event);
 		};
 
 		ws.onclose = (event) => {
@@ -72,6 +74,10 @@
 	}
 
 	let listBoxValue: string = 'account';
+
+	const chat = () => {
+		ws.send(JSON.stringify({ type: 'gamestate' }));
+	};
 </script>
 
 <div class="flex h-screen bg-surface-800">
@@ -85,6 +91,9 @@
 			<ListBoxItem bind:group={listBoxValue} name="hi" value="stats">Stats</ListBoxItem>
 		</ListBox>
 	</div>
+
+	<button on:click={chat} class={button_tw}>Test</button>
+	<button />
 
 	<div class="flex-1 p-8">
 		{#await player_info}
