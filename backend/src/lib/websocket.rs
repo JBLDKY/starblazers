@@ -201,7 +201,7 @@ pub struct Join {
 pub struct LobbyServer {
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: HashMap<String, HashSet<String>>,
-    ring: RingBuffer<GameState, 5>,
+    ring: HashMap<String, RingBuffer<GameState, 5>>,
     player_count: Arc<AtomicUsize>,
 }
 
@@ -214,7 +214,7 @@ impl LobbyServer {
         LobbyServer {
             sessions: HashMap::new(),
             lobbies,
-            ring: RingBuffer::new(),
+            ring: HashMap::new(),
             player_count,
         }
     }
@@ -258,6 +258,9 @@ impl Handler<Connect> for LobbyServer {
         let id = msg.claims.uuid.clone();
         log::info!("Connected: {}", id);
         self.sessions.insert(id.clone(), msg.addr);
+
+        let ring_buffer: RingBuffer<GameState, 5> = RingBuffer::new();
+        self.ring.insert(id.clone(), ring_buffer);
 
         // auto join session to main room
         self.lobbies
@@ -547,13 +550,18 @@ impl Handler<GameState> for LobbyServer {
         log::info!("received gamestate");
         log::info!("pushing gamestate: {:#?}", state);
 
-        self.ring.push(state);
+        let player_ring = self
+            .ring
+            .get_mut(&state.player_id)
+            .expect("Could not access player ring");
 
-        log::info!("{:#?}", self.ring);
+        player_ring.push(state);
 
-        if self.ring.is_full() {
+        if player_ring.is_full() {
             self.send_message("main", "Ringbuffer is full!", "".to_string())
         };
+
+        log::info!("{:#?}", self.ring);
     }
 }
 
