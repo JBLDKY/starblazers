@@ -31,6 +31,10 @@ impl<T, const S: usize> RingBuffer<T, S> {
         }
     }
 
+    pub fn is_full(&self) -> bool {
+        self.full
+    }
+
     pub fn get_buffer(&self) -> &[Option<T>; S] {
         &self.buffer
     }

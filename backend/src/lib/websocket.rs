@@ -563,5 +563,9 @@ impl Handler<GameState> for LobbyServer {
         log::info!("{:#?}", self.ring);
         log::info!("{:#?}", self.lobbies);
         log::info!("{:#?}", self.sessions);
+
+        if self.ring.is_full() {
+            self.send_message("main", "Ringbuffer is full!", "".to_string())
+        };
     }
 }
