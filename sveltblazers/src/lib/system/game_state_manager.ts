@@ -27,11 +27,11 @@ export class GameStateManager {
 			return;
 		}
 
-		const gamestate = JSON.parse(data.split(' ')[1]);
-		this.setGameState(gamestate);
+		// const gamestate = JSON.parse(data.split(' ')[1]);
+		// this.setGameState(gamestate);
 	}
 
 	public sendGameState(): void {
-		this.websocket.sendMessage('gameStateUpdate', this.getGameState());
+		this.websocket.sendMessage(this.getGameState());
 	}
 }

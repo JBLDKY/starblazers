@@ -89,8 +89,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
                     return;
                 }
 
-                let mut res = json.unwrap();
-                res.move_up();
+                let res = json.unwrap();
 
                 ctx.text(format!(
                     "gameStateVerified: {}",
@@ -130,33 +129,10 @@ pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct GameState {
     r#type: String,
-    data: HashMap<String, usize>,
+    position_x: usize,
+    position_y: usize,
     player_id: String,
     timestamp: String,
-}
-
-#[allow(dead_code)]
-impl GameState {
-    fn move_up(&mut self) {
-        if let Some(y) = self.data.get_mut("y") {
-            *y -= 1;
-        }
-    }
-    fn move_down(&mut self) {
-        if let Some(y) = self.data.get_mut("y") {
-            *y += 1;
-        }
-    }
-    fn move_left(&mut self) {
-        if let Some(x) = self.data.get_mut("x") {
-            *x -= 1;
-        }
-    }
-    fn move_right(&mut self) {
-        if let Some(x) = self.data.get_mut("x") {
-            *x += 1;
-        }
-    }
 }
 
 #[derive(Message)]

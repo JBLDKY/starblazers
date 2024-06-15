@@ -8,14 +8,20 @@
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import ChatBox from './ChatBox.svelte';
 	import { validateJwt } from '../../hooks/withJwt';
+	import { get_player_info, type PublicPlayerData } from '../helpers';
 
 	const toastStore = getToastStore();
 	let spaceInvadersGame: SpaceInvadersGame;
+
+	let player_info: PublicPlayerData;
 
 	onMount(async () => {
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
 		// `goto()` cannot be called on the server
+
+		player_info = await get_player_info();
+
 		if (get(jwtStore) === undefined || get(jwtStore) == '') {
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
@@ -42,8 +48,13 @@
 				p.textFont(font);
 
 				// Wait for our font to load before starting the game, else the main menu will not be centered
-				const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p);
-				spaceInvadersGame.start();
+				if (player_info) {
+					const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(
+						p,
+						player_info['uuid']
+					);
+					spaceInvadersGame.start();
+				}
 			});
 		};
 

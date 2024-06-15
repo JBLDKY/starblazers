@@ -7,15 +7,9 @@
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import { jwtStore } from '../../store/auth';
 	import { account_page_input_field, button_tw } from '../../tailwind_presets';
+	import { get_player_info } from '../helpers';
 
 	let ws: WebSocket;
-
-	interface PublicPlayerData {
-		authority: string;
-		email: string;
-		username: string;
-		uuid: string;
-	}
 
 	const toastStore = getToastStore();
 	let player_info: Promise<PublicPlayerData> = get_player_info();
@@ -57,21 +51,6 @@
 			}
 		}
 	});
-
-	async function get_player_info(): Promise<PublicPlayerData> {
-		const res = await fetch('http://localhost:3030/players/player', {
-			method: 'GET',
-			headers: {
-				authorization: get(jwtStore)
-			}
-		});
-
-		if (res.ok) {
-			return res.json();
-		} else {
-			throw new Error(await res.text());
-		}
-	}
 
 	let listBoxValue: string = 'account';
 

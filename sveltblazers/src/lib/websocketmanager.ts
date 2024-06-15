@@ -8,7 +8,7 @@ export class WebSocketManager {
 	private messageHandlers: { [key: string]: (data: any) => void } = {};
 
 	constructor() {
-		this.url = 'ws://localhost:3030/ws';
+		this.url = 'ws://localhost:3030/lobby';
 		this.messages = [];
 	}
 
@@ -22,6 +22,7 @@ export class WebSocketManager {
 		this.ws.onopen = () => {
 			const jwt = get(jwtStore);
 			console.log('lobby connection established');
+			console.log(jwt);
 			this.ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
 		};
 
@@ -49,15 +50,16 @@ export class WebSocketManager {
 		this.messageHandlers[type] = handler;
 	}
 
-	sendMessage(type: string, data: any) {
+	sendMessage(data: any) {
 		console.log('sending!');
+
 		if (!this.ws || !this.ws.readyState === WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
 			return;
 		}
 
-		const message = JSON.stringify({ type, data });
-		this.ws.send(message);
+		console.log(data);
+		this.ws.send(data);
 	}
 
 	close() {

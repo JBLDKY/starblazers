@@ -37,7 +37,6 @@ export class SpaceInvadersGame {
 	private devConsole: DevConsole = new DevConsole(this);
 	private entityManager: EntityManager = new EntityManager();
 	private inputHandler: InputHandler;
-	private data: string = '';
 
 	public debugManager: DebugManager = new DebugManager();
 	public spawnHandler: SpawnHandler;
@@ -46,12 +45,13 @@ export class SpaceInvadersGame {
 	/**
 	 * Initializes the game with a given p5 canvas.
 	 */
-	constructor(p: p5) {
+	constructor(p: p5, player_id: string) {
 		this.p = p;
 		// Start the websocket
 		this.websocket = new WebSocketManager();
 
-		this.user = new User('');
+		this.user = new User('username', player_id);
+		console.log(this.user);
 		this.chatBox = new ChatBox(this.user, this.websocket);
 		this.fpsManager = new FPSManager();
 		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
@@ -272,8 +272,9 @@ export class SpaceInvadersGame {
 
 		return JSON.stringify({
 			type: 'gamestate',
-			data: { position: player.getPosition() },
-			player_id: player.getId(),
+			position_x: player.getPosition().x,
+			position_y: player.getPosition().y,
+			player_id: this.user.uuid,
 			timestamp: new Date()
 		});
 	}
