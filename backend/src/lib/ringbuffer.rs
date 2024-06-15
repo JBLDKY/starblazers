@@ -6,7 +6,7 @@ struct RingBuffer<T, const S: usize> {
 }
 
 impl<T, const S: usize> RingBuffer<T, S> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         // Initialize the buffer with None values.
         // Using .map() here instead of [None; S] lifts the restriction that T must implement copy
         Self {
@@ -17,7 +17,7 @@ impl<T, const S: usize> RingBuffer<T, S> {
         }
     }
 
-    fn push(&mut self, item: T) {
+    pub fn push(&mut self, item: T) {
         self.buffer[self.end] = Some(item);
         self.end = (self.end + 1) % S;
 
@@ -28,6 +28,10 @@ impl<T, const S: usize> RingBuffer<T, S> {
         if self.end == self.start {
             self.full = true;
         }
+    }
+
+    pub fn get_buffer(&self) -> &[Option<T>; S] {
+        &self.buffer
     }
 }
 
@@ -78,5 +82,28 @@ mod tests {
         assert_eq!(ring_buffer.buffer[2], Some(6));
         assert_eq!(ring_buffer.end, 0);
         assert_eq!(ring_buffer.start, 0);
+    }
+
+    #[test]
+    fn test_ring_buffer_get_buffer() {
+        let mut ring_buffer: RingBuffer<usize, 3> = RingBuffer::new();
+        ring_buffer.push(1);
+        ring_buffer.push(2);
+        ring_buffer.push(3);
+
+        let buffer = ring_buffer.get_buffer();
+        assert_eq!(buffer, &[Some(1), Some(2), Some(3)]);
+
+        ring_buffer.push(4);
+        let buffer = ring_buffer.get_buffer();
+        assert_eq!(buffer, &[Some(4), Some(2), Some(3)]);
+
+        ring_buffer.push(5);
+        let buffer = ring_buffer.get_buffer();
+        assert_eq!(buffer, &[Some(4), Some(5), Some(3)]);
+
+        ring_buffer.push(6);
+        let buffer = ring_buffer.get_buffer();
+        assert_eq!(buffer, &[Some(4), Some(5), Some(6)]);
     }
 }
