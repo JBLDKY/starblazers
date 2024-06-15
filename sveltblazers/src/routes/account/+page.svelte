@@ -76,7 +76,8 @@
 	let listBoxValue: string = 'account';
 
 	const chat = () => {
-		ws.send(JSON.stringify({ type: 'gamestate' }));
+		const num = Math.round(Math.random() * 10000);
+		ws.send(JSON.stringify({ type: 'gamestate', data: { position: num } }));
 	};
 </script>
 

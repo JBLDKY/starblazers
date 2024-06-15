@@ -6,7 +6,7 @@ use warp::{http::header::HeaderValue, reject::Reject};
 
 use crate::types::UserRecord;
 
-const JWT_EXPIRY: Option<chrono::TimeDelta> = chrono::TimeDelta::try_minutes(30);
+const JWT_EXPIRY: Option<chrono::TimeDelta> = chrono::TimeDelta::try_minutes(300);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {

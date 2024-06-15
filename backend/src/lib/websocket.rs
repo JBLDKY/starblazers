@@ -8,6 +8,7 @@ use actix::prelude::*;
 use actix_web_actors::ws;
 
 use crate::claims::{Claims, TokenError};
+use crate::ringbuffer::RingBuffer;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -72,7 +73,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
         match msg {
             Ok(ws::Message::Ping(msg)) => {
                 self.hb = Instant::now();
-                ctx.pong(&msg);
+                // ctx.pong(&msg);
             }
             Ok(ws::Message::Pong(_)) => {
                 self.hb = Instant::now();
@@ -124,6 +125,8 @@ pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
 </html>
 "#;
 
+#[derive(Message)]
+#[rtype(result = "()")]
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct GameState {
     r#type: String,
@@ -206,6 +209,7 @@ pub struct Join {
 pub struct LobbyServer {
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: HashMap<String, HashSet<String>>,
+    ring: RingBuffer<GameState, 5>,
     player_count: Arc<AtomicUsize>,
 }
 
@@ -218,6 +222,7 @@ impl LobbyServer {
         LobbyServer {
             sessions: HashMap::new(),
             lobbies,
+            ring: RingBuffer::new(),
             player_count,
         }
     }
@@ -489,6 +494,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             }
             ws::Message::Text(text) => {
                 let m = text.trim();
+                log::info!("{}", m);
                 // we check for /sss type of messages
                 if m.starts_with("{\"type\":\"auth\"}") {
                     let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
@@ -497,15 +503,21 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
 
                     let addr = ctx.address().into();
                     self.addr.do_send(Connect { addr, claims });
-                } else if m.starts_with("{\"type\":\"gamestate\"}") {
-                    log::warn!("received game info: {}", m);
+                } else if m.starts_with("{\"type\":\"gamestate\"") {
+                    let gs = serde_json::from_str::<GameState>(m).expect("couldnt parse gamestate");
+
+                    self.addr.do_send(GameState {
+                        r#type: gs.r#type,
+                        data: gs.data,
+                    });
                 } else {
+                    log::error!("unknown dataformat: {}", m);
+
                     let msg = if let Some(ref name) = self.name {
                         format!("{name}: {m}")
                     } else {
                         m.to_owned()
                     };
-                    log::warn!("{}", &msg);
                     // send message to chat server
                     self.addr.do_send(ClientMessage {
                         id: self.id,
@@ -535,5 +547,18 @@ struct WebsocketAuthJwt {
 impl WebsocketAuthJwt {
     fn claims(&self) -> Result<Claims, TokenError> {
         Claims::decode(self.jwt.split(' ').last().ok_or(TokenError::ParseError)?)
+    }
+}
+
+impl Handler<GameState> for LobbyServer {
+    type Result = ();
+
+    fn handle(&mut self, state: GameState, ctx: &mut Self::Context) {
+        log::info!("received gamestate");
+        log::info!("pushing gamestate: {:#?}", state);
+
+        self.ring.push(state);
+
+        log::info!("{:#?}", self.ring);
     }
 }

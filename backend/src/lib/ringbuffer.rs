@@ -1,4 +1,5 @@
-struct RingBuffer<T, const S: usize> {
+#[derive(Debug)]
+pub struct RingBuffer<T, const S: usize> {
     buffer: [Option<T>; S],
     start: usize,
     end: usize,
