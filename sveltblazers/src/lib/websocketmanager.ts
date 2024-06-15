@@ -1,3 +1,6 @@
+import { get } from 'svelte/store';
+import { jwtStore } from '../store/auth';
+
 export class WebSocketManager {
 	private url: string;
 	private ws: WebSocket | null = null;
@@ -17,7 +20,9 @@ export class WebSocketManager {
 		this.ws = new WebSocket(this.url);
 
 		this.ws.onopen = () => {
-			console.log('WebSocket connection established');
+			const jwt = get(jwtStore);
+			console.log('lobby connection established');
+			this.ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
 		};
 
 		this.ws.onmessage = (event) => {
@@ -45,6 +50,7 @@ export class WebSocketManager {
 	}
 
 	sendMessage(type: string, data: any) {
+		console.log('sending!');
 		if (!this.ws || !this.ws.readyState === WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
 			return;

@@ -267,15 +267,22 @@ export class SpaceInvadersGame {
 		return this.entityManager.getEntityByKind(EntityIndex.slowStraightShootingAlien);
 	}
 
-	getGameStateData(): number {
-		return this.getCurrentPlayer().getPosition();
+	getGameStateData(): string {
+		const player = this.getCurrentPlayer();
+
+		return JSON.stringify({
+			type: 'gamestate',
+			data: { position: player.getPosition() },
+			player_id: player.getId(),
+			timestamp: new Date()
+		});
 	}
 
 	setGameStateData(data: string): void {
 		console.log(data);
-		let player = this.getCurrentPlayer();
-
-		player.setXPos(data.data.x);
-		player.setYPos(data.data.y);
+		// let player = this.getCurrentPlayer();
+		//
+		// player.setXPos(data.data.x);
+		// player.setYPos(data.data.y);
 	}
 }
