@@ -3,6 +3,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use thiserror::Error;
+use uuid::Uuid;
 
 use actix::prelude::*;
 use actix_web_actors::ws;
@@ -167,6 +169,18 @@ pub struct ClientMessage {
 
 /// List of available lobbies
 pub struct ListLobbies;
+
+#[repr(transparent)]
+struct PlayerId(String);
+
+impl PlayerId {
+    fn parse(s: String) -> Result<Self, InvalidDataError> {
+        match Uuid::parse_str(&s) {
+            Ok(_) => Ok(Self(s)),
+            Err(_) => Err(InvalidDataError::PlayerIdIsNotUuid(s)),
+        }
+    }
+}
 
 impl actix::Message for ListLobbies {
     type Result = Vec<String>;
@@ -536,11 +550,15 @@ impl Handler<GameState> for LobbyServer {
         self.ring.push(state);
 
         log::info!("{:#?}", self.ring);
-        log::info!("{:#?}", self.lobbies);
-        log::info!("{:#?}", self.sessions);
 
         if self.ring.is_full() {
             self.send_message("main", "Ringbuffer is full!", "".to_string())
         };
     }
+}
+
+#[derive(Error, Debug)]
+pub enum InvalidDataError {
+    #[error("Player id is not a valid uuid: {0}")]
+    PlayerIdIsNotUuid(String),
 }
