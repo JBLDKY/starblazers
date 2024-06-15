@@ -2,6 +2,14 @@ FROM rust:1.79
 
 ENV SQLX_OFFLINE true
 
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install sqlx CLI
+RUN cargo install sqlx-cli --no-default-features --features rustls,postgres
+
 WORKDIR /usr/src/app
 
 # Copy the Cargo.toml and Cargo.lock files
@@ -20,4 +28,5 @@ RUN cargo build --bin server
 # Copy the rest of the application code
 #COPY . .
 
-CMD ["./target/debug/server"]
+CMD sqlx migrate run && ./target/debug/server
+#CMD ["./target/debug/server"]
