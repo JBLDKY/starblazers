@@ -264,6 +264,7 @@ impl Handler<Connect> for LobbyServer {
 
         // register session with random id
         let id = msg.claims.uuid.clone();
+        log::info!("Connected: {}", id);
         self.sessions.insert(id.clone(), msg.addr);
 
         // auto join session to main room
@@ -496,7 +497,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                 let m = text.trim();
                 log::info!("{}", m);
                 // we check for /sss type of messages
-                if m.starts_with("{\"type\":\"auth\"}") {
+                if m.starts_with("{\"type\":\"auth\"") {
                     let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
                         .expect("Invalid websocket auth jwt format");
                     let claims = auth.claims().expect("Failed to parse claims");
@@ -560,5 +561,7 @@ impl Handler<GameState> for LobbyServer {
         self.ring.push(state);
 
         log::info!("{:#?}", self.ring);
+        log::info!("{:#?}", self.lobbies);
+        log::info!("{:#?}", self.sessions);
     }
 }
