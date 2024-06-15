@@ -75,9 +75,17 @@
 
 	let listBoxValue: string = 'account';
 
-	const chat = () => {
+	const chat = (uuid: string) => {
 		const num = Math.round(Math.random() * 10000);
-		ws.send(JSON.stringify({ type: 'gamestate', data: { position: num } }));
+		const timestamp = new Date();
+		const msg = JSON.stringify({
+			type: 'gamestate',
+			data: { position: num },
+			player_id: uuid,
+			timestamp: timestamp
+		});
+		console.log(msg);
+		ws.send(msg);
 	};
 </script>
 
@@ -93,14 +101,13 @@
 		</ListBox>
 	</div>
 
-	<button on:click={chat} class={button_tw}>Test</button>
-	<button />
-
 	<div class="flex-1 p-8">
 		{#await player_info}
 			<div class="ml-1/2 mr-1/2 absolute mb-40"></div>
 		{:then player_info}
 			{#if listBoxValue === 'account'}
+				<button on:click={() => chat(player_info['uuid'])} class={button_tw}>send gamestate</button>
+
 				<div class="flex-1 space-y-4">
 					<label class="flex items-center">
 						<span class="block w-1/3 text-sm font-medium text-tertiary-500">Username: </span>

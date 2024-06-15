@@ -131,6 +131,8 @@ pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
 struct GameState {
     r#type: String,
     data: HashMap<String, usize>,
+    player_id: String,
+    timestamp: String,
 }
 
 #[allow(dead_code)]
@@ -507,10 +509,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                 } else if m.starts_with("{\"type\":\"gamestate\"") {
                     let gs = serde_json::from_str::<GameState>(m).expect("couldnt parse gamestate");
 
-                    self.addr.do_send(GameState {
-                        r#type: gs.r#type,
-                        data: gs.data,
-                    });
+                    self.addr.do_send(gs);
                 } else {
                     log::error!("unknown dataformat: {}", m);
 
