@@ -1,15 +1,18 @@
 import { get } from 'svelte/store';
 import { jwtStore } from '../store/auth';
+import type { SpaceInvadersGame } from './game/game';
 
 export class WebSocketManager {
 	private url: string;
 	private ws: WebSocket | null = null;
 	public messages: string[];
 	private messageHandlers: { [key: string]: (data: any) => void } = {};
+	private setGameStateData: (state: any) => void;
 
-	constructor() {
+	constructor(setGameStateData: (state: any) => void) {
 		this.url = 'ws://localhost:3030/lobby';
 		this.messages = [];
+		this.setGameStateData = setGameStateData;
 	}
 
 	getMessages() {
@@ -22,18 +25,20 @@ export class WebSocketManager {
 		this.ws.onopen = () => {
 			const jwt = get(jwtStore);
 			console.log('lobby connection established');
-			console.log(jwt);
 			this.ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
 		};
 
 		this.ws.onmessage = (event) => {
-			// create callback?
-			// this.messages.push(event.data);
-			const handler = this.messageHandlers[event.type];
-			if (handler) {
-				handler(event.data);
-			} else {
-				console.warn(`No handler for message type: ${event.type}`);
+			console.log('event.data: ', event.data);
+			let data;
+			try {
+				data = JSON.parse(event.data);
+				console.log('parsed');
+				this.setGameStateData(data);
+
+				console.log('parsed data  from ws: ', data);
+			} catch (error) {
+				console.error('couldnt parse data received from websocket into json');
 			}
 		};
 
@@ -51,14 +56,11 @@ export class WebSocketManager {
 	}
 
 	sendMessage(data: any) {
-		console.log('sending!');
-
 		if (!this.ws || !this.ws.readyState === WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
 			return;
 		}
 
-		console.log(data);
 		this.ws.send(data);
 	}
 

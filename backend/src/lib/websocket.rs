@@ -128,7 +128,7 @@ pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
 
 #[derive(Message)]
 #[rtype(result = "()")]
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug, Clone)]
 struct GameState {
     r#type: String,
     position_x: usize,
@@ -252,7 +252,6 @@ impl Handler<Connect> for LobbyServer {
         println!("Someone joined");
 
         // notify all users in same room
-        self.send_message("main", "Someone joined", "0".to_string());
 
         // register session with random id
         let id = msg.claims.uuid.clone();
@@ -271,13 +270,6 @@ impl Handler<Connect> for LobbyServer {
         let count = self
             .player_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-        self.send_message("main", &format!("Total visitors {count}"), "0".to_string());
-        self.send_message(
-            "main",
-            &format!("Current players {:?}", self.player_count.as_ref()),
-            "0".to_string(),
-        );
 
         // send id back
         id
@@ -299,22 +291,12 @@ impl Handler<Disconnect> for LobbyServer {
                 .player_count
                 .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
 
-            self.send_message(
-                "main",
-                &format!("Current players after someone left: {count}"),
-                "0".to_string(),
-            );
-
             // remove session from all lobbies
             for (name, sessions) in &mut self.lobbies {
                 if sessions.remove(&msg.id) {
                     lobbies.push(name.to_owned());
                 }
             }
-        }
-        // send message to other users
-        for room in lobbies {
-            self.send_message(&room, "Someone disconnected", "0".to_string());
         }
     }
 }
@@ -550,16 +532,20 @@ impl Handler<GameState> for LobbyServer {
         log::info!("received gamestate");
         log::info!("pushing gamestate: {:#?}", state);
 
+        let player_id = state.player_id.clone();
+
         let player_ring = self
             .ring
-            .get_mut(&state.player_id)
+            .get_mut(&player_id)
             .expect("Could not access player ring");
 
-        player_ring.push(state);
+        player_ring.push(state.clone());
 
-        if player_ring.is_full() {
-            self.send_message("main", "Ringbuffer is full!", "".to_string())
-        };
+        self.send_message(
+            "main",
+            &serde_json::to_string(&state.clone()).expect("couldnt parse gamestate to string"),
+            player_id,
+        );
 
         log::info!("{:#?}", self.ring);
     }

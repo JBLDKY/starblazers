@@ -47,23 +47,21 @@ export class SpaceInvadersGame {
 	 */
 	constructor(p: p5, player_id: string) {
 		this.p = p;
-		// Start the websocket
-		this.websocket = new WebSocketManager();
-
-		this.user = new User('username', player_id);
-		console.log(this.user);
-		this.chatBox = new ChatBox(this.user, this.websocket);
-		this.fpsManager = new FPSManager();
-		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
-		this.inputHandler = new InputHandler(this, this.devConsole);
-		this.currentMenu = new MainMenu(this.p, this.inputHandler);
-		this.collisionManager = new CollisionManager();
 
 		// These methods are passed to gameStateManager who calls them
 		// to get and set gamestate. They must be bound to this class
 		// because methods called inside of these might not exist on gamestatemanager
 		this.getGameStateData = this.getGameStateData.bind(this);
 		this.setGameStateData = this.setGameStateData.bind(this);
+		this.websocket = new WebSocketManager(this.setGameStateData);
+
+		this.user = new User('username', player_id);
+		this.chatBox = new ChatBox(this.user, this.websocket);
+		this.fpsManager = new FPSManager();
+		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
+		this.inputHandler = new InputHandler(this, this.devConsole);
+		this.currentMenu = new MainMenu(this.p, this.inputHandler);
+		this.collisionManager = new CollisionManager();
 
 		this.gameStateManager = new GameStateManager(
 			this.websocket,
@@ -138,7 +136,8 @@ export class SpaceInvadersGame {
 			'Debug: ' + DebugManager.debugMode,
 			'Frame: ' + this.fpsManager.getFrameCount(),
 			'IGT: ' + Math.trunc(this.fpsManager.getInGameTime() / 1000),
-			'Entity count: ' + this.entityManager.allEntities().length
+			'Entity count: ' + this.entityManager.allEntities().length,
+			'Player id: ' + this.user.uuid
 		];
 
 		this.displayDebugInfo(debugMessages);
@@ -202,6 +201,12 @@ export class SpaceInvadersGame {
 		return this.entityManager
 			.getEntityByKind(EntityIndex.Player)
 			.filter((player: Player) => this.user.uuid == player.uuid)[0];
+	}
+
+	public getPlayerByUuid(uuid: string): Player {
+		return this.entityManager
+			.getEntityByKind(EntityIndex.Player)
+			.filter((player: Player) => uuid == player.uuid)[0];
 	}
 
 	private startWebsocket() {
@@ -279,11 +284,17 @@ export class SpaceInvadersGame {
 		});
 	}
 
-	setGameStateData(data: string): void {
-		console.log(data);
-		// let player = this.getCurrentPlayer();
-		//
-		// player.setXPos(data.data.x);
-		// player.setYPos(data.data.y);
+	setGameStateData(gamestate: string): void {
+		console.log(gamestate);
+
+		const friend = this.getPlayerByUuid(gamestate.player_id);
+
+		if (friend === undefined) {
+			this.spawnHandler.spawn_player(this.p.createVector(640, 730), gamestate.player_id);
+			return;
+		}
+
+		friend.setXPos(gamestate.position_x);
+		friend.setYPos(gamestate.position_y);
 	}
 }
