@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 use thiserror::Error;
-use uuid::Uuid;
 
 use actix::prelude::*;
 use actix_web_actors::ws;
@@ -17,110 +14,6 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
-
-/// websocket connection is long running connection, it easier
-/// to handle with an actor
-pub struct MyWebSocket {
-    /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
-    /// otherwise we drop connection.
-    hb: Instant,
-}
-
-impl Default for MyWebSocket {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl MyWebSocket {
-    pub fn new() -> Self {
-        Self { hb: Instant::now() }
-    }
-
-    /// helper method that sends ping to client every 5 seconds (HEARTBEAT_INTERVAL).
-    ///
-    /// also this method checks heartbeats from client
-    fn hb(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
-            // check client heartbeats
-            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                // heartbeat timed out
-                log::error!("Websocket Client heartbeat failed, disconnecting!");
-
-                // stop actor
-                ctx.stop();
-
-                // don't try to send a ping
-                return;
-            }
-
-            ctx.ping(b"");
-        });
-    }
-}
-
-impl Actor for MyWebSocket {
-    type Context = ws::WebsocketContext<Self>;
-
-    /// Method is called on actor start. We start the heartbeat process here.
-    fn started(&mut self, ctx: &mut Self::Context) {
-        self.hb(ctx);
-    }
-}
-
-/// Handler for `ws::Message`
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        // process websocket messages
-        match msg {
-            Ok(ws::Message::Ping(msg)) => {
-                self.hb = Instant::now();
-            }
-            Ok(ws::Message::Pong(_)) => {
-                self.hb = Instant::now();
-            }
-            Ok(ws::Message::Text(text)) => {
-                let json = serde_json::from_str::<GameState>(&text);
-
-                if json.is_err() {
-                    ctx.text("invalid json");
-                    return;
-                }
-
-                let res = json.unwrap();
-
-                ctx.text(format!(
-                    "gameStateVerified: {}",
-                    serde_json::to_value(res).unwrap()
-                ));
-            }
-            Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
-            Ok(ws::Message::Close(reason)) => {
-                ctx.close(reason);
-                ctx.stop();
-            }
-            _ => ctx.stop(),
-        }
-    }
-}
-
-pub static INDEX_HTML: &str = r#"<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <title>Starblazers Sanity Check</title>
-    </head>
-
-    <br>
-
-    <body>
-    Welcome to StarBlazers index.html! <br>
-
-    The server is working I guess...<br>
-
-    Now what?
-    </body>
-</html>
-"#;
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -163,18 +56,6 @@ pub struct ClientMessage {
     pub lobby: String,
 }
 
-#[repr(transparent)]
-struct PlayerId(String);
-
-impl PlayerId {
-    fn parse(s: String) -> Result<Self, InvalidDataError> {
-        match Uuid::parse_str(&s) {
-            Ok(_) => Ok(Self(s)),
-            Err(_) => Err(InvalidDataError::PlayerIdIsNotUuid(s)),
-        }
-    }
-}
-
 /// Join room, if room does not exists create new one.
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -191,11 +72,10 @@ pub struct LobbyServer {
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: HashMap<String, HashSet<String>>,
     ring: HashMap<String, RingBuffer<GameState, 5>>,
-    player_count: Arc<AtomicUsize>,
 }
 
 impl LobbyServer {
-    pub fn new(player_count: Arc<AtomicUsize>) -> LobbyServer {
+    pub fn new() -> LobbyServer {
         // default room
         let mut lobbies = HashMap::new();
         lobbies.insert("main".to_owned(), HashSet::new());
@@ -204,12 +84,9 @@ impl LobbyServer {
             sessions: HashMap::new(),
             lobbies,
             ring: HashMap::new(),
-            player_count,
         }
     }
-}
 
-impl LobbyServer {
     /// Send message to all users in the room
     fn send_message(&self, room: &str, message: &str, skip_id: String) {
         if let Some(sessions) = self.lobbies.get(room) {
@@ -221,6 +98,12 @@ impl LobbyServer {
                 }
             }
         }
+    }
+}
+
+impl Default for LobbyServer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -272,10 +155,6 @@ impl Handler<Disconnect> for LobbyServer {
 
         // remove address
         if self.sessions.remove(&msg.id).is_some() {
-            let count = self
-                .player_count
-                .fetch_sub(1, std::sync::atomic::Ordering::SeqCst);
-
             // remove session from all lobbies
             for (name, sessions) in &mut self.lobbies {
                 if sessions.remove(&msg.id) {
@@ -312,7 +191,7 @@ impl Handler<Join> for LobbyServer {
         }
         // send message to other users
         for room in lobbies {
-            self.send_message(&room, "Someone disconnected", "0".to_string());
+            self.send_message(&room, "Someone disconnected", id.to_string());
         }
 
         self.lobbies
@@ -379,27 +258,6 @@ impl Actor for WsLobbySession {
     fn started(&mut self, ctx: &mut Self::Context) {
         // we'll start heartbeat process on session start.
         self.hb(ctx);
-
-        // register self in chat server. `AsyncContext::wait` register
-        // future within context, but context waits until this future resolves
-        // before processing any other events.
-        // HttpContext::state() is instance of WsLobbySessionState, state is shared
-        // across all routes within application
-        // let addr = ctx.address();
-        // self.addr
-        //     .send(Connect {
-        //         addr: addr.recipient(),
-        //     })
-        //     .into_actor(self)
-        //     .then(|res, act, ctx| {
-        //         match res {
-        //             Ok(res) => act.id = res,
-        //             // something is wrong with chat server
-        //             _ => ctx.stop(),
-        //         }
-        //         fut::ready(())
-        //     })
-        //     .wait(ctx);
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
@@ -431,7 +289,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             Ok(msg) => msg,
         };
 
-        log::debug!("WEBSOCKET MESSAGE: {msg:?}");
         match msg {
             ws::Message::Ping(msg) => {
                 self.hb = Instant::now();
@@ -442,7 +299,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             }
             ws::Message::Text(text) => {
                 let m = text.trim();
-                log::info!("{}", m);
                 // we check for /sss type of messages
                 if m.starts_with("{\"type\":\"auth\"") {
                     let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
@@ -498,10 +354,7 @@ impl WebsocketAuthJwt {
 impl Handler<GameState> for LobbyServer {
     type Result = ();
 
-    fn handle(&mut self, state: GameState, ctx: &mut Self::Context) {
-        log::info!("received gamestate");
-        log::info!("pushing gamestate: {:#?}", state);
-
+    fn handle(&mut self, state: GameState, _: &mut Self::Context) {
         let player_id = state.player_id.clone();
 
         let player_ring = self
@@ -516,8 +369,6 @@ impl Handler<GameState> for LobbyServer {
             &serde_json::to_string(&state.clone()).expect("couldnt parse gamestate to string"),
             player_id,
         );
-
-        log::info!("{:#?}", self.ring);
     }
 }
 

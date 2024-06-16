@@ -1,11 +1,9 @@
 use crate::claims::Claims;
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
-use crate::websocket::MyWebSocket;
-use crate::{database::db::ArcDb, websocket::INDEX_HTML};
+use crate::{database::db::ArcDb, index::INDEX_HTML};
 use actix_web::http::header::{ContentType, HeaderValue};
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
-use actix_web_actors::ws;
 use serde_json::json;
 
 /// TODO update
@@ -20,7 +18,6 @@ use serde_json::json;
 pub fn config_server(cfg: &mut web::ServiceConfig) {
     cfg.service(index)
         //.service(chat)
-        .service(web::resource("/ws").route(web::get().to(echo_websocket)))
         .service(players_all)
         .service(users_all)
         .service(login)
@@ -28,13 +25,6 @@ pub fn config_server(cfg: &mut web::ServiceConfig) {
         .service(hello_world)
         .service(verify_jwt)
         .service(player_info);
-}
-
-async fn echo_websocket(
-    req: HttpRequest,
-    stream: web::Payload,
-) -> Result<HttpResponse, actix_web::Error> {
-    ws::start(MyWebSocket::new(), &req, stream)
 }
 
 /// POST /auth/signup -> Returns TODO

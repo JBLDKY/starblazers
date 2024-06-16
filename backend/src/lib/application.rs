@@ -5,7 +5,6 @@ use actix_web::http::header::{self};
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use std::net::TcpListener;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -65,8 +64,7 @@ async fn lobby_websocket(
 fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::io::Error> {
     let db_client = web::Data::new(Arc::new(db_client));
 
-    let lobby_state = Arc::new(AtomicUsize::new(0));
-    let lobby_server = web::Data::new(LobbyServer::new(lobby_state.clone()).start());
+    let lobby_server = web::Data::new(LobbyServer::new().start());
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
