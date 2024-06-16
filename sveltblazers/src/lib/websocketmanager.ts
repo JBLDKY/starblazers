@@ -1,6 +1,5 @@
 import { get } from 'svelte/store';
 import { jwtStore } from '../store/auth';
-import type { SpaceInvadersGame } from './game/game';
 
 export class WebSocketManager {
 	private url: string;
