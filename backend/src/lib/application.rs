@@ -10,8 +10,8 @@ use std::time::Instant;
 
 use crate::configuration::Settings;
 use crate::database::db::DatabaseClient;
+use crate::multiplayer::{LobbyServer, WsLobbySession};
 use crate::routes::config_server;
-use crate::websocket::{LobbyServer, WsLobbySession};
 
 pub struct Application {
     server: Server,
