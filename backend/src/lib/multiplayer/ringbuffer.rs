@@ -1,21 +1,21 @@
 #[derive(Debug)]
 pub struct RingBuffer<T, const S: usize> {
-    buffer: [Option<T>; S],
-    start: usize,
-    end: usize,
-    full: bool,
+    buffer: [Option<T>; S], // Use an array of Option<T> to handle the buffer's storage and potential empty slots
+    start: usize,           // Track the start index for reading
+    end: usize,             // Track the end index for writing
+    full: bool,             // Boolean flag to indicate if the buffer is full
 }
 
 impl<T, const S: usize> Default for RingBuffer<T, S> {
     fn default() -> Self {
-        Self::new()
+        Self::new() // Implement Default to allow easy instantiation with default values
     }
 }
 
 impl<T, const S: usize> RingBuffer<T, S> {
     pub fn new() -> Self {
         // Initialize the buffer with None values.
-        // Using .map() here instead of [None; S] lifts the restriction that T must implement copy
+        // Using .map() here instead of [None; S] lifts the restriction that T must implement Copy
         Self {
             buffer: [(); S].map(|_| None),
             start: 0,
@@ -25,24 +25,24 @@ impl<T, const S: usize> RingBuffer<T, S> {
     }
 
     pub fn push(&mut self, item: T) {
-        self.buffer[self.end] = Some(item);
-        self.end = (self.end + 1) % S;
+        self.buffer[self.end] = Some(item); // Insert the item at the end index
+        self.end = (self.end + 1) % S; // Move the end index forward, wrapping around if necessary
 
         if self.full {
-            self.start = (self.start + 1) % S;
+            self.start = (self.start + 1) % S; // If the buffer is full, move the start index forward
         }
 
         if self.end == self.start {
-            self.full = true;
+            self.full = true; // If the end index catches up to the start, the buffer is now full
         }
     }
 
     pub fn is_full(&self) -> bool {
-        self.full
+        self.full // Simple getter to check if the buffer is full
     }
 
     pub fn get_buffer(&self) -> &[Option<T>; S] {
-        &self.buffer
+        &self.buffer // Provide access to the underlying buffer for inspection
     }
 }
 
