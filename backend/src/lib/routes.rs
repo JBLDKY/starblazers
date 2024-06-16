@@ -8,6 +8,8 @@ use actix_web::http::header::{ContentType, HeaderValue};
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use serde_json::json;
+use std::time::Duration;
+use tokio::time::sleep;
 
 /// TODO update
 /// GET /players/all - players_all - Returns all players
@@ -196,6 +198,7 @@ async fn list_lobbies(
     if let Err(e) = jwt_check(&req) {
         return Ok(e);
     }
+    sleep(Duration::from_secs(2)).await; // Add a delay to simulate a real environment
 
     let lobbies = lobby_manager
         .send(ListLobbies)

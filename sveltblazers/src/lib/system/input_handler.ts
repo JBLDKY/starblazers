@@ -118,7 +118,17 @@ export class InputHandler {
 	}
 
 	handleMenuResult(result: string) {
+		if (result.endsWith("'s lobby")) {
+			this.game.handleLobbySelect(result);
+			return;
+		}
+
 		switch (result) {
+			case 'LeaveOwnLobby':
+				this.game.setGameState(GameState.MENU);
+				this.game.setCurrentMenu(MenuIndex.Multiplayer);
+				this.game.leaveOwnLobby();
+				break;
 			case 'Multiplayer':
 				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.Multiplayer);

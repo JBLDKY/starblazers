@@ -192,7 +192,19 @@ export class SpaceInvadersGame {
 	}
 
 	setCurrentMenu(menuIndex: MenuIndex): void {
+		if (this.currentMenu === null || this.currentMenu === undefined) {
+			return;
+		}
+
+		const oldMenu = this.currentMenu;
+		if (this.currentMenu.index !== menuIndex) {
+			console.log('old: ', this.currentMenu.index);
+			console.log('new: ', menuIndex);
+		}
+
 		this.currentMenu = new MenuFactory().newMenu(this.p, menuIndex, this.inputHandler);
+
+		oldMenu.onExit();
 	}
 
 	isTypingInChat(): boolean {
@@ -299,6 +311,7 @@ export class SpaceInvadersGame {
 	}
 
 	createLobby(): void {
+		console.log(`creating new lobby: ${this.user.uuid}'s lobby`);
 		this.websocket.sendMessage(
 			JSON.stringify({
 				type: 'CreateLobby',
@@ -308,5 +321,25 @@ export class SpaceInvadersGame {
 		);
 
 		console.log('creating lobby');
+	}
+
+	handleLobbySelect(lobby: string): void {
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'JoinLobby',
+				lobby_name: lobby,
+				player_id: this.user.uuid
+			})
+		);
+	}
+
+	leaveOwnLobby(): void {
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'LeaveLobby',
+				lobby_name: this.user.uuid + "'s lobby",
+				player_id: this.user.uuid
+			})
+		);
 	}
 }

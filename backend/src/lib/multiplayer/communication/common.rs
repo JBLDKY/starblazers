@@ -65,11 +65,25 @@ impl ProtocolHandler for CreateLobbyRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JoinLobbyRequest {
     pub lobby_name: String,
+    pub player_id: String,
 }
 
 impl ProtocolHandler for JoinLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
-        let lobby_name = "not implemented".to_string();
-        session.addr.do_send(JoinLobbyRequest { lobby_name });
+        session.addr.do_send(self);
+    }
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LeaveLobbyRequest {
+    pub lobby_name: String,
+    pub player_id: String,
+}
+
+impl ProtocolHandler for LeaveLobbyRequest {
+    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        session.addr.do_send(self);
     }
 }

@@ -1,5 +1,5 @@
 use super::{
-    common::{CreateLobbyRequest, GameState, JoinLobbyRequest},
+    common::{CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest},
     message::Connect,
 };
 use crate::{
@@ -25,6 +25,7 @@ pub enum WebSocketMessage {
     GameState(GameState),
     CreateLobby(CreateLobbyRequest),
     JoinLobby(JoinLobbyRequest),
+    LeaveLobby(LeaveLobbyRequest),
 }
 
 impl ProtocolHandler for WebSocketMessage {
@@ -34,6 +35,7 @@ impl ProtocolHandler for WebSocketMessage {
             WebSocketMessage::GameState(gs) => gs.handle(session, ctx),
             WebSocketMessage::CreateLobby(create_lobby) => create_lobby.handle(session, ctx),
             WebSocketMessage::JoinLobby(join_lobby) => join_lobby.handle(session, ctx),
+            WebSocketMessage::LeaveLobby(leave_lobby) => leave_lobby.handle(session, ctx),
         }
     }
 }

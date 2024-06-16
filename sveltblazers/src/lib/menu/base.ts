@@ -102,5 +102,7 @@ export abstract class BaseMenu {
 		return '';
 	}
 
+	onExit(): void {}
+
 	abstract loop: (timestamp: number) => void;
 }

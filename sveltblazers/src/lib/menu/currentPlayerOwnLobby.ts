@@ -80,4 +80,8 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		this.p.rect(0, 30, 30, this.p.height);
 		this.p.rect(this.p.width - 30, 30, 30, this.p.height);
 	};
+
+	onExit = (): void => {
+		this.inputHandler.handleMenuResult('LeaveOwnLobby');
+	};
 }

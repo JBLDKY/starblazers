@@ -4,7 +4,9 @@
 // lobbies. The `LobbyManager` also facilitates the broadcasting of messages to
 // all players in a specific lobby and maintains the game state using ring buffers.
 
-use crate::multiplayer::communication::common::{CreateLobbyRequest, GameState, JoinLobbyRequest};
+use crate::multiplayer::communication::common::{
+    CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest,
+};
 use crate::multiplayer::communication::message::{
     ClientMessage, Connect, Disconnect, Join, Message,
 };
@@ -174,7 +176,23 @@ impl Handler<CreateLobbyRequest> for LobbyManager {
 
 impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
-    fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {}
+    fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {
+        // if let Some(lobby) = self.lobbies.get_mut(&req.lobby_name) {
+        //     lobby.insert(req.player_id.clone());
+        // };
+
+        self.lobbies
+            .entry(req.lobby_name.clone())
+            .or_default()
+            .insert(req.player_id.clone());
+
+        log::info!(
+            "Player `{}` joined lobby `{}`, current lobbies:\n",
+            req.player_id,
+            req.lobby_name
+        );
+        log::info!("{:#?}", &self.lobbies);
+    }
 }
 
 #[derive(Message)]
@@ -187,5 +205,29 @@ impl Handler<ListLobbies> for LobbyManager {
     fn handle(&mut self, _: ListLobbies, _: &mut Self::Context) -> Self::Result {
         let lobbies = self.lobbies.keys().cloned().collect();
         MessageResult(lobbies)
+    }
+}
+
+impl Handler<LeaveLobbyRequest> for LobbyManager {
+    type Result = ();
+    fn handle(&mut self, req: LeaveLobbyRequest, _: &mut Self::Context) {
+        // Remove the player from the lobby
+        self.lobbies
+            .entry(req.lobby_name.clone())
+            .or_default()
+            .remove(&req.player_id.clone());
+
+        // If that was the last player in the lobby, unlist the lobby
+        if self
+            .lobbies
+            .entry(req.lobby_name.clone())
+            .or_default()
+            .is_empty()
+        {
+            self.lobbies.remove(&req.lobby_name.clone());
+        }
+
+        log::info!("A player has left the lobby, current lobbies:\n");
+        log::info!("{:#?}", &self.lobbies);
     }
 }

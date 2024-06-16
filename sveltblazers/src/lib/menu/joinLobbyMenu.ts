@@ -24,6 +24,7 @@ export class JoinLobbyMenu extends BaseMenu {
 	private builder: MenuItemBuilder;
 	private currentY: number;
 	private lastUpdate = 0;
+	private lobbies: string[] = [];
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
@@ -72,14 +73,25 @@ export class JoinLobbyMenu extends BaseMenu {
 		});
 	}
 
+	private addItem(item: string): void {
+		this.items.push(
+			this.builder
+				.setLabel(item)
+				.setTextSize(ITEM_SIZE)
+				.setRelativeX(0.5)
+				.setAbsoluteY(this.currentY)
+				.build()
+		);
+		this.currentY += PIXELS_BETWEEN_ITEMS;
+	}
+
 	async updateLobbies() {
 		try {
 			const lobbies = await this.getLobbies();
-			console.log('Lobbies:', lobbies);
-			// Update your game state with the fetched lobbies
+			this.lobbies = lobbies;
 		} catch (error) {
 			console.error('Error updating lobbies:', error);
-			// Handle the error appropriately in your game
+			return [];
 		}
 	}
 
@@ -110,8 +122,18 @@ export class JoinLobbyMenu extends BaseMenu {
 			return lobbies;
 		} catch (error) {
 			console.error('Fetch error:', error);
-			throw error; // Re-throw the error to be caught by the caller
+			throw error;
 		}
+	}
+
+	private recreate(): void {
+		this.items = [];
+		this.currentY = MENU_STARTING_Y_COORDINATE;
+		this.createHeader();
+		this.createItems();
+		this.lobbies.forEach((lobby) => {
+			this.addItem(lobby);
+		});
 	}
 
 	loop = (timestamp: number): void => {
@@ -126,6 +148,8 @@ export class JoinLobbyMenu extends BaseMenu {
 		if (result != '' && result != undefined) {
 			this.inputHandler.handleMenuResult(result);
 		}
+
+		this.recreate();
 
 		this.p.clear();
 		this.display();
