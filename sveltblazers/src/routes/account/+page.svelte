@@ -6,13 +6,11 @@
 	import { validateJwt } from '../../hooks/withJwt';
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import { jwtStore } from '../../store/auth';
-	import { account_page_input_field, button_tw } from '../../tailwind_presets';
-	import { get_player_info } from '../helpers';
-
-	let ws: WebSocket;
+	import { account_page_input_field } from '../../tailwind_presets';
+	import { get_player_info, type PublicPlayerData } from '../helpers';
 
 	const toastStore = getToastStore();
-	let player_info: Promise<PublicPlayerData> = get_player_info();
+	const player_info: Promise<PublicPlayerData> = get_player_info();
 
 	onMount(async () => {
 		// This is a protected page; login is required
@@ -24,7 +22,6 @@
 		} else {
 			try {
 				await validateJwt();
-				console.log('JWT is valid');
 			} catch (error) {
 				console.error('Error checking JWT:', error);
 				toastStore.trigger({ message: 'Session expired' });
