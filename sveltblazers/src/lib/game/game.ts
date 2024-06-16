@@ -285,8 +285,6 @@ export class SpaceInvadersGame {
 	}
 
 	setGameStateData(gamestate: string): void {
-		console.log(gamestate);
-
 		const friend = this.getPlayerByUuid(gamestate.player_id);
 
 		if (friend === undefined) {

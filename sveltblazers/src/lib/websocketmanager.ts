@@ -24,19 +24,14 @@ export class WebSocketManager {
 
 		this.ws.onopen = () => {
 			const jwt = get(jwtStore);
-			console.log('lobby connection established');
 			this.ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
 		};
 
 		this.ws.onmessage = (event) => {
-			console.log('event.data: ', event.data);
 			let data;
 			try {
 				data = JSON.parse(event.data);
-				console.log('parsed');
 				this.setGameStateData(data);
-
-				console.log('parsed data  from ws: ', data);
 			} catch (error) {
 				console.error('couldnt parse data received from websocket into json');
 			}
