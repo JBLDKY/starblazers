@@ -1,5 +1,6 @@
 import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
+import { MultiplayerMenu } from '$lib/menu/multiplayer';
 import { SettingsMenu } from '$lib/menu/settings';
 import { InputHandler } from '$lib/system/input_handler';
 import type p5 from 'p5';
@@ -13,7 +14,8 @@ export enum EntityIndex {
 
 export enum MenuIndex {
 	Main,
-	Settings
+	Settings,
+	Multiplayer
 }
 
 export class MenuFactory {
@@ -23,6 +25,8 @@ export class MenuFactory {
 				return new MainMenu(p, inputHandler);
 			case MenuIndex.Settings:
 				return new SettingsMenu(p, inputHandler);
+			case MenuIndex.Multiplayer:
+				return new MultiplayerMenu(p, inputHandler);
 		}
 	}
 }

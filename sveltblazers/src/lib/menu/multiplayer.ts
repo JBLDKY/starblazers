@@ -5,25 +5,24 @@ import { Navigator } from './navigator';
 
 import {
 	MENU_STARTING_Y_COORDINATE,
-	MAIN_MENU,
 	HEADER_SIZE,
 	ITEM_SIZE,
 	PIXELS_BELOW_MAIN_MENU,
 	PIXELS_BETWEEN_ITEMS,
-	MAIN_MENU_ITEM_TEXTS
+	MULTIPLAYER_MENU,
+	MULTIPLAYER_MENU_ITEM_TEXTS
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
 
 /**
- * Represents a main menu derived from the BaseMenu. This class manages the
- * layout and interaction of a Main menu, including creating headers and items.
+ * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
-export class MainMenu extends BaseMenu {
+export class MultiplayerMenu extends BaseMenu {
 	private builder: MenuItemBuilder;
 	private currentY: number;
 
 	/**
-	 * Constructs a Main menu with given p5 instance.
+	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
 	constructor(p: p5, inputHandler: InputHandler) {
@@ -42,12 +41,12 @@ export class MainMenu extends BaseMenu {
 	}
 
 	/**
-	 * Creates the header for the Main menu, setting the title and its initial position.
+	 * Creates the header for the multiplayer menu, setting the title and its initial position.
 	 */
 	private createHeader(): void {
 		this.items.push(
 			this.builder
-				.setLabel(MAIN_MENU)
+				.setLabel(MULTIPLAYER_MENU)
 				.setTextSize(HEADER_SIZE)
 				.setRelativeX(0.5)
 				.setAbsoluteY(this.currentY)
@@ -58,12 +57,12 @@ export class MainMenu extends BaseMenu {
 	}
 
 	/**
-	 * Dynamically creates menu items based on constants defined for the Main menu.
+	 * Dynamically creates menu items based on constants defined for the multiplayer menu.
 	 */
 	private createItems(): void {
 		this.builder.setTextSize(ITEM_SIZE);
 
-		MAIN_MENU_ITEM_TEXTS.forEach((itemText) => {
+		MULTIPLAYER_MENU_ITEM_TEXTS.forEach((itemText) => {
 			this.items.push(this.builder.setLabel(itemText).setAbsoluteY(this.currentY).build());
 			this.currentY += PIXELS_BETWEEN_ITEMS;
 		});

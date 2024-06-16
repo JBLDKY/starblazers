@@ -120,7 +120,8 @@ export class InputHandler {
 	handleMenuResult(result: string) {
 		switch (result) {
 			case 'Multiplayer':
-				this.game.setGameState(GameState.RUN);
+				this.game.setGameState(GameState.MENU);
+				this.game.setCurrentMenu(MenuIndex.Multiplayer);
 				break;
 			case 'Single player':
 				this.game.setGameState(GameState.RUN);
