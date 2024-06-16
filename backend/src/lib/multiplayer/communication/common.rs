@@ -18,8 +18,6 @@ use super::protocol::ProtocolHandler;
 #[rtype(result = "()")]
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub struct GameState {
-    /// Type of the game state update
-    r#type: String,
     /// X position of the player in the game
     position_x: usize,
     /// Y position of the player in the game

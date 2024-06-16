@@ -118,6 +118,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                     Ok(message) => message.handle(self, ctx),
                     Err(e) => {
                         log::error!("Failed to parse message: {}", e);
+                        log::error!("Message contents: {}", m);
                     }
                 }
             }

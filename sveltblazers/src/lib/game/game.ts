@@ -276,7 +276,7 @@ export class SpaceInvadersGame {
 		const player = this.getCurrentPlayer();
 
 		return JSON.stringify({
-			type: 'gamestate',
+			type: 'GameState',
 			position_x: player.getPosition().x,
 			position_y: player.getPosition().y,
 			player_id: this.user.uuid,

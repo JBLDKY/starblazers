@@ -24,7 +24,7 @@ export class WebSocketManager {
 
 		this.ws.onopen = () => {
 			const jwt = get(jwtStore);
-			this.ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
+			this.ws.send(JSON.stringify({ type: 'Auth', jwt: jwt }));
 		};
 
 		this.ws.onmessage = (event) => {
