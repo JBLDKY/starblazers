@@ -174,14 +174,34 @@ async fn player_info(
     }
 }
 
+fn jwt_check(req: &HttpRequest) -> Result<(), HttpResponse> {
+    if let Some(header_value) = req.headers().get("Authorization") {
+        if Claims::from_header_value(header_value).is_ok() {
+            return Ok(());
+        }
+    }
+
+    log::error!("Authorization header not found or invalid!");
+    Err(HttpResponse::Unauthorized().finish())
+}
+
 /// GET /game/lobbies
 ///
 /// Returns a list of currently available lobbies.
 #[get("/game/lobbies")]
 async fn list_lobbies(
+    req: HttpRequest,
     lobby_manager: web::Data<Addr<LobbyManager>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let lobbies = lobby_manager.send(ListLobbies).await.unwrap();
+    if let Err(e) = jwt_check(&req) {
+        return Ok(e);
+    }
+
+    let lobbies = lobby_manager
+        .send(ListLobbies)
+        .await
+        .expect("Failed to get a list of available lobbies.");
+
     json_with_status(&json!(lobbies), StatusCode::OK)
 }
 
