@@ -1,17 +1,46 @@
+use super::{
+    common::{CreateLobbyRequest, GameState, JoinLobbyRequest},
+    message::Connect,
+};
+use crate::{
+    claims::{Claims, TokenError},
+    multiplayer::WsLobbySession,
+};
+use actix::prelude::*;
+use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
-
-use crate::claims::{Claims, TokenError};
 
 /// This file defines data structures specifically used for sending and
 /// receiving data over WebSocket connections. These structures are
 /// serialized and deserialized for communication between the client
 /// and server in real-time.
+pub trait ProtocolHandler {
+    fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>);
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")] // e.g. this adds: `{"type": "CreateLobby"}` to the serialized json
+pub enum WebSocketMessage {
+    Auth(WebsocketAuthJwt),
+    GameState(GameState),
+    CreateLobby(CreateLobbyRequest),
+    JoinLobby(JoinLobbyRequest),
+}
+
+impl ProtocolHandler for WebSocketMessage {
+    fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
+        match self {
+            WebSocketMessage::Auth(auth) => auth.handle(session, ctx),
+            WebSocketMessage::GameState(gs) => gs.handle(session, ctx),
+            WebSocketMessage::CreateLobby(create_lobby) => create_lobby.handle(session, ctx),
+            WebSocketMessage::JoinLobby(join_lobby) => join_lobby.handle(session, ctx),
+        }
+    }
+}
 
 /// Structure representing a WebSocket authentication message containing a JWT
 #[derive(Serialize, Deserialize, Debug)]
 pub struct WebsocketAuthJwt {
-    /// Type of the WebSocket message
-    r#type: String,
     /// JSON Web Token (JWT) for authentication
     jwt: String,
 }
@@ -26,5 +55,29 @@ impl WebsocketAuthJwt {
     pub fn claims(&self) -> Result<Claims, TokenError> {
         let token = Claims::extract_token(&self.jwt)?;
         Claims::decode(token)
+    }
+}
+
+impl ProtocolHandler for WebsocketAuthJwt {
+    fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
+        let claims = self.claims().expect("Failed to parse claims");
+
+        let addr = ctx.address().into();
+
+        session.addr.do_send(Connect { addr, claims });
+    }
+}
+
+impl ProtocolHandler for CreateLobbyRequest {
+    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        let lobby_name = "not implemented".to_string();
+        session.addr.do_send(CreateLobbyRequest { lobby_name });
+    }
+}
+
+impl ProtocolHandler for JoinLobbyRequest {
+    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        let lobby_name = "not implemented".to_string();
+        session.addr.do_send(JoinLobbyRequest { lobby_name });
     }
 }

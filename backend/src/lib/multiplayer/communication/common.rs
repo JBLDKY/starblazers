@@ -1,5 +1,10 @@
 use actix::prelude::*;
+use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
+
+use crate::multiplayer::WsLobbySession;
+
+use super::protocol::ProtocolHandler;
 
 /// This file defines common data structures used in the Actix actor-based
 /// communication system of the application. These structures are designed
@@ -35,4 +40,25 @@ impl GameState {
     pub fn into_player_id(&self) -> String {
         self.player_id.clone()
     }
+}
+
+impl ProtocolHandler for GameState {
+    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        let lobby_name = "not implemented".to_string();
+        session.addr.do_send(self);
+    }
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateLobbyRequest {
+    pub lobby_name: String,
+}
+
+#[derive(Message)]
+#[rtype(result = "()")]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct JoinLobbyRequest {
+    pub lobby_name: String,
 }

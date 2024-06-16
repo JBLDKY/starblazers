@@ -4,7 +4,7 @@
 // lobbies. The `LobbyManager` also facilitates the broadcasting of messages to
 // all players in a specific lobby and maintains the game state using ring buffers.
 
-use crate::multiplayer::communication::common::GameState;
+use crate::multiplayer::communication::common::{CreateLobbyRequest, GameState, JoinLobbyRequest};
 use crate::multiplayer::communication::message::{
     ClientMessage, Connect, Disconnect, Join, Message,
 };
@@ -164,5 +164,19 @@ impl Handler<GameState> for LobbyManager {
             &serde_json::to_string(&state.clone()).expect("couldnt parse gamestate to string"),
             state.into_player_id(),
         );
+    }
+}
+
+impl Handler<CreateLobbyRequest> for LobbyManager {
+    type Result = ();
+    fn handle(&mut self, req: CreateLobbyRequest, _: &mut Self::Context) {
+        log::info!("Received request to create lobby: {:#?}", req);
+    }
+}
+
+impl Handler<JoinLobbyRequest> for LobbyManager {
+    type Result = ();
+    fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {
+        log::info!("Received request to join lobby: {:#?}", req);
     }
 }

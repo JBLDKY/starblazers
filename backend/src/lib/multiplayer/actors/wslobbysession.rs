@@ -5,9 +5,8 @@
 // `LobbyManager` actor for further processing.
 
 use super::LobbyManager;
-use crate::multiplayer::communication::common::GameState;
-use crate::multiplayer::communication::message::{ClientMessage, Connect, Disconnect, Message};
-use crate::multiplayer::communication::protocol::WebsocketAuthJwt;
+use crate::multiplayer::communication::message::{Disconnect, Message};
+use crate::multiplayer::communication::protocol::{ProtocolHandler, WebSocketMessage};
 use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
@@ -115,32 +114,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             }
             ws::Message::Text(text) => {
                 let m = text.trim();
-                // we check for /sss type of messages
-                if m.starts_with("{\"type\":\"auth\"") {
-                    let auth = serde_json::from_str::<WebsocketAuthJwt>(m)
-                        .expect("Invalid websocket auth jwt format");
-                    let claims = auth.claims().expect("Failed to parse claims");
-
-                    let addr = ctx.address().into();
-                    self.addr.do_send(Connect { addr, claims });
-                } else if m.starts_with("{\"type\":\"gamestate\"") {
-                    let gs = serde_json::from_str::<GameState>(m).expect("couldnt parse gamestate");
-
-                    self.addr.do_send(gs);
-                } else {
-                    log::error!("unknown dataformat: {}", m);
-
-                    let msg = if let Some(ref name) = self.name {
-                        format!("{name}: {m}")
-                    } else {
-                        m.to_owned()
-                    };
-                    // send message to chat server
-                    self.addr.do_send(ClientMessage {
-                        id: self.id,
-                        msg,
-                        lobby: self.lobby.clone(),
-                    })
+                match serde_json::from_str::<WebSocketMessage>(m) {
+                    Ok(message) => message.handle(self, ctx),
+                    Err(e) => {
+                        log::error!("Failed to parse message: {}", e);
+                    }
                 }
             }
             ws::Message::Binary(_) => println!("Unexpected binary"),
