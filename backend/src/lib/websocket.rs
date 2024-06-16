@@ -75,15 +75,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
         match msg {
             Ok(ws::Message::Ping(msg)) => {
                 self.hb = Instant::now();
-                // ctx.pong(&msg);
             }
             Ok(ws::Message::Pong(_)) => {
                 self.hb = Instant::now();
             }
             Ok(ws::Message::Text(text)) => {
-                // parse
-                // verify
-                // send back
                 let json = serde_json::from_str::<GameState>(&text);
 
                 if json.is_err() {
@@ -167,9 +163,6 @@ pub struct ClientMessage {
     pub lobby: String,
 }
 
-/// List of available lobbies
-pub struct ListLobbies;
-
 #[repr(transparent)]
 struct PlayerId(String);
 
@@ -180,10 +173,6 @@ impl PlayerId {
             Err(_) => Err(InvalidDataError::PlayerIdIsNotUuid(s)),
         }
     }
-}
-
-impl actix::Message for ListLobbies {
-    type Result = Vec<String>;
 }
 
 /// Join room, if room does not exists create new one.
@@ -267,10 +256,6 @@ impl Handler<Connect> for LobbyServer {
             .or_default()
             .insert(msg.claims.uuid.clone());
 
-        let count = self
-            .player_count
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
         // send id back
         id
     }
@@ -307,21 +292,6 @@ impl Handler<ClientMessage> for LobbyServer {
 
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
         self.send_message(&msg.lobby, msg.msg.as_str(), msg.id.to_string());
-    }
-}
-
-/// Handler for `Listlobbies` message.
-impl Handler<ListLobbies> for LobbyServer {
-    type Result = MessageResult<ListLobbies>;
-
-    fn handle(&mut self, _: ListLobbies, _: &mut Context<Self>) -> Self::Result {
-        let mut lobbies = Vec::new();
-
-        for key in self.lobbies.keys() {
-            lobbies.push(key.to_owned())
-        }
-
-        MessageResult(lobbies)
     }
 }
 
