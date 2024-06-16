@@ -1,14 +1,17 @@
-use std::time::{Duration, Instant};
+// This module defines the `WsLobbySession` actor, which handles WebSocket
+// communication for each player session. It manages the lifecycle of a
+// WebSocket connection, including sending and receiving messages, maintaining
+// heartbeats to keep the connection alive, and forwarding messages to the
+// `LobbyManager` actor for further processing.
 
-use actix::prelude::*;
-use actix::{Actor, Addr, Handler, Running, StreamHandler};
-use actix_web_actors::ws;
-
+use super::LobbyManager;
 use crate::multiplayer::communication::common::GameState;
 use crate::multiplayer::communication::message::{ClientMessage, Connect, Disconnect, Message};
 use crate::multiplayer::communication::protocol::WebsocketAuthJwt;
-
-use super::LobbyManager;
+use actix::prelude::*;
+use actix::{Actor, Addr, Handler, Running, StreamHandler};
+use actix_web_actors::ws;
+use std::time::{Duration, Instant};
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);

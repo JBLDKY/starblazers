@@ -1,12 +1,16 @@
-use std::collections::{HashMap, HashSet};
-
-use actix::prelude::*;
+// This module defines the `LobbyManager` actor, which is responsible for managing
+// player sessions and lobbies. It handles the registration of players, their
+// connections and disconnections, and the organization of players into different
+// lobbies. The `LobbyManager` also facilitates the broadcasting of messages to
+// all players in a specific lobby and maintains the game state using ring buffers.
 
 use crate::multiplayer::communication::common::GameState;
 use crate::multiplayer::communication::message::{
     ClientMessage, Connect, Disconnect, Join, Message,
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
+use actix::prelude::*;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct LobbyManager {
