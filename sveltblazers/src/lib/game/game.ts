@@ -295,4 +295,8 @@ export class SpaceInvadersGame {
 		friend.setXPos(gamestate.position_x);
 		friend.setYPos(gamestate.position_y);
 	}
+
+	createLobby(): void {
+		console.log('creating lobby');
+	}
 }

@@ -1,4 +1,5 @@
 import type { BaseMenu } from '$lib/menu/base';
+import { CurrentPlayerOwnLobbyMenu } from '$lib/menu/currentPlayerOwnLobby';
 import { MainMenu } from '$lib/menu/main';
 import { MultiplayerMenu } from '$lib/menu/multiplayer';
 import { SettingsMenu } from '$lib/menu/settings';
@@ -15,7 +16,8 @@ export enum EntityIndex {
 export enum MenuIndex {
 	Main,
 	Settings,
-	Multiplayer
+	Multiplayer,
+	CurrentPlayerOwnLobby
 }
 
 export class MenuFactory {
@@ -27,6 +29,8 @@ export class MenuFactory {
 				return new SettingsMenu(p, inputHandler);
 			case MenuIndex.Multiplayer:
 				return new MultiplayerMenu(p, inputHandler);
+			case MenuIndex.CurrentPlayerOwnLobby:
+				return new CurrentPlayerOwnLobbyMenu(p, inputHandler);
 		}
 	}
 }

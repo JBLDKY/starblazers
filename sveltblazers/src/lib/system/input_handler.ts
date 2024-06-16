@@ -134,6 +134,11 @@ export class InputHandler {
 				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.Settings);
 				break;
+			case 'Create lobby':
+				this.game.setGameState(GameState.MENU);
+				this.game.setCurrentMenu(MenuIndex.CurrentPlayerOwnLobby);
+				this.game.createLobby();
+				break;
 		}
 	}
 
