@@ -69,45 +69,6 @@ export class MainMenu extends BaseMenu {
 		});
 	}
 
-	/**
-	 * Handles user input to navigate through menu items or to execute actions based on the current selection.
-	 * @param {Object} cachedKeyPresses - A key-value map where each key is a button press and its value is a boolean indicating if it was pressed.
-	 * @returns {string} - The label of the selected menu item, or an empty string if no actionable input was detected.
-	 */
-	handleInput(cachedKeyPresses: { [key: string]: boolean }): string {
-		if (cachedKeyPresses['w'] || cachedKeyPresses['k']) {
-			cachedKeyPresses['w'] = false;
-			cachedKeyPresses['k'] = false;
-			this.prevItem();
-		}
-
-		if (cachedKeyPresses['s'] || cachedKeyPresses['j']) {
-			cachedKeyPresses['s'] = false;
-			cachedKeyPresses['j'] = false;
-			this.nextItem();
-		}
-
-		if (cachedKeyPresses['Enter']) {
-			cachedKeyPresses['Enter'] = false;
-
-			const selected = this.navigator.currentItem();
-			if (selected != null) {
-				return selected.getLabel();
-			}
-
-			console.error(
-				'selected an empty menu item at index: ',
-				this.index,
-				' available range: ',
-				0,
-				' ',
-				this.items.length - 1
-			);
-		}
-
-		return '';
-	}
-
 	loop = (): void => {
 		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
 
