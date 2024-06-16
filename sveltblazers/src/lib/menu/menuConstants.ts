@@ -26,6 +26,8 @@ export const OPTION_MENU_ITEM_TEXTS = [
 	'More settings'
 ];
 
-export const MULTIPLAYER_MENU_ITEM_TEXTS = ['Quick join', 'Create lobby', 'Join lobby', 'Exit'];
+export const MULTIPLAYER_MENU_ITEM_TEXTS = ['Join lobby', 'Create lobby', 'Exit'];
 
 export const CURRENT_PLAYER_OWN_LOBBY_MENU_ITEM_TEXTS = ['Exit'];
+
+export const JOIN_LOBBY_MENU_ITEM_TEXTS = ['Exit'];

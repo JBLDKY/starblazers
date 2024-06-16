@@ -42,7 +42,6 @@ impl GameState {
 
 impl ProtocolHandler for GameState {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
-        let lobby_name = "not implemented".to_string();
         session.addr.do_send(self);
     }
 }
@@ -52,6 +51,13 @@ impl ProtocolHandler for GameState {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreateLobbyRequest {
     pub lobby_name: String,
+    pub player_id: String,
+}
+
+impl ProtocolHandler for CreateLobbyRequest {
+    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        session.addr.do_send(self);
+    }
 }
 
 #[derive(Message)]
@@ -59,4 +65,11 @@ pub struct CreateLobbyRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JoinLobbyRequest {
     pub lobby_name: String,
+}
+
+impl ProtocolHandler for JoinLobbyRequest {
+    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        let lobby_name = "not implemented".to_string();
+        session.addr.do_send(JoinLobbyRequest { lobby_name });
+    }
 }

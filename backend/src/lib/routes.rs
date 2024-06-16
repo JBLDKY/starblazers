@@ -1,9 +1,12 @@
 use crate::claims::Claims;
+use crate::multiplayer::actors::lobbymanager::ListLobbies;
+use crate::multiplayer::LobbyManager;
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
+use actix::Addr;
 use actix_web::http::header::{ContentType, HeaderValue};
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use serde_json::json;
 
 /// TODO update
@@ -24,14 +27,14 @@ pub fn config_server(cfg: &mut web::ServiceConfig) {
         .service(sign_up)
         .service(hello_world)
         .service(verify_jwt)
-        .service(player_info);
+        .service(player_info)
+        .service(list_lobbies);
 }
 
 /// POST /auth/signup -> Returns TODO
 #[post("/auth/signup")]
 async fn sign_up(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, actix_web::Error> {
     let user = serde_json::from_slice::<User>(&body)?;
-    dbg!(&user);
     match db.create_user(&user).await {
         Ok(_) => Ok(HttpResponse::Ok().json(json!({"message:": user.username}))),
         Err(e) => Err(actix_web::error::ErrorBadRequest(e)),
@@ -125,7 +128,7 @@ async fn verify_jwt(req: HttpRequest) -> Result<HttpResponse, actix_web::Error> 
     }
 }
 
-/// Creates the warp filter for the GET /players/player endpoint.
+/// GET /players/player endpoint.
 ///
 /// This filter extracts the authorization header, decodes it into claims, and retrieves player
 /// information based on those claims from the database.
@@ -171,10 +174,16 @@ async fn player_info(
     }
 }
 
-/// Retrieves player information based on the provided JWT in the header.
+/// GET /game/lobbies
 ///
-/// Returns a 401 status code if the JWT is invalid or expired.
-/// Returns a 404 status code if the user cannot be found in the database.
+/// Returns a list of currently available lobbies.
+#[get("/game/lobbies")]
+async fn list_lobbies(
+    lobby_manager: web::Data<Addr<LobbyManager>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let lobbies = lobby_manager.send(ListLobbies).await.unwrap();
+    json_with_status(&json!(lobbies), StatusCode::OK)
+}
 
 /// Constructs a JSON response with a specific status code.
 #[inline(always)]

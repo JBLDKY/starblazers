@@ -67,17 +67,3 @@ impl ProtocolHandler for WebsocketAuthJwt {
         session.addr.do_send(Connect { addr, claims });
     }
 }
-
-impl ProtocolHandler for CreateLobbyRequest {
-    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
-        let lobby_name = "not implemented".to_string();
-        session.addr.do_send(CreateLobbyRequest { lobby_name });
-    }
-}
-
-impl ProtocolHandler for JoinLobbyRequest {
-    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
-        let lobby_name = "not implemented".to_string();
-        session.addr.do_send(JoinLobbyRequest { lobby_name });
-    }
-}

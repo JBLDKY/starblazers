@@ -22,12 +22,10 @@ pub struct LobbyManager {
 impl LobbyManager {
     pub fn new() -> LobbyManager {
         // default room
-        let mut lobbies = HashMap::new();
-        lobbies.insert("main".to_owned(), HashSet::new());
 
         LobbyManager {
             sessions: HashMap::new(),
-            lobbies,
+            lobbies: HashMap::new(),
             ring: HashMap::new(),
         }
     }
@@ -77,12 +75,6 @@ impl Handler<Connect> for LobbyManager {
 
         let ring_buffer: RingBuffer<GameState, 5> = RingBuffer::new();
         self.ring.insert(id.clone(), ring_buffer);
-
-        // auto join session to main room
-        self.lobbies
-            .entry("main".to_owned())
-            .or_default()
-            .insert(msg.claims.uuid.clone());
 
         // send id back
         id
@@ -159,24 +151,41 @@ impl Handler<GameState> for LobbyManager {
 
         player_ring.push(state.clone());
 
-        self.send_message(
-            "main",
-            &serde_json::to_string(&state.clone()).expect("couldnt parse gamestate to string"),
-            state.into_player_id(),
-        );
+        // TODO: this must now send the gamestate to the players in the appopriate lobby
+        //
+        // self.send_message(
+        //     "main",
+        //     &serde_json::to_string(&state.clone()).expect("couldnt parse gamestate to string"),
+        //     state.into_player_id(),
+        // );
     }
 }
 
 impl Handler<CreateLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: CreateLobbyRequest, _: &mut Self::Context) {
-        log::info!("Received request to create lobby: {:#?}", req);
+        let players_in_lobby = HashSet::from([req.player_id.clone()]);
+        self.lobbies.insert(req.lobby_name, players_in_lobby);
+
+        log::info!("A player created a new lobby, current lobbies:\n");
+        log::info!("{:#?}", &self.lobbies);
     }
 }
 
 impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
-    fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {
-        log::info!("Received request to join lobby: {:#?}", req);
+    fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {}
+}
+
+#[derive(Message)]
+#[rtype(result = "Vec<String>")]
+pub struct ListLobbies;
+
+impl Handler<ListLobbies> for LobbyManager {
+    type Result = MessageResult<ListLobbies>;
+
+    fn handle(&mut self, _: ListLobbies, _: &mut Self::Context) -> Self::Result {
+        let lobbies = self.lobbies.keys().cloned().collect();
+        MessageResult(lobbies)
     }
 }
