@@ -8,7 +8,7 @@ use crate::multiplayer::communication::common::GameState;
 use crate::multiplayer::communication::message::{ClientMessage, Connect, Disconnect, Message};
 use crate::multiplayer::communication::protocol::WebsocketAuthJwt;
 
-use super::LobbyServer;
+use super::LobbyManager;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -32,7 +32,7 @@ pub struct WsLobbySession {
     pub name: Option<String>,
 
     /// Chat server
-    pub addr: Addr<LobbyServer>,
+    pub addr: Addr<LobbyManager>,
 }
 
 impl WsLobbySession {

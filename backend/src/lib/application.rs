@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use crate::configuration::Settings;
 use crate::database::db::DatabaseClient;
-use crate::multiplayer::{LobbyServer, WsLobbySession};
+use crate::multiplayer::{LobbyManager, WsLobbySession};
 use crate::routes::config_server;
 
 pub struct Application {
@@ -46,7 +46,7 @@ impl Application {
 async fn lobby_websocket(
     req: HttpRequest,
     stream: web::Payload,
-    srv: actix_web::web::Data<Addr<LobbyServer>>,
+    srv: actix_web::web::Data<Addr<LobbyManager>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
@@ -64,7 +64,7 @@ async fn lobby_websocket(
 fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::io::Error> {
     let db_client = web::Data::new(Arc::new(db_client));
 
-    let lobby_server = web::Data::new(LobbyServer::new().start());
+    let lobby_server = web::Data::new(LobbyManager::new().start());
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()

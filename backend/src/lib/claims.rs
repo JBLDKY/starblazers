@@ -40,8 +40,8 @@ pub enum TokenError {
 impl Claims {
     pub fn extract_token(bearer_string: &str) -> Result<&str, TokenError> {
         let prefix = "Bearer ";
-        if bearer_string.starts_with(prefix) {
-            Ok(&bearer_string[prefix.len()..])
+        if let Some(token) = bearer_string.strip_prefix(prefix) {
+            Ok(token)
         } else {
             Err(TokenError::BearerIsMissing)
         }

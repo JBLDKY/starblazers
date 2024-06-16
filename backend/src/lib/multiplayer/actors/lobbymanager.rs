@@ -9,19 +9,19 @@ use crate::multiplayer::communication::message::{
 use crate::multiplayer::ringbuffer::RingBuffer;
 
 #[derive(Debug)]
-pub struct LobbyServer {
+pub struct LobbyManager {
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: HashMap<String, HashSet<String>>,
     ring: HashMap<String, RingBuffer<GameState, 5>>,
 }
 
-impl LobbyServer {
-    pub fn new() -> LobbyServer {
+impl LobbyManager {
+    pub fn new() -> LobbyManager {
         // default room
         let mut lobbies = HashMap::new();
         lobbies.insert("main".to_owned(), HashSet::new());
 
-        LobbyServer {
+        LobbyManager {
             sessions: HashMap::new(),
             lobbies,
             ring: HashMap::new(),
@@ -42,14 +42,14 @@ impl LobbyServer {
     }
 }
 
-impl Default for LobbyServer {
+impl Default for LobbyManager {
     fn default() -> Self {
         Self::new()
     }
 }
 
 /// Make actor from `LobbyServer`
-impl Actor for LobbyServer {
+impl Actor for LobbyManager {
     /// We are going to use simple Context, we just need ability to communicate
     /// with other actors.
     type Context = Context<Self>;
@@ -58,7 +58,7 @@ impl Actor for LobbyServer {
 /// Handler for Connect message.
 ///
 /// Register new session and assign unique id to this session
-impl Handler<Connect> for LobbyServer {
+impl Handler<Connect> for LobbyManager {
     type Result = String;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
@@ -86,7 +86,7 @@ impl Handler<Connect> for LobbyServer {
 }
 
 /// Handler for Disconnect message.
-impl Handler<Disconnect> for LobbyServer {
+impl Handler<Disconnect> for LobbyManager {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
@@ -107,7 +107,7 @@ impl Handler<Disconnect> for LobbyServer {
 }
 
 /// Handler for Message message.
-impl Handler<ClientMessage> for LobbyServer {
+impl Handler<ClientMessage> for LobbyManager {
     type Result = ();
 
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
@@ -117,7 +117,7 @@ impl Handler<ClientMessage> for LobbyServer {
 
 /// Join room, send disconnect message to old room
 /// send join message to new room
-impl Handler<Join> for LobbyServer {
+impl Handler<Join> for LobbyManager {
     type Result = ();
 
     fn handle(&mut self, msg: Join, _: &mut Context<Self>) {
@@ -144,7 +144,7 @@ impl Handler<Join> for LobbyServer {
     }
 }
 
-impl Handler<GameState> for LobbyServer {
+impl Handler<GameState> for LobbyManager {
     type Result = ();
 
     fn handle(&mut self, state: GameState, _: &mut Self::Context) {

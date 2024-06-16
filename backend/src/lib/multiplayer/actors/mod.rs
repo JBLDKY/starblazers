@@ -1,5 +1,5 @@
-pub mod lobbyserver;
+pub mod lobbymanager;
 pub mod wslobbysession;
 
-pub use lobbyserver::LobbyServer;
+pub use lobbymanager::LobbyManager;
 pub use wslobbysession::WsLobbySession;
