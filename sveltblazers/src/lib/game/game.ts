@@ -297,6 +297,8 @@ export class SpaceInvadersGame {
 	}
 
 	createLobby(): void {
+		this.websocket.sendMessage(JSON.stringify({ type: 'CreateLobby', lobby_name: this.user.uuid }));
+
 		console.log('creating lobby');
 	}
 }
