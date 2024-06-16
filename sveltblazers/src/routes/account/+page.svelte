@@ -15,25 +15,6 @@
 	let player_info: Promise<PublicPlayerData> = get_player_info();
 
 	onMount(async () => {
-		ws = new WebSocket('ws://localhost:3030/lobby');
-
-		ws.onopen = () => {
-			const jwt = get(jwtStore);
-			console.log('lobby connection established');
-			ws.send(JSON.stringify({ type: 'auth', jwt: jwt }));
-		};
-
-		ws.onmessage = (event) => {
-			console.log('received: ', event);
-		};
-
-		ws.onclose = (event) => {
-			console.log('WebSocket connection closed', event.code, event.reason);
-		};
-
-		ws.onerror = (error) => {
-			console.error('WebSocket error', error);
-		};
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
 		// `goto()` cannot be called on the server
@@ -53,19 +34,6 @@
 	});
 
 	let listBoxValue: string = 'account';
-
-	const chat = (uuid: string) => {
-		const num = Math.round(Math.random() * 10000);
-		const timestamp = new Date();
-		const msg = JSON.stringify({
-			type: 'gamestate',
-			data: { position: num },
-			player_id: uuid,
-			timestamp: timestamp
-		});
-		console.log(msg);
-		ws.send(msg);
-	};
 </script>
 
 <div class="flex h-screen bg-surface-800">
@@ -85,8 +53,6 @@
 			<div class="ml-1/2 mr-1/2 absolute mb-40"></div>
 		{:then player_info}
 			{#if listBoxValue === 'account'}
-				<button on:click={() => chat(player_info['uuid'])} class={button_tw}>send gamestate</button>
-
 				<div class="flex-1 space-y-4">
 					<label class="flex items-center">
 						<span class="block w-1/3 text-sm font-medium text-tertiary-500">Username: </span>
