@@ -4,9 +4,8 @@ use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
 
-use crate::multiplayer::communication::message::{
-    ClientMessage, Connect, Disconnect, GameState, Message,
-};
+use crate::multiplayer::communication::common::GameState;
+use crate::multiplayer::communication::message::{ClientMessage, Connect, Disconnect, Message};
 use crate::multiplayer::communication::protocol::WebsocketAuthJwt;
 
 use super::LobbyServer;

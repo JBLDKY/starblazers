@@ -6,6 +6,12 @@ pub struct RingBuffer<T, const S: usize> {
     full: bool,
 }
 
+impl<T, const S: usize> Default for RingBuffer<T, S> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T, const S: usize> RingBuffer<T, S> {
     pub fn new() -> Self {
         // Initialize the buffer with None values.

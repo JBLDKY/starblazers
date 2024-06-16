@@ -32,9 +32,21 @@ pub enum TokenError {
 
     #[error("Token is expired")]
     Expired,
+
+    #[error("JWT does not start with `Bearer`")]
+    BearerIsMissing,
 }
 
 impl Claims {
+    pub fn extract_token(bearer_string: &str) -> Result<&str, TokenError> {
+        let prefix = "Bearer ";
+        if bearer_string.starts_with(prefix) {
+            Ok(&bearer_string[prefix.len()..])
+        } else {
+            Err(TokenError::BearerIsMissing)
+        }
+    }
+
     pub fn decode(jwt: &str) -> Result<Self, TokenError> {
         let secret = Self::get_jwt_secret();
 

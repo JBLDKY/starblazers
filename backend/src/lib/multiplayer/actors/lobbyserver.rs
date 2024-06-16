@@ -2,8 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use actix::prelude::*;
 
+use crate::multiplayer::communication::common::GameState;
 use crate::multiplayer::communication::message::{
-    ClientMessage, Connect, Disconnect, GameState, Join, Message,
+    ClientMessage, Connect, Disconnect, Join, Message,
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
 

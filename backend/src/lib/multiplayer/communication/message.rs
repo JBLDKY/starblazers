@@ -1,65 +1,55 @@
 use crate::claims::Claims;
 use actix::prelude::*;
-use serde::{Deserialize, Serialize};
 
+/// This file defines various messages and data structures used in the
+/// Actix actor-based communication system of the application. These
+/// messages facilitate interactions between different components,
+/// such as chat sessions, game state synchronization, and client-server
+/// communication in a multiplayer environment. Each message is tailored
+/// to be used within the Actix actor framework, ensuring type-safe
+/// and asynchronous communication.
+
+/// A simple message structure wrapping a String
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct Message(pub String);
 
-/// New chat session is created
+/// Message sent when a new chat session is created
 #[derive(Message)]
 #[rtype(String)]
 pub struct Connect {
+    /// Address of the recipient actor for this session
     pub addr: Recipient<Message>,
+    /// Claims containing user-specific data (e.g., authentication information)
     pub claims: Claims,
 }
 
-/// Session is disconnected
+/// Message sent when a session is disconnected
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct Disconnect {
+    /// Unique identifier for the disconnected session
     pub id: String,
 }
-/// Send message to specific room
+
+/// Message sent to a specific room containing a client's message
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct ClientMessage {
-    /// Id of the client session
+    /// Unique identifier for the client session
     pub id: usize,
-    /// Peer message
+    /// The message content sent by the peer
     pub msg: String,
-    /// Room name
+    /// The name of the room the message is sent to
     pub lobby: String,
 }
 
-/// Join room, if room does not exists create new one.
+/// Message to join a room; creates the room if it doesn't exist
 #[derive(Message)]
 #[rtype(result = "()")]
 pub struct Join {
-    /// Client ID
+    /// Unique identifier for the client session
     pub id: usize,
-
-    /// Room name
+    /// The name of the room to join
     pub name: String,
-}
-
-#[derive(Message)]
-#[rtype(result = "()")]
-#[derive(Serialize, Deserialize, Default, Debug, Clone)]
-pub struct GameState {
-    r#type: String,
-    position_x: usize,
-    position_y: usize,
-    player_id: String,
-    timestamp: String,
-}
-
-impl GameState {
-    pub fn player_id(&self) -> &str {
-        &self.player_id
-    }
-
-    pub fn into_player_id(&self) -> String {
-        self.player_id.clone()
-    }
 }
