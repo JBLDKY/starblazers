@@ -13,6 +13,9 @@ import {
 	JOIN_LOBBY_MENU_ITEM_TEXTS
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
+import { get } from 'svelte/store';
+import { jwtStore } from '../../store/auth';
+import { GAME_LOBBIES_URL } from '../../constants';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -20,6 +23,7 @@ import type { InputHandler } from '$lib/system/input_handler';
 export class JoinLobbyMenu extends BaseMenu {
 	private builder: MenuItemBuilder;
 	private currentY: number;
+	private lastUpdate = 0;
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
@@ -68,8 +72,56 @@ export class JoinLobbyMenu extends BaseMenu {
 		});
 	}
 
-	loop = (): void => {
+	async updateLobbies() {
+		try {
+			const lobbies = await this.getLobbies();
+			console.log('Lobbies:', lobbies);
+			// Update your game state with the fetched lobbies
+		} catch (error) {
+			console.error('Error updating lobbies:', error);
+			// Handle the error appropriately in your game
+		}
+	}
+
+	async getLobbies(): Promise<string[]> {
+		const jwt = get(jwtStore);
+
+		try {
+			const response = await fetch(GAME_LOBBIES_URL, {
+				method: 'GET',
+				mode: 'cors', // no-cors, *cors, same-origin
+				headers: {
+					Authorization: `Bearer ${jwt}`
+				}
+			});
+
+			if (!response.ok) {
+				switch (response.status) {
+					case 401:
+						console.warn('Token has been tampered with or has expired');
+						throw new Error('Unauthorized');
+					default:
+						console.error('Server unavailable');
+						throw new Error('Server unavailable');
+				}
+			}
+
+			const lobbies = await response.json();
+			return lobbies;
+		} catch (error) {
+			console.error('Fetch error:', error);
+			throw error; // Re-throw the error to be caught by the caller
+		}
+	}
+
+	loop = (timestamp: number): void => {
 		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
+
+		if (timestamp - this.lastUpdate > 3000) {
+			// Chech for new lobbies every 3 seconds
+			this.updateLobbies();
+			this.lastUpdate = timestamp;
+		}
 
 		if (result != '' && result != undefined) {
 			this.inputHandler.handleMenuResult(result);

@@ -16,6 +16,7 @@ export const AUTH_SERVER_URL: string = `${BASE_URL}/auth/login`;
 export const CREATE_NEW_SERVER_URL: string = `${BASE_URL}/auth/signup`;
 export const TEST_ENDPOINT_SERVER_URL: string = `${BASE_URL}/test`;
 export const VERIFY_JWT_SERVER_URL: string = `${BASE_URL}/auth/verify_jwt`;
+export const GAME_LOBBIES_URL: string = `${BASE_URL}/game/lobbies`;
 
 export const LOGIN_DELAY: number = 2000;
 export const MAX_BULLETS = 50;

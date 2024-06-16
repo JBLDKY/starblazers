@@ -6,7 +6,7 @@ import { ChatBox } from '../chat/chatbox';
 import { User } from '../user/user';
 import { WebSocketManager } from '../websocketmanager';
 import { Colors } from '$lib/assets/color';
-import { GameState } from '../../constants';
+import { GAME_LOBBIES_URL, GameState } from '../../constants';
 import type p5 from 'p5';
 import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
@@ -18,6 +18,8 @@ import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 import { GameStateManager } from '$lib/system/game_state_manager';
+import { jwtStore } from '../../store/auth';
+import { get } from 'svelte/store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -234,7 +236,7 @@ export class SpaceInvadersGame {
 				case GameState.MENU:
 					if (this.currentMenu !== null && this.fpsManager.shouldProcessMenuInput(timestamp)) {
 						this.p.fill('deeppink'); // This fixes the bug where subsequent menus are white
-						this.currentMenu.loop();
+						this.currentMenu.loop(timestamp);
 					}
 					break;
 			}

@@ -102,5 +102,5 @@ export abstract class BaseMenu {
 		return '';
 	}
 
-	abstract loop: () => void;
+	abstract loop: (timestamp: number) => void;
 }

@@ -69,7 +69,7 @@ export class MainMenu extends BaseMenu {
 		});
 	}
 
-	loop = (): void => {
+	loop = (_: number): void => {
 		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
 
 		if (result != '' && result != undefined) {
