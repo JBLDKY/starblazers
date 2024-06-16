@@ -1,3 +1,4 @@
+import { SomeoneElsesLobby } from '$lib/menu/SomeoneElsesLobby';
 import type { BaseMenu } from '$lib/menu/base';
 import { CurrentPlayerOwnLobbyMenu } from '$lib/menu/currentPlayerOwnLobby';
 import { JoinLobbyMenu } from '$lib/menu/joinLobbyMenu';
@@ -19,11 +20,12 @@ export enum MenuIndex {
 	Settings,
 	Multiplayer,
 	CurrentPlayerOwnLobby,
-	JoinLobby
+	JoinLobby,
+	SomeoneElsesLobby
 }
 
 export class MenuFactory {
-	newMenu(p: p5, menuIndex: MenuIndex, inputHandler: InputHandler): BaseMenu {
+	newMenu(p: p5, menuIndex: MenuIndex, inputHandler: InputHandler, ...args: string[]): BaseMenu {
 		switch (menuIndex) {
 			case MenuIndex.Main:
 				return new MainMenu(p, inputHandler);
@@ -32,9 +34,11 @@ export class MenuFactory {
 			case MenuIndex.Multiplayer:
 				return new MultiplayerMenu(p, inputHandler);
 			case MenuIndex.CurrentPlayerOwnLobby:
-				return new CurrentPlayerOwnLobbyMenu(p, inputHandler);
+				return new CurrentPlayerOwnLobbyMenu(p, inputHandler, ...args);
 			case MenuIndex.JoinLobby:
 				return new JoinLobbyMenu(p, inputHandler);
+			case MenuIndex.SomeoneElsesLobby:
+				return new SomeoneElsesLobby(p, inputHandler, ...args);
 		}
 	}
 }

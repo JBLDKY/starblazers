@@ -191,18 +191,14 @@ export class SpaceInvadersGame {
 		this.inputHandler.handleInputWhileTyping();
 	}
 
-	setCurrentMenu(menuIndex: MenuIndex): void {
+	setCurrentMenu(menuIndex: MenuIndex, ...args: string[]): void {
 		if (this.currentMenu === null || this.currentMenu === undefined) {
 			return;
 		}
 
 		const oldMenu = this.currentMenu;
-		if (this.currentMenu.index !== menuIndex) {
-			console.log('old: ', this.currentMenu.index);
-			console.log('new: ', menuIndex);
-		}
 
-		this.currentMenu = new MenuFactory().newMenu(this.p, menuIndex, this.inputHandler);
+		this.currentMenu = new MenuFactory().newMenu(this.p, menuIndex, this.inputHandler, args);
 
 		oldMenu.onExit();
 	}
@@ -334,12 +330,20 @@ export class SpaceInvadersGame {
 	}
 
 	leaveOwnLobby(): void {
+		this.leaveLobby(this.user.uuid + "'s lobby");
+	}
+
+	leaveLobby(lobby: string): void {
 		this.websocket.sendMessage(
 			JSON.stringify({
 				type: 'LeaveLobby',
-				lobby_name: this.user.uuid + "'s lobby",
+				lobby_name: lobby,
 				player_id: this.user.uuid
 			})
 		);
+	}
+
+	userUuid(): string {
+		return this.user.uuid;
 	}
 }

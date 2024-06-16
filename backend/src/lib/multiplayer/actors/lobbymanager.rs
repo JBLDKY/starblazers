@@ -231,3 +231,25 @@ impl Handler<LeaveLobbyRequest> for LobbyManager {
         log::info!("{:#?}", &self.lobbies);
     }
 }
+
+#[derive(Message)]
+#[rtype(result = "Vec<String>")]
+pub struct PlayersInLobby {
+    pub lobby_name: String,
+}
+
+impl Handler<PlayersInLobby> for LobbyManager {
+    type Result = MessageResult<PlayersInLobby>;
+
+    fn handle(&mut self, req: PlayersInLobby, _: &mut Self::Context) -> Self::Result {
+        let players: Vec<String> = self
+            .lobbies
+            .get(&req.lobby_name)
+            .unwrap_or(&HashSet::new())
+            .iter()
+            .map(|s| s.to_owned())
+            .collect();
+
+        MessageResult(players)
+    }
+}

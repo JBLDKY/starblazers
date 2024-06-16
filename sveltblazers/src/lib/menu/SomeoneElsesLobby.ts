@@ -9,8 +9,8 @@ import {
 	ITEM_SIZE,
 	PIXELS_BELOW_MAIN_MENU,
 	PIXELS_BETWEEN_ITEMS,
-	CURRENT_PLAYER_OWN_LOBBY_MENU,
-	CURRENT_PLAYER_OWN_LOBBY_MENU_ITEM_TEXTS
+	SOMEONE_ELSES_LOBBY_MENU,
+	SOMEONE_ELSES_LOBBY_MENU_ITEM_TEXTS
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
 import { get } from 'svelte/store';
@@ -20,12 +20,13 @@ import { get_players_in_lobby_url } from '../../constants';
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
-export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
+export class SomeoneElsesLobby extends BaseMenu {
 	private builder: MenuItemBuilder;
 	private currentY: number;
+	private lastUpdate = 0;
 	private lobbyName: string;
 	private players: string[] = [];
-	private lastUpdate: number = 0;
+	private userUuid: string;
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
@@ -34,8 +35,9 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	constructor(p: p5, inputHandler: InputHandler, lobbyName: string[]) {
 		super(p, inputHandler);
 		this.p = p;
-		this.p.fill('deeppink');
 		this.lobbyName = lobbyName[0];
+		this.userUuid = lobbyName[1];
+		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
 
 		this.builder = new MenuItemBuilder(this.p);
@@ -53,7 +55,7 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	private createHeader(): void {
 		this.items.push(
 			this.builder
-				.setLabel(CURRENT_PLAYER_OWN_LOBBY_MENU)
+				.setLabel(SOMEONE_ELSES_LOBBY_MENU)
 				.setTextSize(HEADER_SIZE)
 				.setRelativeX(0.5)
 				.setAbsoluteY(this.currentY)
@@ -69,16 +71,30 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	private createItems(): void {
 		this.builder.setTextSize(ITEM_SIZE);
 
-		CURRENT_PLAYER_OWN_LOBBY_MENU_ITEM_TEXTS.forEach((itemText) => {
+		SOMEONE_ELSES_LOBBY_MENU_ITEM_TEXTS.forEach((itemText) => {
 			this.items.push(this.builder.setLabel(itemText).setAbsoluteY(this.currentY).build());
 			this.currentY += PIXELS_BETWEEN_ITEMS;
 		});
+	}
+
+	private addItem(item: string): void {
+		this.items.push(
+			this.builder
+				.setLabel(item)
+				.setTextSize(ITEM_SIZE)
+				.setRelativeX(0.5)
+				.setAbsoluteY(this.currentY)
+				.build()
+		);
+		this.currentY += PIXELS_BETWEEN_ITEMS;
 	}
 
 	async updatePlayersInLobby() {
 		try {
 			const players = await this.getPlayersInLobby();
 			this.players = players;
+			console.log('Success!');
+			console.log(this.players);
 		} catch (error) {
 			console.error('Error updating lobbies:', error);
 			return [];
@@ -118,25 +134,13 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		}
 	}
 
-	private addItem(item: string): void {
-		this.items.push(
-			this.builder
-				.setLabel(item)
-				.setTextSize(ITEM_SIZE)
-				.setRelativeX(0.5)
-				.setAbsoluteY(this.currentY)
-				.build()
-		);
-		this.currentY += PIXELS_BETWEEN_ITEMS;
-	}
-
 	private recreate(): void {
 		this.items = [];
 		this.currentY = MENU_STARTING_Y_COORDINATE;
 		this.createHeader();
 		this.createItems();
 		this.players.forEach((player) => {
-			if (this.lobbyName.includes(player)) {
+			if (this.userUuid == player) {
 				player = player + ' (you)';
 			}
 			this.addItem(player);
@@ -162,9 +166,5 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		this.display();
 		this.p.rect(0, 30, 30, this.p.height);
 		this.p.rect(this.p.width - 30, 30, 30, this.p.height);
-	};
-
-	onExit = (): void => {
-		this.inputHandler.handleMenuResult('LeaveOwnLobby');
 	};
 }

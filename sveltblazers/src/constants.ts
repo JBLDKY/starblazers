@@ -18,6 +18,10 @@ export const TEST_ENDPOINT_SERVER_URL: string = `${BASE_URL}/test`;
 export const VERIFY_JWT_SERVER_URL: string = `${BASE_URL}/auth/verify_jwt`;
 export const GAME_LOBBIES_URL: string = `${BASE_URL}/game/lobbies`;
 
+export const get_players_in_lobby_url = (lobby: string): string => {
+	return `${BASE_URL}/game/${lobby}/players`;
+};
+
 export const LOGIN_DELAY: number = 2000;
 export const MAX_BULLETS = 50;
 

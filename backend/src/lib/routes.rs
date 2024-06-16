@@ -1,5 +1,5 @@
 use crate::claims::Claims;
-use crate::multiplayer::actors::lobbymanager::ListLobbies;
+use crate::multiplayer::actors::lobbymanager::{ListLobbies, PlayersInLobby};
 use crate::multiplayer::LobbyManager;
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
@@ -30,7 +30,8 @@ pub fn config_server(cfg: &mut web::ServiceConfig) {
         .service(hello_world)
         .service(verify_jwt)
         .service(player_info)
-        .service(list_lobbies);
+        .service(list_lobbies)
+        .service(players_in_lobby);
 }
 
 /// POST /auth/signup -> Returns TODO
@@ -206,6 +207,32 @@ async fn list_lobbies(
         .expect("Failed to get a list of available lobbies.");
 
     json_with_status(&json!(lobbies), StatusCode::OK)
+}
+
+/// GET /game/lobbies
+///
+/// Returns a list of currently available lobbies.
+#[get("/game/{lobby_name}/players")]
+async fn players_in_lobby(
+    req: HttpRequest,
+    mut lobby_name: web::Path<String>,
+    lobby_manager: web::Data<Addr<LobbyManager>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    lobby_name.push_str("'s lobby");
+
+    if let Err(e) = jwt_check(&req) {
+        return Ok(e);
+    }
+    sleep(Duration::from_secs(2)).await; // Add a delay to simulate a real environment
+
+    let players = lobby_manager
+        .send(PlayersInLobby {
+            lobby_name: lobby_name.to_string(),
+        })
+        .await
+        .expect("Failed to get a list of players in the lobby");
+
+    json_with_status(&json!(players), StatusCode::OK)
 }
 
 /// Constructs a JSON response with a specific status code.
