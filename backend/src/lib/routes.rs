@@ -1,14 +1,15 @@
 use crate::claims::Claims;
 use crate::multiplayer::actors::lobbymanager::{ListLobbies, PlayersInLobby};
-use crate::multiplayer::LobbyManager;
+use crate::multiplayer::{LobbyManager, WsLobbySession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
 use actix::Addr;
 use actix_web::http::header::{ContentType, HeaderValue};
 use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpRequest, HttpResponse};
+use actix_web_actors::ws;
 use serde_json::json;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 /// TODO update
@@ -18,15 +19,18 @@ use tokio::time::sleep;
 /// POST /auth/login - login - start authenticating the login request
 /// GET /helloworld - helloworld - for sanity checks / testing warp things
 /// GET /auth/verify_jwt
+/// GET /players/player - return information about the player.
+/// GET /game/lobbies - get a list of active lobbies
+// [websocket] GET /lobby - the main (and currently only) websocket
 
 /// Configure the server services
 pub fn config_server(cfg: &mut web::ServiceConfig) {
     cfg.service(index)
-        //.service(chat)
         .service(players_all)
         .service(users_all)
         .service(login)
         .service(sign_up)
+        .service(lobby_websocket)
         .service(hello_world)
         .service(verify_jwt)
         .service(player_info)
@@ -242,4 +246,24 @@ fn json_with_status(
     status: StatusCode,
 ) -> Result<HttpResponse, actix_web::Error> {
     Ok(HttpResponse::build(status).json(json))
+}
+
+// [websocket] GET /lobby
+#[get("/lobby")]
+async fn lobby_websocket(
+    req: HttpRequest,
+    stream: web::Payload,
+    srv: actix_web::web::Data<Addr<LobbyManager>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    ws::start(
+        WsLobbySession {
+            id: 0,
+            hb: Instant::now(),
+            lobby: "main".to_owned(),
+            name: Some("name".to_string()),
+            addr: srv.get_ref().clone(),
+        },
+        &req,
+        stream,
+    )
 }

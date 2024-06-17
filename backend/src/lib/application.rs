@@ -1,16 +1,14 @@
-use actix::{Actor, Addr};
+use actix::Actor;
 use actix_cors::Cors;
 use actix_web::dev::Server;
 use actix_web::http::header::{self};
-use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
-use actix_web_actors::ws;
+use actix_web::{web, App, HttpServer};
 use std::net::TcpListener;
 use std::sync::Arc;
-use std::time::Instant;
 
 use crate::configuration::Settings;
 use crate::database::db::DatabaseClient;
-use crate::multiplayer::{LobbyManager, WsLobbySession};
+use crate::multiplayer::LobbyManager;
 use crate::routes::config_server;
 
 pub struct Application {
@@ -43,24 +41,6 @@ impl Application {
     }
 }
 
-async fn lobby_websocket(
-    req: HttpRequest,
-    stream: web::Payload,
-    srv: actix_web::web::Data<Addr<LobbyManager>>,
-) -> Result<HttpResponse, actix_web::Error> {
-    ws::start(
-        WsLobbySession {
-            id: 0,
-            hb: Instant::now(),
-            lobby: "main".to_owned(),
-            name: Some("name".to_string()),
-            addr: srv.get_ref().clone(),
-        },
-        &req,
-        stream,
-    )
-}
-
 fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::io::Error> {
     let db_client = web::Data::new(Arc::new(db_client));
 
@@ -79,7 +59,6 @@ fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::
             .app_data(db_client.clone())
             .app_data(lobby_server.clone())
             .configure(config_server)
-            .route("/lobby", web::get().to(lobby_websocket))
     })
     .listen(listener)?
     .run();

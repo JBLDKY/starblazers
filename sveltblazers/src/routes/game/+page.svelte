@@ -20,8 +20,6 @@
 		// If this is not inside onMount(), it will raise an error that
 		// `goto()` cannot be called on the server
 
-		player_info = await get_player_info();
-
 		if (get(jwtStore) === undefined || get(jwtStore) == '') {
 			toastStore.trigger({ message: 'You are not logged in!' });
 			goto('/login');
@@ -36,6 +34,13 @@
 			}
 		}
 
+		try {
+			player_info = await get_player_info();
+		} catch (error) {
+			console.error(error);
+			toastStore.trigger({ message: 'Who are you?' });
+			goto('/login');
+		}
 		// FIXME: Event if this fails, the game loads and actually creates a websocket connection
 	});
 
