@@ -1,6 +1,6 @@
 import type p5 from 'p5';
 import { BaseMenu } from './base';
-import { MenuItemBuilder } from './menuitem/menu_item_builder';
+import { playerInfoStore } from '../../store/auth';
 import { Navigator } from './navigator';
 
 import {
@@ -16,29 +16,31 @@ import type { InputHandler } from '$lib/system/input_handler';
 import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
+import type { WebSocketManager } from '$lib/websocketmanager';
+import type { PublicPlayerData } from '../../routes/helpers';
+import { lobbyName } from '../../routes/helpers';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
 export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
-	private builder: MenuItemBuilder;
 	private currentY: number;
-	private lobbyName: string;
 	private players: string[] = [];
 	private lastUpdate: number = 0;
+	private playerInfo: PublicPlayerData;
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
-	constructor(p: p5, inputHandler: InputHandler, lobbyName: string[]) {
+	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager) {
 		super(p, inputHandler);
 		this.p = p;
 		this.p.fill('deeppink');
-		this.lobbyName = lobbyName[0];
+		this.websocket = websocket;
 		this.currentY = MENU_STARTING_Y_COORDINATE;
 
-		this.builder = new MenuItemBuilder(this.p);
+		this.playerInfo = get(playerInfoStore);
 
 		this.createHeader();
 		this.createItems();
@@ -89,7 +91,7 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		const jwt = get(jwtStore);
 
 		try {
-			const lobby_name_without_suffix = this.lobbyName.split("'")[0];
+			const lobby_name_without_suffix = this.playerInfo.uuid;
 			const url = get_players_in_lobby_url(lobby_name_without_suffix);
 			const response = await fetch(url, {
 				method: 'GET',
@@ -135,12 +137,27 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		this.currentY = MENU_STARTING_Y_COORDINATE;
 		this.createHeader();
 		this.createItems();
+
 		this.players.forEach((player) => {
-			if (this.lobbyName.includes(player)) {
+			if (lobbyName(this.playerInfo).includes(player)) {
 				player = player + ' (you)';
 			}
 			this.addItem(player);
 		});
+	}
+
+	private createLobby(): void {
+		if (this.websocket === undefined || this.websocket === null) {
+			return;
+		}
+
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'CreateLobby',
+				lobby_name: this.playerInfo.username + "'s lobby",
+				player_id: this.playerInfo.username
+			})
+		);
 	}
 
 	loop = (timestamp: number): void => {
@@ -150,6 +167,10 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 			// Check for new lobbies every 3 seconds
 			this.updatePlayersInLobby();
 			this.lastUpdate = timestamp;
+		}
+
+		if (result === 'Create lobby') {
+			this.createLobby();
 		}
 
 		if (result != '' && result != undefined) {

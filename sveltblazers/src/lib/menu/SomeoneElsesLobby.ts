@@ -1,7 +1,7 @@
 import type p5 from 'p5';
 import { BaseMenu } from './base';
-import { MenuItemBuilder } from './menuitem/menu_item_builder';
 import { Navigator } from './navigator';
+import { playerInfoStore } from '../../store/auth';
 
 import {
 	MENU_STARTING_Y_COORDINATE,
@@ -16,35 +16,36 @@ import type { InputHandler } from '$lib/system/input_handler';
 import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
+import type { WebSocketManager } from '$lib/websocketmanager';
+import type { PublicPlayerData } from '../../routes/helpers';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
 export class SomeoneElsesLobby extends BaseMenu {
-	private builder: MenuItemBuilder;
 	private currentY: number;
 	private lastUpdate = 0;
-	private lobbyName: string;
 	private players: string[] = [];
-	private userUuid: string;
+	private playerInfo: PublicPlayerData;
+	private lobbyName: string;
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
-	constructor(p: p5, inputHandler: InputHandler, lobbyName: string[]) {
+	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager, lobbyName: string) {
 		super(p, inputHandler);
 		this.p = p;
-		this.lobbyName = lobbyName[0];
-		this.userUuid = lobbyName[1];
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
-
-		this.builder = new MenuItemBuilder(this.p);
+		this.lobbyName = lobbyName;
 
 		this.createHeader();
 		this.createItems();
 
+		this.playerInfo = get(playerInfoStore);
+
+		this.websocket = websocket;
 		this.navigator = new Navigator(this.p);
 		this.navigator.moveTo(this.items[this.index]);
 	}
@@ -93,8 +94,6 @@ export class SomeoneElsesLobby extends BaseMenu {
 		try {
 			const players = await this.getPlayersInLobby();
 			this.players = players;
-			console.log('Success!');
-			console.log(this.players);
 		} catch (error) {
 			console.error('Error updating lobbies:', error);
 			return [];
@@ -105,7 +104,7 @@ export class SomeoneElsesLobby extends BaseMenu {
 		const jwt = get(jwtStore);
 
 		try {
-			const lobby_name_without_suffix = this.lobbyName.split("'")[0];
+			const lobby_name_without_suffix = this.lobbyName.replace("'s lobby", '');
 			const url = get_players_in_lobby_url(lobby_name_without_suffix);
 			const response = await fetch(url, {
 				method: 'GET',
@@ -140,7 +139,7 @@ export class SomeoneElsesLobby extends BaseMenu {
 		this.createHeader();
 		this.createItems();
 		this.players.forEach((player) => {
-			if (this.userUuid == player) {
+			if (this.playerInfo.uuid == player) {
 				player = player + ' (you)';
 			}
 			this.addItem(player);

@@ -18,7 +18,6 @@ import type { InputHandler } from '$lib/system/input_handler';
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
 export class MultiplayerMenu extends BaseMenu {
-	private builder: MenuItemBuilder;
 	private currentY: number;
 
 	/**
@@ -30,8 +29,6 @@ export class MultiplayerMenu extends BaseMenu {
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
-
-		this.builder = new MenuItemBuilder(this.p);
 
 		this.createHeader();
 		this.createItems();

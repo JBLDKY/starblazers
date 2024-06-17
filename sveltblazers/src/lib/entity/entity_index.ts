@@ -6,6 +6,7 @@ import { MainMenu } from '$lib/menu/main';
 import { MultiplayerMenu } from '$lib/menu/multiplayer';
 import { SettingsMenu } from '$lib/menu/settings';
 import { InputHandler } from '$lib/system/input_handler';
+import type { WebSocketManager } from '$lib/websocketmanager';
 import type p5 from 'p5';
 
 export enum EntityIndex {
@@ -25,7 +26,13 @@ export enum MenuIndex {
 }
 
 export class MenuFactory {
-	newMenu(p: p5, menuIndex: MenuIndex, inputHandler: InputHandler, ...args: string[]): BaseMenu {
+	newMenu(
+		p: p5,
+		menuIndex: MenuIndex,
+		inputHandler: InputHandler,
+		websocket: WebSocketManager,
+		...args: string[]
+	): BaseMenu {
 		switch (menuIndex) {
 			case MenuIndex.Main:
 				return new MainMenu(p, inputHandler);
@@ -34,11 +41,11 @@ export class MenuFactory {
 			case MenuIndex.Multiplayer:
 				return new MultiplayerMenu(p, inputHandler);
 			case MenuIndex.CurrentPlayerOwnLobby:
-				return new CurrentPlayerOwnLobbyMenu(p, inputHandler, ...args);
+				return new CurrentPlayerOwnLobbyMenu(p, inputHandler, websocket);
 			case MenuIndex.JoinLobby:
-				return new JoinLobbyMenu(p, inputHandler);
+				return new JoinLobbyMenu(p, inputHandler, websocket);
 			case MenuIndex.SomeoneElsesLobby:
-				return new SomeoneElsesLobby(p, inputHandler, ...args);
+				return new SomeoneElsesLobby(p, inputHandler, websocket, args[0][0]); // Provide the lobby name
 		}
 	}
 }

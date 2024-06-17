@@ -16,12 +16,12 @@ import type { InputHandler } from '$lib/system/input_handler';
 import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { GAME_LOBBIES_URL } from '../../constants';
+import type { WebSocketManager } from '$lib/websocketmanager';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
 export class JoinLobbyMenu extends BaseMenu {
-	private builder: MenuItemBuilder;
 	private currentY: number;
 	private lastUpdate = 0;
 	private lobbies: string[] = [];
@@ -30,12 +30,13 @@ export class JoinLobbyMenu extends BaseMenu {
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
-	constructor(p: p5, inputHandler: InputHandler) {
+	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager) {
 		super(p, inputHandler);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
 
+		this.websocket = websocket;
 		this.builder = new MenuItemBuilder(this.p);
 
 		this.createHeader();

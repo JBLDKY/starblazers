@@ -13,11 +13,47 @@ use crate::multiplayer::communication::message::{
 use crate::multiplayer::ringbuffer::RingBuffer;
 use actix::prelude::*;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+
+#[derive(Debug, Default)]
+pub struct Lobbies(HashMap<String, HashSet<String>>);
+
+impl Lobbies {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn empty_lobbies(&self) -> Vec<String> {
+        self.0
+            .iter()
+            .filter_map(|(key, value)| {
+                if value.is_empty() {
+                    Some(key.to_owned())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    pub fn remove_empty(&mut self) {
+        for key in self.empty_lobbies() {
+            log::info!("Removing empty lobby: {}", &key);
+            self.0.remove(&key);
+        }
+    }
+}
+
+impl fmt::Display for Lobbies {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
 
 #[derive(Debug)]
 pub struct LobbyManager {
     sessions: HashMap<String, Recipient<Message>>,
-    lobbies: HashMap<String, HashSet<String>>,
+    lobbies: Lobbies,
     ring: HashMap<String, RingBuffer<GameState, 5>>,
 }
 
@@ -27,14 +63,14 @@ impl LobbyManager {
 
         LobbyManager {
             sessions: HashMap::new(),
-            lobbies: HashMap::new(),
+            lobbies: Lobbies::new(),
             ring: HashMap::new(),
         }
     }
 
     /// Send message to all users in the room
     fn send_message(&self, room: &str, message: &str, skip_id: String) {
-        if let Some(sessions) = self.lobbies.get(room) {
+        if let Some(sessions) = self.lobbies.0.get(room) {
             for id in sessions {
                 if *id != skip_id {
                     if let Some(addr) = self.sessions.get(id) {
@@ -95,7 +131,7 @@ impl Handler<Disconnect> for LobbyManager {
         // remove address
         if self.sessions.remove(&msg.id).is_some() {
             // remove session from all lobbies
-            for (name, sessions) in &mut self.lobbies {
+            for (name, sessions) in &mut self.lobbies.0 {
                 if sessions.remove(&msg.id) {
                     lobbies.push(name.to_owned());
                 }
@@ -123,7 +159,7 @@ impl Handler<Join> for LobbyManager {
         let mut lobbies = Vec::new();
 
         // remove session from all lobbies
-        for (n, sessions) in &mut self.lobbies {
+        for (n, sessions) in &mut self.lobbies.0 {
             if sessions.remove(&id.to_string()) {
                 lobbies.push(n.to_owned());
             }
@@ -134,6 +170,7 @@ impl Handler<Join> for LobbyManager {
         }
 
         self.lobbies
+            .0
             .entry(name.clone())
             .or_default()
             .insert(id.to_string());
@@ -167,7 +204,7 @@ impl Handler<CreateLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: CreateLobbyRequest, _: &mut Self::Context) {
         let players_in_lobby = HashSet::from([req.player_id.clone()]);
-        self.lobbies.insert(req.lobby_name, players_in_lobby);
+        self.lobbies.0.insert(req.lobby_name, players_in_lobby);
 
         log::info!("A player created a new lobby, current lobbies:\n");
         log::info!("{:#?}", &self.lobbies);
@@ -177,11 +214,10 @@ impl Handler<CreateLobbyRequest> for LobbyManager {
 impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {
-        // if let Some(lobby) = self.lobbies.get_mut(&req.lobby_name) {
-        //     lobby.insert(req.player_id.clone());
-        // };
+        log::info!("join lobby request: {:#?}", req);
 
         self.lobbies
+            .0
             .entry(req.lobby_name.clone())
             .or_default()
             .insert(req.player_id.clone());
@@ -203,8 +239,8 @@ impl Handler<ListLobbies> for LobbyManager {
     type Result = MessageResult<ListLobbies>;
 
     fn handle(&mut self, _: ListLobbies, _: &mut Self::Context) -> Self::Result {
-        let lobbies = self.lobbies.keys().cloned().collect();
-        MessageResult(lobbies)
+        self.lobbies.remove_empty();
+        MessageResult(self.lobbies.0.keys().cloned().collect())
     }
 }
 
@@ -213,6 +249,7 @@ impl Handler<LeaveLobbyRequest> for LobbyManager {
     fn handle(&mut self, req: LeaveLobbyRequest, _: &mut Self::Context) {
         // Remove the player from the lobby
         self.lobbies
+            .0
             .entry(req.lobby_name.clone())
             .or_default()
             .remove(&req.player_id.clone());
@@ -220,11 +257,12 @@ impl Handler<LeaveLobbyRequest> for LobbyManager {
         // If that was the last player in the lobby, unlist the lobby
         if self
             .lobbies
+            .0
             .entry(req.lobby_name.clone())
             .or_default()
             .is_empty()
         {
-            self.lobbies.remove(&req.lobby_name.clone());
+            self.lobbies.0.remove(&req.lobby_name.clone());
         }
 
         log::info!("A player has left the lobby, current lobbies:\n");
@@ -242,8 +280,17 @@ impl Handler<PlayersInLobby> for LobbyManager {
     type Result = MessageResult<PlayersInLobby>;
 
     fn handle(&mut self, req: PlayersInLobby, _: &mut Self::Context) -> Self::Result {
+        log::info!("Players_in_lobby request: {:#?}", &req.lobby_name);
+
+        log::info!("Lobbies {:#?}", self.lobbies);
+        log::info!(
+            "Players in lobby: {:#?}",
+            self.lobbies.0.get(&req.lobby_name)
+        );
+
         let players: Vec<String> = self
             .lobbies
+            .0
             .get(&req.lobby_name)
             .unwrap_or(&HashSet::new())
             .iter()

@@ -121,7 +121,7 @@ export class InputHandler {
 		if (result.endsWith("'s lobby")) {
 			this.game.handleLobbySelect(result);
 			this.game.setGameState(GameState.MENU);
-			this.game.setCurrentMenu(MenuIndex.SomeoneElsesLobby, result, this.game.userUuid());
+			this.game.setCurrentMenu(MenuIndex.SomeoneElsesLobby, result);
 			return;
 		}
 
@@ -148,10 +148,7 @@ export class InputHandler {
 				break;
 			case 'Create lobby':
 				this.game.setGameState(GameState.MENU);
-				this.game.setCurrentMenu(
-					MenuIndex.CurrentPlayerOwnLobby,
-					this.game.userUuid() + "'s lobby"
-				);
+				this.game.setCurrentMenu(MenuIndex.CurrentPlayerOwnLobby);
 				this.game.createLobby();
 				break;
 			case 'Join lobby':

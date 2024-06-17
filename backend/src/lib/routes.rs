@@ -226,7 +226,6 @@ async fn players_in_lobby(
     if let Err(e) = jwt_check(&req) {
         return Ok(e);
     }
-    sleep(Duration::from_secs(2)).await; // Add a delay to simulate a real environment
 
     let players = lobby_manager
         .send(PlayersInLobby {

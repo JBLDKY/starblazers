@@ -19,7 +19,6 @@ import type { InputHandler } from '$lib/system/input_handler';
  * layout and interaction of a Main menu, including creating headers and items.
  */
 export class MainMenu extends BaseMenu {
-	private builder: MenuItemBuilder;
 	private currentY: number;
 
 	/**

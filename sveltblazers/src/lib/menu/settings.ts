@@ -1,5 +1,4 @@
 import type p5 from 'p5';
-import { MenuItemBuilder } from './menuitem/menu_item_builder';
 import { BaseMenu } from './base';
 
 import {
@@ -18,7 +17,6 @@ import type { InputHandler } from '$lib/system/input_handler';
  * layout and interaction of a settings menu, including creating headers and items.
  */
 export class SettingsMenu extends BaseMenu {
-	private builder: MenuItemBuilder;
 	private currentY: number;
 
 	/**
@@ -30,8 +28,6 @@ export class SettingsMenu extends BaseMenu {
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
-
-		this.builder = new MenuItemBuilder(this.p);
 
 		this.createHeader();
 		this.createItems();

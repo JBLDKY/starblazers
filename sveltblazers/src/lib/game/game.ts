@@ -189,14 +189,20 @@ export class SpaceInvadersGame {
 		this.inputHandler.handleInputWhileTyping();
 	}
 
-	setCurrentMenu(menuIndex: MenuIndex, ...args: string[]): void {
+	setCurrentMenu(menuIndex: MenuIndex, ...args): void {
 		if (this.currentMenu === null || this.currentMenu === undefined) {
 			return;
 		}
 
 		const oldMenu = this.currentMenu;
 
-		this.currentMenu = new MenuFactory().newMenu(this.p, menuIndex, this.inputHandler, args);
+		this.currentMenu = new MenuFactory().newMenu(
+			this.p,
+			menuIndex,
+			this.inputHandler,
+			this.websocket,
+			args
+		);
 
 		oldMenu.onExit();
 	}
