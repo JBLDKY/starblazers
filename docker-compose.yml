@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./sveltblazers:/app
-      - /app/node_modules
+      - node_modules:/app/node_modules
     ports:
       - "5173:5173"
     environment:
@@ -23,7 +23,7 @@ services:
     depends_on:
       - db
     environment:
-      DATABASE_URL: "postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@db/${DATABASE_NAME}"
+      DATABASE_URL: "postgres://postgres:password@db/starblazers"
 
   db:
     image: postgres
@@ -38,3 +38,4 @@ services:
 
 volumes:
   postgres_data:
+  node_modules:
