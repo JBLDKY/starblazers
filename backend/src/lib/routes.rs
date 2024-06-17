@@ -1,6 +1,5 @@
 use crate::claims::Claims;
-use crate::multiplayer::actors::lobbymanager::{ListLobbies, PlayersInLobby};
-use crate::multiplayer::{LobbyManager, WsLobbySession};
+use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, WsLobbySession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
 use actix::Addr;
