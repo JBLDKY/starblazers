@@ -147,6 +147,10 @@ export class SomeoneElsesLobby extends BaseMenu {
 		});
 	}
 
+	onExit(): void {
+		this.inputHandler.handleMenuResult('LeaveLobby');
+	}
+
 	loop = (timestamp: number): void => {
 		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
 

@@ -6,7 +6,7 @@ import { ChatBox } from '../chat/chatbox';
 import { User } from '../user/user';
 import { WebSocketManager } from '../websocketmanager';
 import { Colors } from '$lib/assets/color';
-import { GAME_LOBBIES_URL, GameState } from '../../constants';
+import { GameState } from '../../constants';
 import type p5 from 'p5';
 import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
@@ -18,8 +18,6 @@ import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 import { GameStateManager } from '$lib/system/game_state_manager';
-import { jwtStore } from '../../store/auth';
-import { get } from 'svelte/store';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -227,10 +225,7 @@ export class SpaceInvadersGame {
 	 * The main game loop. Updates game state and draws our background frames.
 	 */
 	private gameLoop(timestamp: number): void {
-		requestAnimationFrame((newTimestamp) => {
-			this.gameLoop(newTimestamp);
-		});
-
+		requestAnimationFrame(this.gameLoop.bind(this));
 		if (this.fpsManager.shouldDraw(timestamp)) {
 			switch (this.state) {
 				case GameState.RUN:
@@ -242,15 +237,19 @@ export class SpaceInvadersGame {
 					this.handleInput(timestamp); // TODO: why
 					break;
 				case GameState.MENU:
-					if (this.currentMenu !== null && this.fpsManager.shouldProcessMenuInput(timestamp)) {
-						this.p.fill('deeppink'); // This fixes the bug where subsequent menus are white
-						this.currentMenu.loop(timestamp);
-					}
+					this.handleMenu(timestamp);
 					break;
 			}
 		}
 		// this.chatBox.receiveMessage();
 		this.fpsManager.update(timestamp);
+	}
+
+	private handleMenu(timestamp: number): void {
+		if (this.currentMenu !== null && this.fpsManager.shouldProcessMenuInput(timestamp)) {
+			this.p.fill('deeppink'); // This fixes the bug where subsequent menus are white
+			this.currentMenu.loop(timestamp);
+		}
 	}
 
 	/**

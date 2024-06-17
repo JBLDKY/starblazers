@@ -41,7 +41,6 @@
 			toastStore.trigger({ message: 'Who are you?' });
 			goto('/login');
 		}
-		// FIXME: Event if this fails, the game loads and actually creates a websocket connection
 	});
 
 	const sketch: Sketch = (p) => {
@@ -63,12 +62,12 @@
 			});
 		};
 
-		p.draw = () => {
-			if (spaceInvadersGame !== undefined) {
-				spaceInvadersGame.update();
-				spaceInvadersGame.draw();
-			}
-		};
+		// p.draw = () => {
+		// 	if (spaceInvadersGame !== undefined) {
+		// 		spaceInvadersGame.update();
+		// 		spaceInvadersGame.draw();
+		// 	}
+		// };
 	};
 </script>
 

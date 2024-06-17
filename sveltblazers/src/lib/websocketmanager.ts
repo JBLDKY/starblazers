@@ -5,7 +5,6 @@ export class WebSocketManager {
 	private url: string;
 	private ws: WebSocket | null = null;
 	public messages: string[];
-	private messageHandlers: { [key: string]: (data: any) => void } = {};
 	private setGameStateData: (state: any) => void;
 
 	constructor(setGameStateData: (state: any) => void) {
@@ -43,10 +42,6 @@ export class WebSocketManager {
 		this.ws.onerror = (error) => {
 			console.error('WebSocket error', error);
 		};
-	}
-
-	onMessage(type: string, handler: (data: any) => void) {
-		this.messageHandlers[type] = handler;
 	}
 
 	sendMessage(data: any) {
