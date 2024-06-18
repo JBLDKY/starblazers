@@ -1,5 +1,7 @@
 use crate::claims::Claims;
-use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, WsLobbySession};
+use crate::multiplayer::{
+    ListLobbies, LobbyManager, PlayerContext, PlayersInLobby, WsLobbySession,
+};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
 use actix::Addr;
@@ -256,7 +258,7 @@ async fn lobby_websocket(
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
-            id: Uuid::nil(),
+            player_ctx: PlayerContext::new(),
             hb: Instant::now(),
             addr: srv.get_ref().clone(),
         },

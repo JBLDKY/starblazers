@@ -6,12 +6,13 @@
 
 use super::LobbyManager;
 use crate::multiplayer::communication::message::{Disconnect, Message};
+use crate::multiplayer::communication::player_context::InMenu;
 use crate::multiplayer::communication::protocol::{ProtocolHandler, WebSocketMessage};
+use crate::multiplayer::{HasPlayerId, PlayerContext};
 use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
 use std::time::{Duration, Instant};
-use uuid::Uuid;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -22,7 +23,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 #[derive(Debug)]
 pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
-    pub id: Uuid,
+    pub player_ctx: PlayerContext<InMenu>,
 
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
@@ -37,8 +38,6 @@ impl WsLobbySession {
     ///
     /// also this method checks heartbeats from client
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        let session_id = self.id.to_string();
-
         ctx.run_interval(HEARTBEAT_INTERVAL, move |act, ctx| {
             // check client heartbeats
             if Instant::now().duration_since(act.hb) < CLIENT_TIMEOUT {
@@ -47,11 +46,11 @@ impl WsLobbySession {
             }
 
             // heartbeat timed out
-            log::info!("Heartbeat stopped: {}", act.id);
+            log::info!("Heartbeat stopped: {}", act.player_ctx.id());
 
             // notify chat server
             act.addr.do_send(Disconnect {
-                id: session_id.clone(),
+                id: act.player_ctx.id().to_string(),
             });
 
             // stop actor
@@ -73,7 +72,7 @@ impl Actor for WsLobbySession {
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         // notify chat server
         self.addr.do_send(Disconnect {
-            id: self.id.to_string(),
+            id: self.player_ctx.id().to_string(),
         });
 
         Running::Stop
