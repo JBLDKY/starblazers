@@ -137,6 +137,19 @@ export class JoinLobbyMenu extends BaseMenu {
 		});
 	}
 
+	handleLobbySelect(lobby: string): void {
+		if (this.websocket === undefined || this.websocket === null) {
+			return;
+		}
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'JoinLobby',
+				lobby_name: lobby,
+				player_id: this.playerInfo.uuid
+			})
+		);
+	}
+
 	loop = (timestamp: number): void => {
 		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
 
@@ -144,6 +157,10 @@ export class JoinLobbyMenu extends BaseMenu {
 			// Chech for new lobbies every 3 seconds
 			this.updateLobbies();
 			this.lastUpdate = timestamp;
+		}
+
+		if (result.endsWith("'s Lobby")) {
+			this.handleLobbySelect(result);
 		}
 
 		if (result != '' && result != undefined) {

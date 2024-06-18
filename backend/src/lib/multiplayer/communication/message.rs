@@ -25,7 +25,7 @@ pub struct Connect {
 }
 
 /// Message sent when a session is disconnected
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Disconnect {
     /// Unique identifier for the disconnected session

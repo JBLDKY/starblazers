@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use jsonwebtoken::{decode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use uuid::Uuid;
 use warp::{http::header::HeaderValue, reject::Reject};
 
 use crate::types::UserRecord;
@@ -121,5 +122,13 @@ impl Claims {
             std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable is not set");
 
         secret.as_bytes().to_vec()
+    }
+
+    pub fn uuid(&self) -> Result<Uuid, uuid::Error> {
+        Uuid::parse_str(&self.uuid)
+    }
+
+    pub fn get_uuid_string(&self) -> &str {
+        &self.uuid
     }
 }

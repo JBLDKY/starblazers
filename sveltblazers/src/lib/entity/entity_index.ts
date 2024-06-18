@@ -39,7 +39,7 @@ export class MenuFactory {
 			case MenuIndex.Settings:
 				return new SettingsMenu(p, inputHandler);
 			case MenuIndex.Multiplayer:
-				return new MultiplayerMenu(p, inputHandler);
+				return new MultiplayerMenu(p, inputHandler, websocket);
 			case MenuIndex.CurrentPlayerOwnLobby:
 				return new CurrentPlayerOwnLobbyMenu(p, inputHandler, websocket);
 			case MenuIndex.JoinLobby:

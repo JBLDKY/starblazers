@@ -1,6 +1,5 @@
 import type p5 from 'p5';
 import { BaseMenu } from './base';
-import { playerInfoStore } from '../../store/auth';
 import { Navigator } from './navigator';
 
 import {
@@ -17,7 +16,6 @@ import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
-import type { PublicPlayerData } from '../../routes/helpers';
 import { lobbyName } from '../../routes/helpers';
 
 /**
@@ -27,7 +25,6 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	private currentY: number;
 	private players: string[] = [];
 	private lastUpdate: number = 0;
-	private playerInfo: PublicPlayerData;
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
@@ -39,8 +36,6 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		this.p.fill('deeppink');
 		this.websocket = websocket;
 		this.currentY = MENU_STARTING_Y_COORDINATE;
-
-		this.playerInfo = get(playerInfoStore);
 
 		this.createHeader();
 		this.createItems();
@@ -186,6 +181,17 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	};
 
 	onExit = (): void => {
-		this.inputHandler.handleMenuResult('LeaveOwnLobby');
+		if (this.websocket === null || this.websocket === undefined) {
+			console.error('Could not leave lobby');
+			return;
+		}
+
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'LeaveLobby',
+				lobby_name: lobbyName(this.playerInfo),
+				player_id: this.playerInfo.uuid
+			})
+		);
 	};
 }

@@ -4,6 +4,9 @@ import type { MenuItem } from './menuitem/menu_item';
 import type { InputHandler } from '$lib/system/input_handler';
 import type { WebSocketManager } from '$lib/websocketmanager';
 import { MenuItemBuilder } from './menuitem/menu_item_builder';
+import type { PublicPlayerData } from '../../routes/helpers';
+import { get } from 'svelte/store';
+import { playerInfoStore } from '../../store/auth';
 
 /**
  * Abstract class representing the base structure of a menu in a p5 application.
@@ -17,6 +20,7 @@ export abstract class BaseMenu {
 	protected index: number = 1; // Assuming 0 can be a default start index
 	protected inputHandler: InputHandler;
 	protected websocket;
+	protected playerInfo: PublicPlayerData;
 
 	/**
 	 * Constructs a base menu.
@@ -28,6 +32,7 @@ export abstract class BaseMenu {
 		this.navigator = new Navigator(this.p);
 		this.inputHandler = inputHandler;
 		this.websocket = websocket;
+		this.playerInfo = get(playerInfoStore);
 	}
 
 	/**

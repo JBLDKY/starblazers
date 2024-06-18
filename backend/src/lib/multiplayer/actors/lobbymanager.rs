@@ -11,20 +11,43 @@ use crate::multiplayer::communication::message::{
     ClientMessage, Connect, Disconnect, Join, Message,
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
+use crate::multiplayer::InvalidDataError;
+use crate::routes::players_in_lobby;
 use actix::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use uuid::Uuid;
 
-#[derive(Debug, Default)]
-pub struct Lobbies(HashMap<String, HashSet<String>>);
+#[derive(Debug)]
+pub struct Lobbies {
+    lobbies: HashMap<String, HashSet<Uuid>>,
+    player_to_lobby: HashMap<Uuid, String>,
+}
 
 impl Lobbies {
+    pub fn get(&self) -> &HashMap<String, HashSet<Uuid>> {
+        &self.lobbies
+    }
+
     pub fn new() -> Self {
-        Self(HashMap::new())
+        Self {
+            lobbies: HashMap::new(),
+            player_to_lobby: HashMap::new(),
+        }
+    }
+
+    pub fn new_lobby(&mut self, lobby_name: String) -> Result<(), InvalidDataError> {
+        if self.lobbies.contains_key(&lobby_name) {
+            return Err(InvalidDataError::LobbyAlreadyExists);
+        }
+
+        self.lobbies.insert(lobby_name, HashSet::new());
+
+        Ok(())
     }
 
     pub fn empty_lobbies(&self) -> Vec<String> {
-        self.0
+        self.lobbies
             .iter()
             .filter_map(|(key, value)| {
                 if value.is_empty() {
@@ -39,14 +62,52 @@ impl Lobbies {
     pub fn remove_empty(&mut self) {
         for key in self.empty_lobbies() {
             log::info!("Removing empty lobby: {}", &key);
-            self.0.remove(&key);
+            self.lobbies.remove(&key);
         }
+    }
+
+    pub fn add_player_to(
+        &mut self,
+        player: Uuid,
+        lobby_name: String,
+    ) -> Result<(), InvalidDataError> {
+        if let Some(players) = self.lobbies.get_mut(&lobby_name) {
+            players.insert(player);
+            Ok(())
+        } else {
+            Err(InvalidDataError::LobbyDoesNotExist(lobby_name))
+        }
+    }
+
+    pub fn remove_lobby(&mut self, lobby_name: &str) -> Option<HashSet<Uuid>> {
+        self.lobbies.remove(lobby_name)
+    }
+
+    pub fn remove_player_from_lobby(
+        &mut self,
+        player: Uuid,
+        lobby_name: String,
+    ) -> Result<(), InvalidDataError> {
+        self.lobbies
+            .get_mut(&lobby_name)
+            .ok_or_else(|| InvalidDataError::LobbyDoesNotExist(lobby_name.clone()))
+            .and_then(|players| {
+                if players.remove(&player) {
+                    Ok(())
+                } else {
+                    Err(InvalidDataError::PlayerIsNotInLobby(lobby_name))
+                }
+            })
     }
 }
 
 impl fmt::Display for Lobbies {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.0)
+        write!(
+            f,
+            "Lobbies: {:?}\nPlayer-To-Lobby: {:?}",
+            self.lobbies, self.player_to_lobby
+        )
     }
 }
 
@@ -68,18 +129,18 @@ impl LobbyManager {
         }
     }
 
-    /// Send message to all users in the room
-    fn send_message(&self, room: &str, message: &str, skip_id: String) {
-        if let Some(sessions) = self.lobbies.0.get(room) {
-            for id in sessions {
-                if *id != skip_id {
-                    if let Some(addr) = self.sessions.get(id) {
-                        addr.do_send(Message(message.to_owned()));
-                    }
-                }
-            }
-        }
-    }
+    // /// Send message to all users in the room
+    // fn send_message(&self, room: &str, message: &str, skip_id: Uuid) {
+    //     if let Some(sessions) = self.lobbies.lobbies.get(room) {
+    //         for id in sessions {
+    //             if *id != skip_id {
+    //                 if let Some(addr) = self.sessions.get(id) {
+    //                     addr.do_send(Message(message.to_owned()));
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 impl Default for LobbyManager {
@@ -124,19 +185,7 @@ impl Handler<Disconnect> for LobbyManager {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        println!("Someone disconnected");
-
-        let mut lobbies: Vec<String> = Vec::new();
-
-        // remove address
-        if self.sessions.remove(&msg.id).is_some() {
-            // remove session from all lobbies
-            for (name, sessions) in &mut self.lobbies.0 {
-                if sessions.remove(&msg.id) {
-                    lobbies.push(name.to_owned());
-                }
-            }
-        }
+        log::info!("Disconnect msg received: {:?}", msg);
     }
 }
 
@@ -145,7 +194,7 @@ impl Handler<ClientMessage> for LobbyManager {
     type Result = ();
 
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-        self.send_message(&msg.lobby, msg.msg.as_str(), msg.id.to_string());
+        // self.send_message(&msg.lobby, msg.msg.as_str(), msg.id.to_string());
     }
 }
 
@@ -156,26 +205,25 @@ impl Handler<Join> for LobbyManager {
 
     fn handle(&mut self, msg: Join, _: &mut Context<Self>) {
         let Join { id, name } = msg;
-        let mut lobbies = Vec::new();
 
         // remove session from all lobbies
-        for (n, sessions) in &mut self.lobbies.0 {
-            if sessions.remove(&id.to_string()) {
-                lobbies.push(n.to_owned());
-            }
-        }
+        // for (n, sessions) in &mut self.lobbies.0 {
+        //     if sessions.remove(&id.to_string()) {
+        //         lobbies.push(n.to_owned());
+        //     }
+        // }
         // send message to other users
-        for room in lobbies {
-            self.send_message(&room, "Someone disconnected", id.to_string());
-        }
+        // for room in lobbies {
+        //     self.send_message(&room, "Someone disconnected", id.to_string());
+        // }
 
-        self.lobbies
-            .0
-            .entry(name.clone())
-            .or_default()
-            .insert(id.to_string());
+        // self.lobbies
+        //     .get_lobbies()
+        //     .entry(name.clone())
+        //     .or_default()
+        //     .insert(id.to_string());
 
-        self.send_message(&name, "Someone connected", id.to_string());
+        // self.send_message(&name, "Someone connected", id.to_string());
     }
 }
 
@@ -203,11 +251,13 @@ impl Handler<GameState> for LobbyManager {
 impl Handler<CreateLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: CreateLobbyRequest, _: &mut Self::Context) {
-        let players_in_lobby = HashSet::from([req.player_id.clone()]);
-        self.lobbies.0.insert(req.lobby_name, players_in_lobby);
+        let player_id = Uuid::parse_str(&req.player_id).expect("Not a valid uuid");
+
+        let _ = self.lobbies.new_lobby(req.lobby_name.clone());
+        let _ = self.lobbies.add_player_to(player_id, req.lobby_name);
 
         log::info!("A player created a new lobby, current lobbies:\n");
-        log::info!("{:#?}", &self.lobbies);
+        log::info!("{:#?}", &self.lobbies.get());
     }
 }
 
@@ -215,18 +265,15 @@ impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {
         log::info!("join lobby request: {:#?}", req);
-
-        self.lobbies
-            .0
-            .entry(req.lobby_name.clone())
-            .or_default()
-            .insert(req.player_id.clone());
-
         log::info!(
             "Player `{}` joined lobby `{}`, current lobbies:\n",
             req.player_id,
             req.lobby_name
         );
+
+        let player_id = Uuid::parse_str(&req.player_id).expect("Not a valid uuid");
+        let _ = self.lobbies.add_player_to(player_id, req.lobby_name);
+
         log::info!("{:#?}", &self.lobbies);
     }
 }
@@ -240,33 +287,30 @@ impl Handler<ListLobbies> for LobbyManager {
 
     fn handle(&mut self, _: ListLobbies, _: &mut Self::Context) -> Self::Result {
         self.lobbies.remove_empty();
-        MessageResult(self.lobbies.0.keys().cloned().collect())
+        MessageResult(self.lobbies.get().keys().cloned().collect())
     }
 }
 
 impl Handler<LeaveLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: LeaveLobbyRequest, _: &mut Self::Context) {
+        log::info!("Leave lobby request: {:#?}", req);
+
         // Remove the player from the lobby
-        self.lobbies
-            .0
-            .entry(req.lobby_name.clone())
-            .or_default()
-            .remove(&req.player_id.clone());
+        let player_id = Uuid::parse_str(&req.player_id).expect("Not a valid Uuid");
 
-        // If that was the last player in the lobby, unlist the lobby
-        if self
+        match self
             .lobbies
-            .0
-            .entry(req.lobby_name.clone())
-            .or_default()
-            .is_empty()
+            .remove_player_from_lobby(player_id, req.lobby_name)
         {
-            self.lobbies.0.remove(&req.lobby_name.clone());
-        }
+            Ok(_) => log::info!("A player has left the lobby, current lobbies:"),
+            Err(e) => log::error!("Could not remove player from lobby: {}", e),
+        };
 
-        log::info!("A player has left the lobby, current lobbies:\n");
-        log::info!("{:#?}", &self.lobbies);
+        // Cleanup empty lobbies
+        self.lobbies.remove_empty();
+
+        log::info!("{:#?}", &self.lobbies.get());
     }
 }
 
@@ -280,21 +324,13 @@ impl Handler<PlayersInLobby> for LobbyManager {
     type Result = MessageResult<PlayersInLobby>;
 
     fn handle(&mut self, req: PlayersInLobby, _: &mut Self::Context) -> Self::Result {
-        log::info!("Players_in_lobby request: {:#?}", &req.lobby_name);
-
-        log::info!("Lobbies {:#?}", self.lobbies);
-        log::info!(
-            "Players in lobby: {:#?}",
-            self.lobbies.0.get(&req.lobby_name)
-        );
-
         let players: Vec<String> = self
             .lobbies
-            .0
+            .get()
             .get(&req.lobby_name)
             .unwrap_or(&HashSet::new())
             .iter()
-            .map(|s| s.to_owned())
+            .map(|s| s.to_string().to_owned())
             .collect();
 
         MessageResult(players)

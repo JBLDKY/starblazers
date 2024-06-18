@@ -1,6 +1,5 @@
 import type p5 from 'p5';
 import { BaseMenu } from './base';
-import { MenuItemBuilder } from './menuitem/menu_item_builder';
 import { Navigator } from './navigator';
 
 import {
@@ -13,6 +12,7 @@ import {
 	MULTIPLAYER_MENU_ITEM_TEXTS
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
+import type { WebSocketManager } from '$lib/websocketmanager';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -24,11 +24,12 @@ export class MultiplayerMenu extends BaseMenu {
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
-	constructor(p: p5, inputHandler: InputHandler) {
+	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager) {
 		super(p, inputHandler);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
+		this.websocket = websocket;
 
 		this.createHeader();
 		this.createItems();
@@ -65,8 +66,26 @@ export class MultiplayerMenu extends BaseMenu {
 		});
 	}
 
+	private createLobby(): void {
+		if (this.websocket === null || this.websocket === undefined) {
+			console.error('Could not create lobby');
+			return;
+		}
+
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'CreateLobby',
+				lobby_name: this.playerInfo.uuid + "'s lobby",
+				player_id: this.playerInfo.uuid
+			})
+		);
+	}
+
 	loop = (_: number): void => {
 		const result = this.handleInput(this.inputHandler.getCachedKeyPresses());
+		if (result == 'Create lobby') {
+			this.createLobby();
+		}
 
 		if (result != '' && result != undefined) {
 			this.inputHandler.handleMenuResult(result);

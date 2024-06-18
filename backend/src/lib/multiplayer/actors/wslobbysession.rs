@@ -11,6 +11,7 @@ use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -20,18 +21,12 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
 pub struct WsLobbySession {
-    /// unique session id
-    pub id: usize,
+    /// Player's Uuid to identify the connection
+    pub id: Uuid,
 
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
     pub hb: Instant,
-
-    /// joined room
-    pub lobby: String,
-
-    /// peer name
-    pub name: Option<String>,
 
     /// Chat server
     pub addr: Addr<LobbyManager>,
@@ -42,25 +37,25 @@ impl WsLobbySession {
     ///
     /// also this method checks heartbeats from client
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+        let session_id = self.id.to_string();
+
+        ctx.run_interval(HEARTBEAT_INTERVAL, move |act, ctx| {
             // check client heartbeats
-            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                // heartbeat timed out
-                println!("Websocket Client heartbeat failed, disconnecting!");
-
-                // notify chat server
-                act.addr.do_send(Disconnect {
-                    id: act.id.to_string(),
-                });
-
-                // stop actor
-                ctx.stop();
-
-                // don't try to send a ping
+            if Instant::now().duration_since(act.hb) < CLIENT_TIMEOUT {
+                ctx.ping(b"");
                 return;
             }
 
-            ctx.ping(b"");
+            // heartbeat timed out
+            log::info!("Heartbeat stopped: {}", act.id);
+
+            // notify chat server
+            act.addr.do_send(Disconnect {
+                id: session_id.clone(),
+            });
+
+            // stop actor
+            ctx.stop();
         });
     }
 }
@@ -80,6 +75,7 @@ impl Actor for WsLobbySession {
         self.addr.do_send(Disconnect {
             id: self.id.to_string(),
         });
+
         Running::Stop
     }
 }

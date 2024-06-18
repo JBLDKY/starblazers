@@ -64,6 +64,8 @@ impl ProtocolHandler for WebsocketAuthJwt {
     fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
         let claims = self.claims().expect("Failed to parse claims");
 
+        session.id = claims.uuid().expect("Invalid Uuid");
+
         let addr = ctx.address().into();
 
         session.addr.do_send(Connect { addr, claims });

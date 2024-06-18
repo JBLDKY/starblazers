@@ -189,7 +189,7 @@ export class SpaceInvadersGame {
 		this.inputHandler.handleInputWhileTyping();
 	}
 
-	setCurrentMenu(menuIndex: MenuIndex, ...args): void {
+	setCurrentMenu(menuIndex: MenuIndex, ...args: string[]): void {
 		if (this.currentMenu === null || this.currentMenu === undefined) {
 			return;
 		}
@@ -309,43 +309,6 @@ export class SpaceInvadersGame {
 
 		friend.setXPos(gamestate.position_x);
 		friend.setYPos(gamestate.position_y);
-	}
-
-	createLobby(): void {
-		console.log(`creating new lobby: ${this.user.uuid}'s lobby`);
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'CreateLobby',
-				lobby_name: this.user.uuid + "'s lobby",
-				player_id: this.user.uuid
-			})
-		);
-
-		console.log('creating lobby');
-	}
-
-	handleLobbySelect(lobby: string): void {
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'JoinLobby',
-				lobby_name: lobby,
-				player_id: this.user.uuid
-			})
-		);
-	}
-
-	leaveOwnLobby(): void {
-		this.leaveLobby(this.user.uuid + "'s lobby");
-	}
-
-	leaveLobby(lobby: string): void {
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'LeaveLobby',
-				lobby_name: lobby,
-				player_id: this.user.uuid
-			})
-		);
 	}
 
 	userUuid(): string {

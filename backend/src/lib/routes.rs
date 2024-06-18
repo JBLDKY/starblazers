@@ -10,6 +10,7 @@ use actix_web_actors::ws;
 use serde_json::json;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
+use uuid::Uuid;
 
 /// TODO update
 /// GET /players/all - players_all - Returns all players
@@ -255,10 +256,8 @@ async fn lobby_websocket(
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
-            id: 0,
+            id: Uuid::nil(),
             hb: Instant::now(),
-            lobby: "main".to_owned(),
-            name: Some("name".to_string()),
             addr: srv.get_ref().clone(),
         },
         &req,

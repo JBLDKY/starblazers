@@ -1,8 +1,6 @@
 import type p5 from 'p5';
 import { BaseMenu } from './base';
 import { Navigator } from './navigator';
-import { playerInfoStore } from '../../store/auth';
-
 import {
 	MENU_STARTING_Y_COORDINATE,
 	HEADER_SIZE,
@@ -17,7 +15,6 @@ import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
-import type { PublicPlayerData } from '../../routes/helpers';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -26,7 +23,6 @@ export class SomeoneElsesLobby extends BaseMenu {
 	private currentY: number;
 	private lastUpdate = 0;
 	private players: string[] = [];
-	private playerInfo: PublicPlayerData;
 	private lobbyName: string;
 
 	/**
@@ -42,8 +38,6 @@ export class SomeoneElsesLobby extends BaseMenu {
 
 		this.createHeader();
 		this.createItems();
-
-		this.playerInfo = get(playerInfoStore);
 
 		this.websocket = websocket;
 		this.navigator = new Navigator(this.p);
@@ -147,7 +141,18 @@ export class SomeoneElsesLobby extends BaseMenu {
 	}
 
 	onExit(): void {
-		this.inputHandler.handleMenuResult('LeaveLobby');
+		if (this.websocket === null || this.websocket === undefined) {
+			console.error('Could not leave lobby');
+			return;
+		}
+
+		this.websocket.sendMessage(
+			JSON.stringify({
+				type: 'LeaveLobby',
+				lobby_name: this.lobbyName,
+				player_id: this.playerInfo.uuid
+			})
+		);
 	}
 
 	loop = (timestamp: number): void => {

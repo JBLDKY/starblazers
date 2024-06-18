@@ -119,40 +119,30 @@ export class InputHandler {
 
 	handleMenuResult(result: string) {
 		if (result.endsWith("'s lobby")) {
-			this.game.handleLobbySelect(result);
-			this.game.setGameState(GameState.MENU);
 			this.game.setCurrentMenu(MenuIndex.SomeoneElsesLobby, result);
 			return;
 		}
 
 		switch (result) {
 			case 'LeaveOwnLobby':
-				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.Multiplayer);
-				this.game.leaveOwnLobby();
 				break;
 			case 'Multiplayer':
-				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.Multiplayer);
 				break;
 			case 'Single player':
 				this.game.setGameState(GameState.RUN);
 				break;
 			case 'Main menu':
-				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.Main);
 				break;
 			case 'Settings':
-				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.Settings);
 				break;
 			case 'Create lobby':
-				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.CurrentPlayerOwnLobby);
-				this.game.createLobby();
 				break;
 			case 'Join lobby':
-				this.game.setGameState(GameState.MENU);
 				this.game.setCurrentMenu(MenuIndex.JoinLobby);
 				break;
 		}
