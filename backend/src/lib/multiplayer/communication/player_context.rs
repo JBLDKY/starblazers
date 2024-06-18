@@ -64,6 +64,12 @@ pub struct PlayerContext<S> {
     state: S,
 }
 
+impl<S> PlayerContext<S> {
+    pub fn get_state(&self) -> &S {
+        &self.state
+    }
+}
+
 impl PlayerContext<Initializing> {
     pub fn new() -> Self {
         PlayerContext {

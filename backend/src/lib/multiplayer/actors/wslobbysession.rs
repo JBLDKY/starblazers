@@ -6,9 +6,9 @@
 
 use super::LobbyManager;
 use crate::multiplayer::communication::message::{Disconnect, Message};
-use crate::multiplayer::communication::player_context::InMenu;
+use crate::multiplayer::communication::player_context::{InMenu, Initializing};
 use crate::multiplayer::communication::protocol::{ProtocolHandler, WebSocketMessage};
-use crate::multiplayer::{HasPlayerId, PlayerContext};
+use crate::multiplayer::PlayerContext;
 use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
@@ -23,7 +23,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 #[derive(Debug)]
 pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
-    pub player_ctx: PlayerContext<InMenu>,
+    pub player_ctx: PlayerContext<Initializing>,
 
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
@@ -46,12 +46,22 @@ impl WsLobbySession {
             }
 
             // heartbeat timed out
-            log::info!("Heartbeat stopped: {}", act.player_ctx.id());
+            match &act.player_ctx.get_state() {
+                Initializing => {
+                    log::info!("Heartbeat stopped: Player not initialized yet");
+                }
+                InMenu => {
+                    log::info!(
+                        "Heartbeat stopped: {}",
+                        act.player_ctx.get_state().get_player().id
+                    );
 
-            // notify chat server
-            act.addr.do_send(Disconnect {
-                id: act.player_ctx.id().to_string(),
-            });
+                    // notify chat server
+                    act.addr.do_send(Disconnect {
+                        id: state.get_player().id.to_string(),
+                    });
+                }
+            }
 
             // stop actor
             ctx.stop();
