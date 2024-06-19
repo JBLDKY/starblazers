@@ -1,8 +1,5 @@
 use crate::claims::Claims;
-use crate::multiplayer::communication::player_context::Initializing;
-use crate::multiplayer::{
-    ListLobbies, LobbyManager, PlayerContext, PlayersInLobby, WsLobbySession,
-};
+use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsLobbySession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
 use actix::Addr;
@@ -13,9 +10,7 @@ use actix_web_actors::ws;
 use serde_json::json;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
-use uuid::Uuid;
 
-/// TODO update
 /// GET /players/all - players_all - Returns all players
 /// POST /players/create - players_create - Create a new player
 /// POST /database/resettable - database_resettable - Drop the provided table
@@ -259,7 +254,7 @@ async fn lobby_websocket(
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
-            player_ctx: PlayerContext::new(),
+            user_state: UserState::Unauthenticated,
             hb: Instant::now(),
             addr: srv.get_ref().clone(),
         },

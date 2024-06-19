@@ -1,6 +1,7 @@
 use super::{
     common::{CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest},
     message::Connect,
+    user_state::UserEvent,
 };
 use crate::{
     claims::{Claims, TokenError},
@@ -64,9 +65,11 @@ impl ProtocolHandler for WebsocketAuthJwt {
     fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
         let claims = self.claims().expect("Failed to parse claims");
 
-        session.id = claims.uuid().expect("Invalid Uuid");
+        let event = UserEvent::Login(claims.uuid().expect("Invalid Uuid"));
 
         let addr = ctx.address().into();
+
+        session.user_state.transition(event);
 
         session.addr.do_send(Connect { addr, claims });
     }

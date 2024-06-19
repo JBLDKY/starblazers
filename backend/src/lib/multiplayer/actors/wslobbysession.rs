@@ -6,9 +6,8 @@
 
 use super::LobbyManager;
 use crate::multiplayer::communication::message::{Disconnect, Message};
-use crate::multiplayer::communication::player_context::{InMenu, Initializing};
 use crate::multiplayer::communication::protocol::{ProtocolHandler, WebSocketMessage};
-use crate::multiplayer::PlayerContext;
+use crate::multiplayer::UserState;
 use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
@@ -20,10 +19,14 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
+enum ConnectionState {
+    AwaitingHandshake,
+}
+
 #[derive(Debug)]
 pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
-    pub player_ctx: PlayerContext<Initializing>,
+    pub user_state: UserState,
 
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
@@ -46,26 +49,18 @@ impl WsLobbySession {
             }
 
             // heartbeat timed out
-            match &act.player_ctx.get_state() {
-                Initializing => {
-                    log::info!("Heartbeat stopped: Player not initialized yet");
-                }
-                InMenu => {
-                    log::info!(
-                        "Heartbeat stopped: {}",
-                        act.player_ctx.get_state().get_player().id
-                    );
-
-                    // notify chat server
-                    act.addr.do_send(Disconnect {
-                        id: state.get_player().id.to_string(),
-                    });
-                }
-            }
 
             // stop actor
             ctx.stop();
         });
+    }
+
+    pub fn set_player_state(&mut self, player_state: UserState) {
+        self.user_state = player_state;
+    }
+
+    pub fn player_state_mut(&mut self) -> &mut UserState {
+        &mut self.user_state
     }
 }
 
@@ -80,10 +75,10 @@ impl Actor for WsLobbySession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        // notify chat server
-        self.addr.do_send(Disconnect {
-            id: self.player_ctx.id().to_string(),
-        });
+        if let Some(id) = self.user_state.player_id() {
+            // notify chat server
+            self.addr.do_send(Disconnect { id: id.to_string() });
+        }
 
         Running::Stop
     }
