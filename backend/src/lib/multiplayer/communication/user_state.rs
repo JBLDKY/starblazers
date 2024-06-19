@@ -64,7 +64,7 @@ impl UserState {
         }
     }
 
-    pub fn player_id(&self) -> Option<Uuid> {
+    pub fn user_id(&self) -> Option<Uuid> {
         match self {
             UserState::Unauthenticated => None,
             UserState::Authenticated { player_id } => Some(*player_id),

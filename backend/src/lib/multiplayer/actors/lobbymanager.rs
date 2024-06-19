@@ -12,7 +12,6 @@ use crate::multiplayer::communication::message::{
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
 use crate::multiplayer::InvalidDataError;
-use crate::routes::players_in_lobby;
 use actix::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -263,7 +262,7 @@ impl Handler<CreateLobbyRequest> for LobbyManager {
 
 impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
-    fn handle(&mut self, req: JoinLobbyRequest, _: &mut Self::Context) {
+    fn handle(&mut self, req: JoinLobbyRequest, ctx: &mut Self::Context) {
         log::info!("join lobby request: {:#?}", req);
         log::info!(
             "Player `{}` joined lobby `{}`, current lobbies:\n",

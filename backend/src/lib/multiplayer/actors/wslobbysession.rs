@@ -75,7 +75,7 @@ impl Actor for WsLobbySession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        if let Some(id) = self.user_state.player_id() {
+        if let Some(id) = self.user_state.user_id() {
             // notify chat server
             self.addr.do_send(Disconnect { id: id.to_string() });
         }

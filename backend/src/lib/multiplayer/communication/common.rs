@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::multiplayer::WsLobbySession;
 
-use super::protocol::ProtocolHandler;
+use super::{protocol::ProtocolHandler, user_state::UserEvent};
 
 /// This file defines common data structures used in the Actix actor-based
 /// communication system of the application. These structures are designed
@@ -56,7 +56,20 @@ pub struct CreateLobbyRequest {
 
 impl ProtocolHandler for CreateLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        // Send the CreateLobbyRequest to the LobbyManager to create the lobby and add the user to it
         session.addr.do_send(self);
+
+        // If the user state correctly contains a uuid, transition to the InLobby state with the
+        // JoinLobby event.
+        if let Some(uuid) = session.user_state.user_id() {
+            session.user_state.transition(UserEvent::JoinLobby(uuid));
+        } else {
+            // This shouldn't happen...
+            log::error!(
+                "Could not create a lobby because user has no uuid.\nUser state: {:?}",
+                session.user_state
+            );
+        };
     }
 }
 
