@@ -70,6 +70,7 @@ impl ProtocolHandler for WebsocketAuthJwt {
         let addr = ctx.address().into();
 
         session.user_state.transition(event);
+        log::info!("Transitioning to: {}", session.user_state);
 
         session.addr.do_send(Connect { addr, claims });
     }

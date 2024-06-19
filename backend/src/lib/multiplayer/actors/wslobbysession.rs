@@ -19,10 +19,6 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 /// How long before lack of client response causes a timeout
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-enum ConnectionState {
-    AwaitingHandshake,
-}
-
 #[derive(Debug)]
 pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
@@ -44,7 +40,7 @@ impl WsLobbySession {
         ctx.run_interval(HEARTBEAT_INTERVAL, move |act, ctx| {
             // check client heartbeats
             if Instant::now().duration_since(act.hb) < CLIENT_TIMEOUT {
-                ctx.ping(b"");
+                act.check_heartbeat(ctx);
                 return;
             }
 
@@ -53,6 +49,19 @@ impl WsLobbySession {
             // stop actor
             ctx.stop();
         });
+    }
+
+    fn check_heartbeat(&mut self, ctx: &mut ws::WebsocketContext<Self>) {
+        // Log the current state at each interval
+        log::info!("{}", self.user_state.to_string());
+
+        if Instant::now().duration_since(self.hb) < CLIENT_TIMEOUT {
+            ctx.ping(b"");
+            ctx.text(self.user_state.to_string());
+        } else {
+            // Heartbeat timed out
+            ctx.stop();
+        }
     }
 
     pub fn set_player_state(&mut self, player_state: UserState) {

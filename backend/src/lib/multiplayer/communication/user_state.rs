@@ -1,11 +1,29 @@
+use std::fmt;
+
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum UserState {
     Unauthenticated,
     Authenticated { player_id: Uuid },
     InLobby { player_id: Uuid, lobby_id: Uuid },
     InGame { player_id: Uuid, game_id: Uuid },
+}
+
+impl fmt::Display for UserState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UserState::Unauthenticated => write!(f, "Unauthenticated"),
+            UserState::Authenticated { player_id } => write!(f, "Authenticated: {}", player_id),
+            UserState::InLobby {
+                player_id,
+                lobby_id,
+            } => write!(f, "In Lobby: {} (Lobby {})", player_id, lobby_id),
+            UserState::InGame { player_id, game_id } => {
+                write!(f, "In Game: {} (Game {})", player_id, game_id)
+            }
+        }
+    }
 }
 
 #[derive(Debug)]

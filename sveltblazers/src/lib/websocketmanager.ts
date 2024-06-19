@@ -27,6 +27,7 @@ export class WebSocketManager {
 
 		this.ws.onmessage = (event) => {
 			let data;
+			console.log(event);
 			try {
 				data = JSON.parse(event.data);
 				this.setGameStateData(data);
