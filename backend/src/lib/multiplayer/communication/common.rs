@@ -1,6 +1,7 @@
 use actix::prelude::*;
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::multiplayer::WsLobbySession;
 
@@ -83,7 +84,16 @@ pub struct JoinLobbyRequest {
 
 impl ProtocolHandler for JoinLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        // If the user state correctly contains a uuid, transition to the InLobby state with the
+        // JoinLobby event.
+        let lobby_id = Uuid::parse_str(&self.lobby_name).expect("failed to parse to uuid");
+
+        // Send the CreateLobbyRequest to the LobbyManager to create the lobby and add the user to it
         session.addr.do_send(self);
+
+        session
+            .user_state
+            .transition(UserEvent::JoinLobby(lobby_id));
     }
 }
 
@@ -98,5 +108,7 @@ pub struct LeaveLobbyRequest {
 impl ProtocolHandler for LeaveLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
         session.addr.do_send(self);
+
+        session.user_state.transition(UserEvent::Exit);
     }
 }
