@@ -8,7 +8,9 @@ export class FPSManager {
 	private fpsDisplayTime: number = 0;
 	private readonly fpsInterval: number = 1000 / 60;
 	private readonly menuInputInterval: number = 100;
+	private readonly webSocketInterval: number = 3000;
 	private menuLastFrameTime: number = 0;
+	private lastWebSocketTime: number = 0;
 
 	/**
 	 * Creates an FPSManager instance.
@@ -54,6 +56,18 @@ export class FPSManager {
 			// Check if the elapsed time exceeds the set interval for menu input
 			// Adjust the last frame time, compensating for any extra time beyond the interval
 			this.menuLastFrameTime = timestamp - (elapsed % this.menuInputInterval);
+			return true; // Return true to indicate that input should be processed
+		}
+		return false; // Return false if the interval has not yet been exceeded
+	}
+
+	public shouldPingWebSocket(timestamp: number): boolean {
+		const elapsed = timestamp - this.webSocketInterval; // Calculate the time elapsed since the last processed frame
+
+		if (elapsed > this.webSocketInterval) {
+			// Check if the elapsed time exceeds the set interval for a websocket ping
+			// Adjust the last frame time, compensating for any extra time beyond the interval
+			this.lastWebSocketTime = timestamp - (elapsed % this.webSocketInterval);
 			return true; // Return true to indicate that input should be processed
 		}
 		return false; // Return false if the interval has not yet been exceeded

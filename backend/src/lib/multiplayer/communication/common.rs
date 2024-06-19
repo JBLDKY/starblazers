@@ -107,6 +107,7 @@ pub struct LeaveLobbyRequest {
 
 impl ProtocolHandler for LeaveLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+        // Send the LeaveLobbyRequest to the LobbyManager to make it leave the lobby
         session.addr.do_send(self);
 
         session.user_state.transition(UserEvent::Exit);

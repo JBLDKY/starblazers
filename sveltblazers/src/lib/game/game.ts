@@ -247,6 +247,10 @@ export class SpaceInvadersGame {
 					break;
 			}
 		}
+
+		if (this.fpsManager.shouldPingWebSocket(timestamp)) {
+			this.websocket.sendMessage('ping');
+		}
 		// this.chatBox.receiveMessage();
 		this.fpsManager.update(timestamp);
 	}

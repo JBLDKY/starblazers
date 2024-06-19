@@ -126,8 +126,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                 match serde_json::from_str::<WebSocketMessage>(m) {
                     Ok(message) => message.handle(self, ctx),
                     Err(e) => {
-                        log::error!("Failed to parse message: {}", e);
-                        log::error!("Message contents: {}", m);
+                        log::trace!("Failed to parse message: {}", e);
+                        log::trace!("Message contents: {}", m);
                     }
                 }
             }

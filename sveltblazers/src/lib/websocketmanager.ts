@@ -38,20 +38,34 @@ export class WebSocketManager {
 
 		this.ws.onclose = (event) => {
 			console.log('WebSocket connection closed', event.code, event.reason);
+			this.reconnect();
 		};
 
 		this.ws.onerror = (error) => {
+			this.ws = new WebSocket(this.url);
+
 			console.error('WebSocket error', error);
 		};
 	}
 
 	sendMessage(data: any) {
-		if (!this.ws || !this.ws.readyState === WebSocket.OPEN) {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
 			return;
 		}
 
-		this.ws.send(data);
+		try {
+			this.ws.send(data);
+		} catch (error) {
+			console.log('caught error, reconnecting');
+			this.connect();
+		}
+	}
+	reconnect() {
+		setTimeout(() => {
+			console.log('Reconnecting to WebSocket...');
+			this.connect();
+		}, 5000); // Attempt to reconnect every 5 seconds
 	}
 
 	close() {
