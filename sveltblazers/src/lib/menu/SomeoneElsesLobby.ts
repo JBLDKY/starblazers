@@ -15,6 +15,7 @@ import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
+import type { LeaveLobbyMessage } from '$lib/types';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -146,13 +147,11 @@ export class SomeoneElsesLobby extends BaseMenu {
 			return;
 		}
 
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'LeaveLobby',
-				lobby_name: this.lobbyName,
-				player_id: this.playerInfo.uuid
-			})
-		);
+		this.websocket.sendMessage({
+			type: 'LeaveLobby',
+			lobby_name: this.lobbyName,
+			player_id: this.playerInfo.uuid
+		} as LeaveLobbyMessage);
 	}
 
 	loop = (timestamp: number): void => {

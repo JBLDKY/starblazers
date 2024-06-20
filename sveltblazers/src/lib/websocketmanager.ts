@@ -6,11 +6,16 @@ export class WebSocketManager {
 	private ws: WebSocket | null = null;
 	public messages: string[];
 	private setGameStateData: (state: any) => void;
+	private setSynchronizedState: (state: SynchronizeStateMessage) => void;
 
-	constructor(setGameStateData: (state: any) => void) {
+	constructor(
+		setGameStateData: (state: any) => void,
+		setSynchronizedState: (state: SynchronizeStateMessage) => void
+	) {
 		this.url = 'ws://localhost:3030/lobby';
 		this.messages = [];
 		this.setGameStateData = setGameStateData;
+		this.setSynchronizedState = setSynchronizedState;
 	}
 
 	getMessages() {
@@ -27,10 +32,9 @@ export class WebSocketManager {
 
 		this.ws.onmessage = (event) => {
 			let data;
-			console.log(event);
 			try {
 				data = JSON.parse(event.data);
-				this.setGameStateData(data);
+				this.handleReceivedWebSocketData(data);
 			} catch (error) {
 				console.error('couldnt parse data received from websocket into json');
 			}
@@ -48,14 +52,21 @@ export class WebSocketManager {
 		};
 	}
 
-	sendMessage(data: any) {
+	handleReceivedWebSocketData(data: BaseWebSocketMessage) {
+		switch (data.type) {
+			case 'SynchronizeState':
+				this.setSynchronizedState(data as SynchronizeStateMessage);
+		}
+	}
+
+	sendMessage(data: BaseWebSocketMessage) {
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
 			return;
 		}
 
 		try {
-			this.ws.send(data);
+			this.ws.send(JSON.stringify(data));
 		} catch (error) {
 			console.log('caught error, reconnecting');
 			this.connect();
@@ -74,3 +85,23 @@ export class WebSocketManager {
 		}
 	}
 }
+
+interface BaseWebSocketMessage {
+	type: string;
+}
+
+interface AuthMessage extends BaseWebSocketMessage {
+	jwt: string;
+}
+
+interface SynchronizeStateMessage extends BaseWebSocketMessage {
+	state: UserState;
+}
+
+interface UserState {
+	player_id?: string; // UUID
+	lobby_id?: string; // UUID
+	game_id?: string; // UUID
+}
+
+// You can extend this with more specific message types as needed

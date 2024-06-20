@@ -13,6 +13,7 @@ import {
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
 import type { WebSocketManager } from '$lib/websocketmanager';
+import type { CreateLobbyMessage } from '$lib/types';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -72,13 +73,11 @@ export class MultiplayerMenu extends BaseMenu {
 			return;
 		}
 
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'CreateLobby',
-				lobby_name: this.playerInfo.uuid + "'s lobby",
-				player_id: this.playerInfo.uuid
-			})
-		);
+		this.websocket.sendMessage({
+			type: 'CreateLobby',
+			lobby_name: this.playerInfo.uuid + "'s lobby",
+			player_id: this.playerInfo.uuid
+		} as CreateLobbyMessage);
 	}
 
 	loop = (_: number): void => {

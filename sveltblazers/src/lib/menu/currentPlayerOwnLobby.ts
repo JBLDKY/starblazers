@@ -17,6 +17,7 @@ import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
 import { lobbyName } from '../../routes/helpers';
+import type { CreateLobbyMessage, LeaveLobbyMessage } from '$lib/types';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -146,13 +147,11 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 			return;
 		}
 
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'CreateLobby',
-				lobby_name: this.playerInfo.username + "'s lobby",
-				player_id: this.playerInfo.username
-			})
-		);
+		this.websocket.sendMessage({
+			type: 'CreateLobby',
+			lobby_name: this.playerInfo.username + "'s lobby",
+			player_id: this.playerInfo.username
+		} as CreateLobbyMessage);
 	}
 
 	loop = (timestamp: number): void => {
@@ -186,12 +185,10 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 			return;
 		}
 
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'LeaveLobby',
-				lobby_name: lobbyName(this.playerInfo),
-				player_id: this.playerInfo.uuid
-			})
-		);
+		this.websocket.sendMessage({
+			type: 'LeaveLobby',
+			lobby_name: lobbyName(this.playerInfo),
+			player_id: this.playerInfo.uuid
+		} as LeaveLobbyMessage);
 	};
 }

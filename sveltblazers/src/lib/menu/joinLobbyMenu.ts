@@ -17,6 +17,7 @@ import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { GAME_LOBBIES_URL } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
+import type { JoinLobbyMessage } from '$lib/types';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -142,13 +143,11 @@ export class JoinLobbyMenu extends BaseMenu {
 			return;
 		}
 		console.log('sending join lobby request');
-		this.websocket.sendMessage(
-			JSON.stringify({
-				type: 'JoinLobby',
-				lobby_name: lobby,
-				player_id: this.playerInfo.uuid
-			})
-		);
+		this.websocket.sendMessage({
+			type: 'JoinLobby',
+			lobby_name: lobby,
+			player_id: this.playerInfo.uuid
+		} as JoinLobbyMessage);
 	}
 
 	loop = (timestamp: number): void => {

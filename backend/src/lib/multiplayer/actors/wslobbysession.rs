@@ -6,7 +6,9 @@
 
 use super::LobbyManager;
 use crate::multiplayer::communication::message::{Disconnect, Message};
-use crate::multiplayer::communication::protocol::{ProtocolHandler, WebSocketMessage};
+use crate::multiplayer::communication::protocol::{
+    ProtocolHandler, SynchronizeState, WebSocketMessage,
+};
 use crate::multiplayer::UserState;
 use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
@@ -53,11 +55,12 @@ impl WsLobbySession {
 
     fn check_heartbeat(&mut self, ctx: &mut ws::WebsocketContext<Self>) {
         // Log the current state at each interval
-        log::info!("{}", self.user_state.to_string());
+        let state = SynchronizeState::from(self.user_state.clone());
+        let s = serde_json::to_string(&state).expect("Could not parse state to string");
 
         if Instant::now().duration_since(self.hb) < CLIENT_TIMEOUT {
             ctx.ping(b"");
-            ctx.text(self.user_state.to_string());
+            ctx.text(s);
         } else {
             // Heartbeat timed out
             ctx.stop();
@@ -123,11 +126,16 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             }
             ws::Message::Text(text) => {
                 let m = text.trim();
+
+                if m == "ping" {
+                    return;
+                }
+
                 match serde_json::from_str::<WebSocketMessage>(m) {
                     Ok(message) => message.handle(self, ctx),
                     Err(e) => {
-                        log::trace!("Failed to parse message: {}", e);
-                        log::trace!("Message contents: {}", m);
+                        log::debug!("Failed to parse message: {}", e);
+                        log::debug!("Message contents: {}", m);
                     }
                 }
             }

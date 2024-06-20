@@ -18,6 +18,7 @@ import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
 import { GameStateManager } from '$lib/system/game_state_manager';
+import type { SynchronizeStateMessage } from '$lib/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -53,7 +54,8 @@ export class SpaceInvadersGame {
 		// because methods called inside of these might not exist on gamestatemanager
 		this.getGameStateData = this.getGameStateData.bind(this);
 		this.setGameStateData = this.setGameStateData.bind(this);
-		this.websocket = new WebSocketManager(this.setGameStateData);
+		this.setSynchronizedState = this.setSynchronizedState.bind(this);
+		this.websocket = new WebSocketManager(this.setGameStateData, this.setSynchronizedState);
 
 		this.user = new User('username', player_id);
 		this.chatBox = new ChatBox(this.user, this.websocket);
@@ -294,13 +296,13 @@ export class SpaceInvadersGame {
 	getGameStateData(): string {
 		const player = this.getCurrentPlayer();
 
-		return JSON.stringify({
+		return {
 			type: 'GameState',
 			position_x: player.getPosition().x,
 			position_y: player.getPosition().y,
 			player_id: this.user.uuid,
 			timestamp: new Date()
-		});
+		};
 	}
 
 	setGameStateData(gamestate: string): void {
@@ -317,5 +319,28 @@ export class SpaceInvadersGame {
 
 	userUuid(): string {
 		return this.user.uuid;
+	}
+
+	setSynchronizedState(data: SynchronizeStateMessage): void {
+		console.log('Received state sync message:', data);
+
+		const state = data.state;
+		if (state.Authenticated) {
+			console.log('Authenticated:', state.Authenticated.player_id);
+		} else if (state.Unauthenticated) {
+			console.log('Unauthenticated');
+		} else if (state.InLobby) {
+			console.log(
+				'In Lobby:',
+				`Player ID: ${state.InLobby.player_id}, Lobby ID: ${state.InLobby.lobby_id}`
+			);
+		} else if (state.InGame) {
+			console.log(
+				'In Game:',
+				`Player ID: ${state.InGame.player_id}, Game ID: ${state.InGame.game_id}`
+			);
+		} else {
+			console.error('Unknown state type or malformed data');
+		}
 	}
 }

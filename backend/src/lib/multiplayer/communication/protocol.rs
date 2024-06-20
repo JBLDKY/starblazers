@@ -1,7 +1,7 @@
 use super::{
     common::{CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest},
     message::Connect,
-    user_state::UserEvent,
+    user_state::{UserEvent, UserState},
 };
 use crate::{
     claims::{Claims, TokenError},
@@ -28,9 +28,9 @@ pub enum WebSocketMessage {
     JoinLobby(JoinLobbyRequest),
     LeaveLobby(LeaveLobbyRequest),
 }
-
 impl ProtocolHandler for WebSocketMessage {
     fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
+        log::info!("Received message: {:?}", &self);
         match self {
             WebSocketMessage::Auth(auth) => auth.handle(session, ctx),
             WebSocketMessage::GameState(gs) => gs.handle(session, ctx),
@@ -47,7 +47,6 @@ pub struct WebsocketAuthJwt {
     /// JSON Web Token (JWT) for authentication
     jwt: String,
 }
-
 impl WebsocketAuthJwt {
     /// Decodes the JWT to extract claims
     ///
@@ -70,5 +69,19 @@ impl ProtocolHandler for WebsocketAuthJwt {
         session.user_state.transition(event);
 
         session.addr.do_send(Connect { addr, claims });
+    }
+}
+
+/// This will likely only ever be sent from server to client, not the other way around
+/// Based on this info, the client can enforce the correct state.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub struct SynchronizeState {
+    state: UserState,
+}
+
+impl From<UserState> for SynchronizeState {
+    fn from(user_state: UserState) -> Self {
+        Self { state: user_state }
     }
 }

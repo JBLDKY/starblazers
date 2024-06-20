@@ -63,3 +63,48 @@ export enum Key {
 	Y = 89,
 	Z = 90
 }
+
+export interface BaseWebSocketMessage {
+	type: string;
+}
+
+export interface AuthMessage extends BaseWebSocketMessage {
+	jwt: string;
+}
+
+export interface SynchronizeStateMessage extends BaseWebSocketMessage {
+	state: UserState;
+}
+
+export interface LeaveLobbyMessage extends BaseWebSocketMessage {
+	type: 'LeaveLobby';
+	lobby_name: string;
+	player_id: string; // Assuming player_id is a string; adjust type as necessary
+}
+
+export interface CreateLobbyMessage extends BaseWebSocketMessage {
+	type: 'CreateLobby';
+	lobby_name: string;
+	player_id: string;
+}
+
+export interface JoinLobbyMessage extends BaseWebSocketMessage {
+	type: 'JoinLobby';
+	lobby_name: string;
+	player_id: string;
+}
+
+export type UserState = {
+	Authenticated?: {
+		player_id: string;
+	};
+	Unauthenticated?: null;
+	InLobby?: {
+		player_id: string;
+		lobby_id: string;
+	};
+	InGame?: {
+		player_id: string;
+		game_id: string;
+	};
+};
