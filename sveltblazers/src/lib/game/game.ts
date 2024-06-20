@@ -326,10 +326,46 @@ export class SpaceInvadersGame {
 
 		const state = data.state;
 		if (state.Authenticated) {
+			console.log('Execcing authenticated');
 			console.log('Authenticated:', state.Authenticated.player_id);
+			if (
+				this.currentMenu.kind === MenuIndex.SomeoneElsesLobby ||
+				this.currentMenu.kind === MenuIndex.CurrentPlayerOwnLobby
+			) {
+				this.state = GameState.MENU;
+				this.setCurrentMenu(MenuIndex.Main);
+			}
 		} else if (state.Unauthenticated) {
 			console.log('Unauthenticated');
 		} else if (state.InLobby) {
+			console.log('Execcing InLobby');
+			console.log(state.InLobby.lobby_id);
+			console.log(this.user.uuid);
+			// For some reason, if in someone elses lobby, it says ur in ur own lobby.
+			if (state.InLobby.lobby_id !== this.user.uuid) {
+				console.log('someone elses');
+				if (
+					this.state !== GameState.MENU ||
+					this.currentMenu.kind !== MenuIndex.SomeoneElsesLobby
+				) {
+					console.log('1');
+					this.state = GameState.MENU;
+					this.setCurrentMenu(MenuIndex.SomeoneElsesLobby, state.InLobby.lobby_id);
+				}
+			} else {
+				console.log('CurrentOwnplayerLobby');
+				if (
+					this.state !== GameState.MENU ||
+					this.currentMenu.kind !== MenuIndex.CurrentPlayerOwnLobby
+				) {
+					console.log('2');
+					console.log(this.state);
+					console.log(this.currentMenu.index);
+
+					this.state = GameState.MENU;
+					this.setCurrentMenu(MenuIndex.CurrentPlayerOwnLobby);
+				}
+			}
 			console.log(
 				'In Lobby:',
 				`Player ID: ${state.InLobby.player_id}, Lobby ID: ${state.InLobby.lobby_id}`

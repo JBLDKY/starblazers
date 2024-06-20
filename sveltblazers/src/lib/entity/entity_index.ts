@@ -17,6 +17,7 @@ export enum EntityIndex {
 }
 
 export enum MenuIndex {
+	Undefined,
 	Main,
 	Settings,
 	Multiplayer,

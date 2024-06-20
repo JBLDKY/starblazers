@@ -335,3 +335,14 @@ impl Handler<PlayersInLobby> for LobbyManager {
         MessageResult(players)
     }
 }
+
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct DebugLog;
+
+impl Handler<DebugLog> for LobbyManager {
+    type Result = ();
+    fn handle(&mut self, _: DebugLog, _: &mut Self::Context) {
+        log::info!("{:#?}", &self);
+    }
+}

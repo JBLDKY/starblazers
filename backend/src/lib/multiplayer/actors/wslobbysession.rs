@@ -4,6 +4,7 @@
 // heartbeats to keep the connection alive, and forwarding messages to the
 // `LobbyManager` actor for further processing.
 
+use super::lobbymanager::DebugLog;
 use super::LobbyManager;
 use crate::multiplayer::communication::message::{Disconnect, Message};
 use crate::multiplayer::communication::protocol::{
@@ -61,6 +62,7 @@ impl WsLobbySession {
         if Instant::now().duration_since(self.hb) < CLIENT_TIMEOUT {
             ctx.ping(b"");
             ctx.text(s);
+            // self.addr.do_send(DebugLog); // Use this to print the LobbyManager
         } else {
             // Heartbeat timed out
             ctx.stop();
@@ -127,7 +129,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             ws::Message::Text(text) => {
                 let m = text.trim();
 
-                if m == "ping" {
+                if !m.starts_with('{') {
                     return;
                 }
 

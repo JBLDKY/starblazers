@@ -18,6 +18,7 @@ import { jwtStore } from '../../store/auth';
 import { GAME_LOBBIES_URL } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
 import type { JoinLobbyMessage } from '$lib/types';
+import { MenuIndex } from '$lib/entity/entity_index';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -27,6 +28,7 @@ export class JoinLobbyMenu extends BaseMenu {
 	private lastUpdate = 0;
 	private lobbies: string[] = [];
 
+	public kind: MenuIndex = MenuIndex.JoinLobby;
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
@@ -142,7 +144,9 @@ export class JoinLobbyMenu extends BaseMenu {
 		if (this.websocket === undefined || this.websocket === null) {
 			return;
 		}
-		console.log('sending join lobby request');
+		console.log('joinlobby: ', lobby);
+		console.log('player uuid: ', this.playerInfo.uuid);
+
 		this.websocket.sendMessage({
 			type: 'JoinLobby',
 			lobby_name: lobby,
