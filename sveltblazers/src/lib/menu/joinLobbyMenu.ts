@@ -141,6 +141,7 @@ export class JoinLobbyMenu extends BaseMenu {
 		if (this.websocket === undefined || this.websocket === null) {
 			return;
 		}
+		console.log('sending join lobby request');
 		this.websocket.sendMessage(
 			JSON.stringify({
 				type: 'JoinLobby',
@@ -159,11 +160,12 @@ export class JoinLobbyMenu extends BaseMenu {
 			this.lastUpdate = timestamp;
 		}
 
-		if (result.endsWith("'s Lobby")) {
-			this.handleLobbySelect(result);
-		}
-
-		if (result != '' && result != undefined) {
+		// There are only two choices here
+		if (result === 'Main menu') {
+			// Go to main menu
+			this.inputHandler.handleMenuResult(result);
+		} else if (result != '' && result != undefined) {
+			this.handleLobbySelect(result); // Join a lobby
 			this.inputHandler.handleMenuResult(result);
 		}
 
