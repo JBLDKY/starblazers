@@ -120,6 +120,10 @@ export abstract class BaseMenu {
 		return this.kind;
 	}
 
+	setKind(menuKind: MenuKind): void {
+		this.kind = menuKind;
+	}
+
 	onExit(): void {}
 
 	abstract loop: (timestamp: number) => void;

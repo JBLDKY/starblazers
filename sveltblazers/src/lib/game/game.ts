@@ -331,6 +331,7 @@ export class SpaceInvadersGame {
 			this.handleInLobbyState(data.state);
 			// For some reason, if in someone elses lobby, it says ur in ur own lobby.
 		} else if (state.InGame) {
+			// TODO:
 			console.log(
 				'In Game:',
 				`Player ID: ${state.InGame.player_id}, Game ID: ${state.InGame.game_id}`

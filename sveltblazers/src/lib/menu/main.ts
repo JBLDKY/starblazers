@@ -22,13 +22,15 @@ import { MenuKind } from '$lib/entity/entity_index';
 export class MainMenu extends BaseMenu {
 	private currentY: number;
 
-	public kind: MenuKind = MenuKind.Main;
 	/**
 	 * Constructs a Main menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
 	constructor(p: p5, inputHandler: InputHandler) {
 		super(p, inputHandler);
+
+		this.setKind(MenuKind.Main);
+
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;

@@ -27,14 +27,13 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	private players: string[] = [];
 	private lastUpdate: number = 0;
 
-	public kind: MenuKind = MenuKind.CurrentPlayerOwnLobby;
-
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
 	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager) {
 		super(p, inputHandler);
+		this.setKind(MenuKind.CurrentPlayerOwnLobby);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.websocket = websocket;

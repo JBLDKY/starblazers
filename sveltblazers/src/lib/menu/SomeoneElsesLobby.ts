@@ -27,14 +27,13 @@ export class SomeoneElsesLobby extends BaseMenu {
 	private players: string[] = [];
 	private lobbyName: string;
 
-	public kind = MenuKind.SomeoneElsesLobby;
-
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
 	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager, lobbyName: string) {
 		super(p, inputHandler);
+		this.setKind(MenuKind.SomeoneElsesLobby);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;

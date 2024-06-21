@@ -28,6 +28,7 @@ export class MultiplayerMenu extends BaseMenu {
 	 */
 	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager) {
 		super(p, inputHandler);
+		this.setKind(MenuKind.Multiplayer);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;

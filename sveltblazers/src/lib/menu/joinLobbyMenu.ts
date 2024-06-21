@@ -28,13 +28,13 @@ export class JoinLobbyMenu extends BaseMenu {
 	private lastUpdate = 0;
 	private lobbies: string[] = [];
 
-	public kind: MenuKind = MenuKind.JoinLobby;
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
 	 */
 	constructor(p: p5, inputHandler: InputHandler, websocket: WebSocketManager) {
 		super(p, inputHandler);
+		this.setKind(MenuKind.JoinLobby);
 		this.p = p;
 		this.p.fill('deeppink');
 		this.currentY = MENU_STARTING_Y_COORDINATE;
