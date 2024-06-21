@@ -293,7 +293,7 @@ export class SpaceInvadersGame {
 		return this.entityManager.getEntityByKind(EntityIndex.slowStraightShootingAlien);
 	}
 
-	getGameStateData(): string {
+	getGameStateData(): object {
 		const player = this.getCurrentPlayer();
 
 		return {
@@ -321,14 +321,14 @@ export class SpaceInvadersGame {
 		return this.user.uuid;
 	}
 
-	setSynchronizedState(data: SynchronizeStateMessage): void {
-		const state = data.state;
+	setSynchronizedState(message: SynchronizeStateMessage): void {
+		const state = message.state;
 		if (state.Authenticated) {
 			this.handleAuthenticatedState();
 		} else if (state.Unauthenticated) {
 			this.handleUnauthenticatedState();
 		} else if (state.InLobby) {
-			this.handleInLobbyState(data.state);
+			this.handleInLobbyState(state);
 			// For some reason, if in someone elses lobby, it says ur in ur own lobby.
 		} else if (state.InGame) {
 			// TODO:
