@@ -17,7 +17,7 @@ import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
 import type { CreateLobbyMessage, LeaveLobbyMessage } from '$lib/types';
-import { MenuIndex } from '$lib/entity/entity_index';
+import { MenuKind } from '$lib/entity/entity_index';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
@@ -27,7 +27,7 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 	private players: string[] = [];
 	private lastUpdate: number = 0;
 
-	public kind: MenuIndex = MenuIndex.CurrentPlayerOwnLobby;
+	public kind: MenuKind = MenuKind.CurrentPlayerOwnLobby;
 
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.

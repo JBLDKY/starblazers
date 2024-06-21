@@ -1,5 +1,5 @@
 import type { DevConsole } from '$lib/dev_console';
-import { MenuIndex } from '$lib/entity/entity_index';
+import { MenuKind } from '$lib/entity/entity_index';
 import type { SpaceInvadersGame } from '$lib/game/game';
 import { GameState } from '../../constants';
 import { parse as uuidParse } from 'uuid';
@@ -85,7 +85,7 @@ export class InputHandler {
 			switch (this.game.getGameState()) {
 				case GameState.RUN:
 					this.game.setGameState(GameState.MENU);
-					this.game.setCurrentMenu(MenuIndex.Main);
+					this.game.setCurrentMenu(MenuKind.Main);
 					break;
 				case GameState.PAUSE:
 					this.game.setGameState(GameState.RUN);
@@ -121,30 +121,30 @@ export class InputHandler {
 	handleMenuResult(result: string) {
 		try {
 			uuidParse(result);
-			this.game.setCurrentMenu(MenuIndex.SomeoneElsesLobby, result);
-		} catch (error) {}
+			this.game.setCurrentMenu(MenuKind.SomeoneElsesLobby, result);
+		} catch (_) {}
 
 		switch (result) {
 			case 'LeaveOwnLobby':
-				this.game.setCurrentMenu(MenuIndex.Multiplayer);
+				this.game.setCurrentMenu(MenuKind.Multiplayer);
 				break;
 			case 'Multiplayer':
-				this.game.setCurrentMenu(MenuIndex.Multiplayer);
+				this.game.setCurrentMenu(MenuKind.Multiplayer);
 				break;
 			case 'Single player':
 				this.game.setGameState(GameState.RUN);
 				break;
 			case 'Main menu':
-				this.game.setCurrentMenu(MenuIndex.Main);
+				this.game.setCurrentMenu(MenuKind.Main);
 				break;
 			case 'Settings':
-				this.game.setCurrentMenu(MenuIndex.Settings);
+				this.game.setCurrentMenu(MenuKind.Settings);
 				break;
 			case 'Create lobby':
-				this.game.setCurrentMenu(MenuIndex.CurrentPlayerOwnLobby);
+				this.game.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
 				break;
 			case 'Join lobby':
-				this.game.setCurrentMenu(MenuIndex.JoinLobby);
+				this.game.setCurrentMenu(MenuKind.JoinLobby);
 				break;
 		}
 	}

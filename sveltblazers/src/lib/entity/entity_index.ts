@@ -16,7 +16,7 @@ export enum EntityIndex {
 	Player
 }
 
-export enum MenuIndex {
+export enum MenuKind {
 	Undefined,
 	Main,
 	Settings,
@@ -29,23 +29,23 @@ export enum MenuIndex {
 export class MenuFactory {
 	newMenu(
 		p: p5,
-		menuIndex: MenuIndex,
+		menuIndex: MenuKind,
 		inputHandler: InputHandler,
 		websocket: WebSocketManager,
 		...args: string[]
 	): BaseMenu {
 		switch (menuIndex) {
-			case MenuIndex.Main:
+			case MenuKind.Main:
 				return new MainMenu(p, inputHandler);
-			case MenuIndex.Settings:
+			case MenuKind.Settings:
 				return new SettingsMenu(p, inputHandler);
-			case MenuIndex.Multiplayer:
+			case MenuKind.Multiplayer:
 				return new MultiplayerMenu(p, inputHandler, websocket);
-			case MenuIndex.CurrentPlayerOwnLobby:
+			case MenuKind.CurrentPlayerOwnLobby:
 				return new CurrentPlayerOwnLobbyMenu(p, inputHandler, websocket);
-			case MenuIndex.JoinLobby:
+			case MenuKind.JoinLobby:
 				return new JoinLobbyMenu(p, inputHandler, websocket);
-			case MenuIndex.SomeoneElsesLobby:
+			case MenuKind.SomeoneElsesLobby:
 				return new SomeoneElsesLobby(p, inputHandler, websocket, args[0][0]); // Provide the lobby name
 		}
 	}

@@ -16,7 +16,7 @@ import { SpawnHandler } from '$lib/system/entities/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
-import { EntityIndex, MenuFactory, MenuIndex } from '$lib/entity/entity_index';
+import { EntityIndex, MenuFactory, MenuKind } from '$lib/entity/entity_index';
 import { GameStateManager } from '$lib/system/game_state_manager';
 import type { SynchronizeStateMessage } from '$lib/types';
 
@@ -191,7 +191,7 @@ export class SpaceInvadersGame {
 		this.inputHandler.handleInputWhileTyping();
 	}
 
-	setCurrentMenu(menuIndex: MenuIndex, ...args: string[]): void {
+	setCurrentMenu(menuIndex: MenuKind, ...args: string[]): void {
 		if (this.currentMenu === null || this.currentMenu === undefined) {
 			return;
 		}
@@ -322,48 +322,30 @@ export class SpaceInvadersGame {
 	}
 
 	setSynchronizedState(data: SynchronizeStateMessage): void {
-		console.log('Received state sync message:', data);
-
 		const state = data.state;
 		if (state.Authenticated) {
-			console.log('Execcing authenticated');
-			console.log('Authenticated:', state.Authenticated.player_id);
 			if (
-				this.currentMenu.kind === MenuIndex.SomeoneElsesLobby ||
-				this.currentMenu.kind === MenuIndex.CurrentPlayerOwnLobby
+				this.currentMenu.kind === MenuKind.SomeoneElsesLobby ||
+				this.currentMenu.kind === MenuKind.CurrentPlayerOwnLobby
 			) {
 				this.state = GameState.MENU;
-				this.setCurrentMenu(MenuIndex.Main);
+				this.setCurrentMenu(MenuKind.Main);
 			}
 		} else if (state.Unauthenticated) {
-			console.log('Unauthenticated');
 		} else if (state.InLobby) {
-			console.log('Execcing InLobby');
-			console.log(state.InLobby.lobby_id);
-			console.log(this.user.uuid);
 			// For some reason, if in someone elses lobby, it says ur in ur own lobby.
 			if (state.InLobby.lobby_id !== this.user.uuid) {
-				console.log('someone elses');
-				if (
-					this.state !== GameState.MENU ||
-					this.currentMenu.kind !== MenuIndex.SomeoneElsesLobby
-				) {
-					console.log('1');
+				if (this.state !== GameState.MENU || this.currentMenu.kind !== MenuKind.SomeoneElsesLobby) {
 					this.state = GameState.MENU;
-					this.setCurrentMenu(MenuIndex.SomeoneElsesLobby, state.InLobby.lobby_id);
+					this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
 				}
 			} else {
-				console.log('CurrentOwnplayerLobby');
 				if (
 					this.state !== GameState.MENU ||
-					this.currentMenu.kind !== MenuIndex.CurrentPlayerOwnLobby
+					this.currentMenu.kind !== MenuKind.CurrentPlayerOwnLobby
 				) {
-					console.log('2');
-					console.log(this.state);
-					console.log(this.currentMenu.index);
-
 					this.state = GameState.MENU;
-					this.setCurrentMenu(MenuIndex.CurrentPlayerOwnLobby);
+					this.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
 				}
 			}
 			console.log(

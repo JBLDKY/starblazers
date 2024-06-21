@@ -11,7 +11,7 @@ import {
 	OPTION_MENU_ITEM_TEXTS
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
-import { MenuIndex } from '$lib/entity/entity_index';
+import { MenuKind } from '$lib/entity/entity_index';
 
 /**
  * Represents a settings menu derived from the BaseMenu. This class manages the
@@ -20,7 +20,7 @@ import { MenuIndex } from '$lib/entity/entity_index';
 export class SettingsMenu extends BaseMenu {
 	private currentY: number;
 
-	public kind: MenuIndex = MenuIndex.Settings;
+	public kind: MenuKind = MenuKind.Settings;
 
 	/**
 	 * Constructs a settings menu with given p5 instance.

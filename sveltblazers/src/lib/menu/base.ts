@@ -7,7 +7,7 @@ import { MenuItemBuilder } from './menuitem/menu_item_builder';
 import type { PublicPlayerData } from '../../routes/helpers';
 import { get } from 'svelte/store';
 import { playerInfoStore } from '../../store/auth';
-import { MenuIndex } from '$lib/entity/entity_index';
+import { MenuKind } from '$lib/entity/entity_index';
 
 /**
  * Abstract class representing the base structure of a menu in a p5 application.
@@ -22,7 +22,7 @@ export abstract class BaseMenu {
 	protected websocket;
 	protected playerInfo: PublicPlayerData;
 
-	public kind: MenuIndex = MenuIndex.Undefined;
+	private kind: MenuKind = MenuKind.Undefined;
 	public index: number = 1; // Assuming 0 can be a default start index
 
 	/**
@@ -114,6 +114,10 @@ export abstract class BaseMenu {
 		}
 
 		return '';
+	}
+
+	getKind(): MenuKind {
+		return this.kind;
 	}
 
 	onExit(): void {}

@@ -13,7 +13,7 @@ import {
 	MAIN_MENU_ITEM_TEXTS
 } from './menuConstants';
 import type { InputHandler } from '$lib/system/input_handler';
-import { MenuIndex } from '$lib/entity/entity_index';
+import { MenuKind } from '$lib/entity/entity_index';
 
 /**
  * Represents a main menu derived from the BaseMenu. This class manages the
@@ -22,7 +22,7 @@ import { MenuIndex } from '$lib/entity/entity_index';
 export class MainMenu extends BaseMenu {
 	private currentY: number;
 
-	public kind: MenuIndex = MenuIndex.Main;
+	public kind: MenuKind = MenuKind.Main;
 	/**
 	 * Constructs a Main menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.

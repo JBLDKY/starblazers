@@ -14,14 +14,14 @@ import {
 import type { InputHandler } from '$lib/system/input_handler';
 import type { WebSocketManager } from '$lib/websocketmanager';
 import type { CreateLobbyMessage } from '$lib/types';
-import { MenuIndex } from '$lib/entity/entity_index';
+import { MenuKind } from '$lib/entity/entity_index';
 
 /**
  * Represents a Multiplayer menu derived from the BaseMenu. This class manages the creating & joining of lobbies.
  */
 export class MultiplayerMenu extends BaseMenu {
 	private currentY: number;
-	public kind: MenuIndex = MenuIndex.Multiplayer;
+	public kind: MenuKind = MenuKind.Multiplayer;
 	/**
 	 * Constructs a multiplayer menu with given p5 instance.
 	 * @param {p5} p - The p5 instance used for drawing the menu.
