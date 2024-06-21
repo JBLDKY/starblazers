@@ -4,9 +4,8 @@
 // heartbeats to keep the connection alive, and forwarding messages to the
 // `LobbyManager` actor for further processing.
 
-use super::lobbymanager::DebugLog;
-use super::LobbyManager;
-use crate::multiplayer::communication::message::{Disconnect, Message};
+use super::{LobbyManager, UserStateManager};
+use crate::multiplayer::communication::message::{Disconnect, Message, RegisterWebSocket};
 use crate::multiplayer::communication::protocol::{
     ProtocolHandler, SynchronizeState, WebSocketMessage,
 };
@@ -27,12 +26,17 @@ pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
     pub user_state: UserState,
 
+    pub connection_id: String,
+
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
     pub hb: Instant,
 
     /// Chat server
-    pub addr: Addr<LobbyManager>,
+    pub lobby_manager_addr: Addr<LobbyManager>,
+
+    /// Chat server
+    pub user_state_manager_addr: Addr<UserStateManager>,
 }
 
 impl WsLobbySession {
@@ -60,6 +64,7 @@ impl WsLobbySession {
         let s = serde_json::to_string(&state).expect("Could not parse state to string");
 
         if Instant::now().duration_since(self.hb) < CLIENT_TIMEOUT {
+            log::debug!("{:?}", &self.connection_id);
             ctx.ping(b"");
             ctx.text(s);
             // self.addr.do_send(DebugLog); // Use this to print the LobbyManager
@@ -86,12 +91,34 @@ impl Actor for WsLobbySession {
     fn started(&mut self, ctx: &mut Self::Context) {
         // we'll start heartbeat process on session start.
         self.hb(ctx);
+
+        // register self in chat server. `AsyncContext::wait` register
+        // future within context, but context waits until this future resolves
+        // before processing any other events.
+        // HttpContext::state() is instance of WsChatSessionState, state is shared
+        // across all routes within application
+        let addr = ctx.address();
+        self.lobby_manager_addr
+            .send(RegisterWebSocket {
+                addr: addr.recipient(),
+            })
+            .into_actor(self)
+            .then(|res, act, ctx| {
+                match res {
+                    Ok(res) => act.connection_id = res,
+                    // something is wrong with chat server
+                    _ => ctx.stop(),
+                }
+                fut::ready(())
+            })
+            .wait(ctx);
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         if let Some(id) = self.user_state.user_id() {
             // notify chat server
-            self.addr.do_send(Disconnect { id: id.to_string() });
+            self.lobby_manager_addr
+                .do_send(Disconnect { id: id.to_string() });
         }
 
         Running::Stop

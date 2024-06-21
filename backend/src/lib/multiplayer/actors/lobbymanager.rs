@@ -8,7 +8,7 @@ use crate::multiplayer::communication::common::{
     CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest,
 };
 use crate::multiplayer::communication::message::{
-    ClientMessage, Connect, Disconnect, Join, Message,
+    ClientMessage, Connect, Disconnect, Join, Message, RegisterWebSocket,
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
 use crate::multiplayer::InvalidDataError;
@@ -112,6 +112,7 @@ impl fmt::Display for Lobbies {
 
 #[derive(Debug)]
 pub struct LobbyManager {
+    connections: HashMap<Uuid, Recipient<Message>>,
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: Lobbies,
     ring: HashMap<String, RingBuffer<GameState, 5>>,
@@ -122,6 +123,7 @@ impl LobbyManager {
         // default room
 
         LobbyManager {
+            connections: HashMap::new(),
             sessions: HashMap::new(),
             lobbies: Lobbies::new(),
             ring: HashMap::new(),
@@ -319,9 +321,6 @@ impl Handler<PlayersInLobby> for LobbyManager {
     type Result = MessageResult<PlayersInLobby>;
 
     fn handle(&mut self, req: PlayersInLobby, _: &mut Self::Context) -> Self::Result {
-        log::info!("{:?}", req);
-        log::info!("{:?}", self.lobbies);
-
         let players: Vec<String> = self
             .lobbies
             .get()
@@ -343,5 +342,24 @@ impl Handler<DebugLog> for LobbyManager {
     type Result = ();
     fn handle(&mut self, _: DebugLog, _: &mut Self::Context) {
         log::info!("{:#?}", &self);
+    }
+}
+
+/// Handler for Connect message.
+///
+/// Register new session and assign unique id to this session
+impl Handler<RegisterWebSocket> for LobbyManager {
+    type Result = String;
+
+    fn handle(&mut self, msg: RegisterWebSocket, _: &mut Context<Self>) -> String {
+        log::info!("Someone joined");
+
+        let id = Uuid::new_v4();
+
+        // register session with random id
+        self.connections.insert(id, msg.addr);
+
+        // send id back
+        id.to_string()
     }
 }

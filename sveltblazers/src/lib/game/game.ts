@@ -323,6 +323,7 @@ export class SpaceInvadersGame {
 
 	setSynchronizedState(message: SynchronizeStateMessage): void {
 		const state = message.state;
+		console.log(state);
 		if (state.Authenticated) {
 			this.handleAuthenticatedState();
 		} else if (state.Unauthenticated) {

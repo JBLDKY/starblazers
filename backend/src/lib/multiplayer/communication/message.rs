@@ -24,6 +24,13 @@ pub struct Connect {
     pub claims: Claims,
 }
 
+/// Message sent when a new chat session is created
+#[derive(Message)]
+#[rtype(result = "String")]
+pub struct RegisterWebSocket {
+    /// Address of the recipient actor for this session
+    pub addr: Recipient<Message>,
+}
 /// Message sent when a session is disconnected
 #[derive(Message, Debug)]
 #[rtype(result = "()")]

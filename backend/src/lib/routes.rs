@@ -1,4 +1,5 @@
 use crate::claims::Claims;
+use crate::multiplayer::actors::UserStateManager;
 use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsLobbySession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
@@ -248,13 +249,16 @@ fn json_with_status(
 async fn lobby_websocket(
     req: HttpRequest,
     stream: web::Payload,
-    srv: actix_web::web::Data<Addr<LobbyManager>>,
+    lm: actix_web::web::Data<Addr<LobbyManager>>,
+    usm: actix_web::web::Data<Addr<UserStateManager>>,
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
+            connection_id: "".to_string(),
             user_state: UserState::Unauthenticated,
             hb: Instant::now(),
-            addr: srv.get_ref().clone(),
+            lobby_manager_addr: lm.get_ref().clone(),
+            user_state_manager_addr: usm.get_ref().clone(),
         },
         &req,
         stream,

@@ -68,7 +68,7 @@ impl ProtocolHandler for WebsocketAuthJwt {
 
         session.user_state.transition(event);
 
-        session.addr.do_send(Connect { addr, claims });
+        session.lobby_manager_addr.do_send(Connect { addr, claims });
     }
 }
 

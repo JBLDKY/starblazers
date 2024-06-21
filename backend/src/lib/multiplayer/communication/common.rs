@@ -43,7 +43,7 @@ impl GameState {
 
 impl ProtocolHandler for GameState {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
-        session.addr.do_send(self);
+        session.lobby_manager_addr.do_send(self);
     }
 }
 
@@ -58,7 +58,7 @@ pub struct CreateLobbyRequest {
 impl ProtocolHandler for CreateLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
         // Send the CreateLobbyRequest to the LobbyManager to create the lobby and add the user to it
-        session.addr.do_send(self);
+        session.lobby_manager_addr.do_send(self);
 
         // If the user state correctly contains a uuid, transition to the InLobby state with the
         // JoinLobby event.
@@ -89,7 +89,7 @@ impl ProtocolHandler for JoinLobbyRequest {
         let lobby_id = Uuid::parse_str(&self.lobby_name).expect("failed to parse to uuid");
 
         // Send the CreateLobbyRequest to the LobbyManager to create the lobby and add the user to it
-        session.addr.do_send(self);
+        session.lobby_manager_addr.do_send(self);
 
         session
             .user_state
@@ -108,7 +108,7 @@ pub struct LeaveLobbyRequest {
 impl ProtocolHandler for LeaveLobbyRequest {
     fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
         // Send the LeaveLobbyRequest to the LobbyManager to make it leave the lobby
-        session.addr.do_send(self);
+        session.lobby_manager_addr.do_send(self);
 
         session.user_state.transition(UserEvent::Exit);
     }
