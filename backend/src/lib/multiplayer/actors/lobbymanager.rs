@@ -162,10 +162,6 @@ impl Handler<Connect> for LobbyManager {
     type Result = String;
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
-        println!("Someone joined");
-
-        // notify all users in same room
-
         // register session with random id
         let id = msg.claims.uuid.clone();
         log::info!("Connected: {}", id);
@@ -263,7 +259,7 @@ impl Handler<CreateLobbyRequest> for LobbyManager {
 impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
     fn handle(&mut self, req: JoinLobbyRequest, ctx: &mut Self::Context) {
-        log::info!("join lobby request: {:#?}", req);
+        log::info!("\njoin lobby request: {:#?}", req);
         log::info!(
             "Player `{}` joined lobby `{}`, current lobbies:\n",
             req.player_id,
@@ -273,7 +269,7 @@ impl Handler<JoinLobbyRequest> for LobbyManager {
         let player_id = Uuid::parse_str(&req.player_id).expect("Not a valid uuid");
         let _ = self.lobbies.add_player_to(player_id, req.lobby_name);
 
-        log::info!("{:#?}", &self.lobbies);
+        log::info!("{:#?}\n", &self.lobbies);
     }
 }
 
@@ -309,11 +305,11 @@ impl Handler<LeaveLobbyRequest> for LobbyManager {
         // Cleanup empty lobbies
         self.lobbies.remove_empty();
 
-        log::info!("{:#?}", &self.lobbies.get());
+        log::info!("{:#?}\n", &self.lobbies.get());
     }
 }
 
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "Vec<String>")]
 pub struct PlayersInLobby {
     pub lobby_name: String,
@@ -323,6 +319,9 @@ impl Handler<PlayersInLobby> for LobbyManager {
     type Result = MessageResult<PlayersInLobby>;
 
     fn handle(&mut self, req: PlayersInLobby, _: &mut Self::Context) -> Self::Result {
+        log::info!("{:?}", req);
+        log::info!("{:?}", self.lobbies);
+
         let players: Vec<String> = self
             .lobbies
             .get()

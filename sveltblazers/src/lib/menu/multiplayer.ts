@@ -76,7 +76,7 @@ export class MultiplayerMenu extends BaseMenu {
 
 		this.websocket.sendMessage({
 			type: 'CreateLobby',
-			lobby_name: this.playerInfo.uuid + "'s lobby",
+			lobby_name: this.playerInfo.uuid,
 			player_id: this.playerInfo.uuid
 		} as CreateLobbyMessage);
 	}

@@ -74,10 +74,11 @@ impl UserState {
                 }
             }
 
-            (state, _) => {
+            (state, event) => {
                 log::error!(
-                    "Transition not possible or not handled from state: {:?}",
-                    state
+                    "Transition not possible or not handled from state `{:?}`: `{:?}` ",
+                    state,
+                    event
                 );
             }
         }

@@ -2,6 +2,7 @@ import type { DevConsole } from '$lib/dev_console';
 import { MenuIndex } from '$lib/entity/entity_index';
 import type { SpaceInvadersGame } from '$lib/game/game';
 import { GameState } from '../../constants';
+import { parse as uuidParse } from 'uuid';
 
 export class InputHandler {
 	private game: SpaceInvadersGame;
@@ -118,10 +119,10 @@ export class InputHandler {
 	}
 
 	handleMenuResult(result: string) {
-		if (result.endsWith("'s lobby")) {
+		try {
+			uuidParse(result);
 			this.game.setCurrentMenu(MenuIndex.SomeoneElsesLobby, result);
-			return;
-		}
+		} catch (error) {}
 
 		switch (result) {
 			case 'LeaveOwnLobby':

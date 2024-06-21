@@ -8,10 +8,6 @@ export type PublicPlayerData = {
 	uuid: string;
 };
 
-export const lobbyName = (playerInfo: PublicPlayerData): string => {
-	return playerInfo.uuid + "'s lobby";
-};
-
 export async function get_player_info(): Promise<PublicPlayerData> {
 	const res = await fetch('http://localhost:3030/players/player', {
 		method: 'GET',

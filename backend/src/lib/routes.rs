@@ -217,11 +217,9 @@ async fn list_lobbies(
 #[get("/game/{lobby_name}/players")]
 async fn players_in_lobby(
     req: HttpRequest,
-    mut lobby_name: web::Path<String>,
+    lobby_name: web::Path<String>,
     lobby_manager: web::Data<Addr<LobbyManager>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    lobby_name.push_str("'s lobby");
-
     if let Err(e) = jwt_check(&req) {
         return Ok(e);
     }

@@ -16,7 +16,6 @@ import { get } from 'svelte/store';
 import { jwtStore } from '../../store/auth';
 import { get_players_in_lobby_url } from '../../constants';
 import type { WebSocketManager } from '$lib/websocketmanager';
-import { lobbyName } from '../../routes/helpers';
 import type { CreateLobbyMessage, LeaveLobbyMessage } from '$lib/types';
 import { MenuIndex } from '$lib/entity/entity_index';
 
@@ -138,7 +137,7 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 		this.createItems();
 
 		this.players.forEach((player) => {
-			if (lobbyName(this.playerInfo).includes(player)) {
+			if (this.playerInfo.uuid == player) {
 				player = player + ' (you)';
 			}
 			this.addItem(player);
@@ -152,7 +151,7 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 
 		this.websocket.sendMessage({
 			type: 'CreateLobby',
-			lobby_name: this.playerInfo.username + "'s lobby",
+			lobby_name: this.playerInfo.username,
 			player_id: this.playerInfo.username
 		} as CreateLobbyMessage);
 	}
@@ -190,7 +189,7 @@ export class CurrentPlayerOwnLobbyMenu extends BaseMenu {
 
 		this.websocket.sendMessage({
 			type: 'LeaveLobby',
-			lobby_name: lobbyName(this.playerInfo),
+			lobby_name: this.playerInfo.uuid,
 			player_id: this.playerInfo.uuid
 		} as LeaveLobbyMessage);
 	};

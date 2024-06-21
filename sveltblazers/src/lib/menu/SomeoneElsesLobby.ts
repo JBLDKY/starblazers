@@ -102,8 +102,7 @@ export class SomeoneElsesLobby extends BaseMenu {
 		const jwt = get(jwtStore);
 
 		try {
-			const lobby_name_without_suffix = this.lobbyName.replace("'s lobby", '');
-			const url = get_players_in_lobby_url(lobby_name_without_suffix);
+			const url = get_players_in_lobby_url(this.lobbyName);
 			const response = await fetch(url, {
 				method: 'GET',
 				mode: 'cors', // no-cors, *cors, same-origin
