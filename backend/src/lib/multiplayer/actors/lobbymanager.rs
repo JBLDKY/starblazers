@@ -112,7 +112,6 @@ impl fmt::Display for Lobbies {
 
 #[derive(Debug)]
 pub struct LobbyManager {
-    connections: HashMap<Uuid, Recipient<Message>>,
     sessions: HashMap<String, Recipient<Message>>,
     lobbies: Lobbies,
     ring: HashMap<String, RingBuffer<GameState, 5>>,
@@ -123,7 +122,6 @@ impl LobbyManager {
         // default room
 
         LobbyManager {
-            connections: HashMap::new(),
             sessions: HashMap::new(),
             lobbies: Lobbies::new(),
             ring: HashMap::new(),
@@ -342,24 +340,5 @@ impl Handler<DebugLog> for LobbyManager {
     type Result = ();
     fn handle(&mut self, _: DebugLog, _: &mut Self::Context) {
         log::info!("{:#?}", &self);
-    }
-}
-
-/// Handler for Connect message.
-///
-/// Register new session and assign unique id to this session
-impl Handler<RegisterWebSocket> for LobbyManager {
-    type Result = String;
-
-    fn handle(&mut self, msg: RegisterWebSocket, _: &mut Context<Self>) -> String {
-        log::info!("Someone joined");
-
-        let id = Uuid::new_v4();
-
-        // register session with random id
-        self.connections.insert(id, msg.addr);
-
-        // send id back
-        id.to_string()
     }
 }

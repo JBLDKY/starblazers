@@ -1,31 +1,27 @@
 use std::collections::HashMap;
 
-use actix::{Actor, Context};
+use actix::{Actor, Context, Handler};
 use uuid::Uuid;
 
-#[derive(Debug)]
-pub struct UserStateStore {
-    user_id: Uuid,
-    current_lobby_id: Option<Uuid>,
-    current_game_id: Option<Uuid>,
-}
+use crate::multiplayer::{communication::message::RegisterWebSocket, UserState};
 
-impl UserStateStore {
-    pub fn new(
-        uuid: Uuid,
-        current_lobby_id: Option<Uuid>,
-        current_game_id: Option<Uuid>,
-    ) -> UserStateStore {
-        UserStateStore {
-            user_id: uuid,
-            current_lobby_id,
-            current_game_id,
+pub struct UserStateManager {
+    users: HashMap<Uuid, UserState>,
+}
+impl UserStateManager {
+    pub fn new() -> Self {
+        Self {
+            users: HashMap::new(),
         }
     }
 }
 
-pub struct UserStateManager {
-    users: HashMap<Uuid, UserStateStore>,
+impl Default for UserStateManager {
+    fn default() -> Self {
+        Self {
+            users: HashMap::new(),
+        }
+    }
 }
 
 /// Make actor from `LobbyServer`
@@ -33,4 +29,13 @@ impl Actor for UserStateManager {
     /// We are going to use simple Context, we just need ability to communicate
     /// with other actors.
     type Context = Context<Self>;
+}
+
+impl Handler<RegisterWebSocket> for UserStateManager {
+    type Result = ();
+
+    fn handle(&mut self, msg: RegisterWebSocket, _: &mut Context<Self>) {
+        self.users
+            .insert(msg.connection_id, UserState::Unauthenticated);
+    }
 }

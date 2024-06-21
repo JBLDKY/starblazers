@@ -11,6 +11,7 @@ use actix_web_actors::ws;
 use serde_json::json;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
+use uuid::Uuid;
 
 /// GET /players/all - players_all - Returns all players
 /// POST /players/create - players_create - Create a new player
@@ -254,7 +255,7 @@ async fn lobby_websocket(
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
-            connection_id: "".to_string(),
+            connection_id: Uuid::nil(),
             user_state: UserState::Unauthenticated,
             hb: Instant::now(),
             lobby_manager_addr: lm.get_ref().clone(),

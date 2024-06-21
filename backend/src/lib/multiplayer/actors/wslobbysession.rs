@@ -14,6 +14,7 @@ use actix::prelude::*;
 use actix::{Actor, Addr, Handler, Running, StreamHandler};
 use actix_web_actors::ws;
 use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -26,7 +27,7 @@ pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
     pub user_state: UserState,
 
-    pub connection_id: String,
+    pub connection_id: Uuid,
 
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
     /// otherwise we drop connection.
@@ -92,23 +93,24 @@ impl Actor for WsLobbySession {
         // we'll start heartbeat process on session start.
         self.hb(ctx);
 
-        // register self in chat server. `AsyncContext::wait` register
+        // register self in UserStateManager. `AsyncContext::wait` register
         // future within context, but context waits until this future resolves
         // before processing any other events.
-        // HttpContext::state() is instance of WsChatSessionState, state is shared
+        // HttpContext::state() is instance of WsLobbySession, state is shared
         // across all routes within application
         let addr = ctx.address();
-        self.lobby_manager_addr
+        self.user_state_manager_addr
             .send(RegisterWebSocket {
                 addr: addr.recipient(),
+                connection_id: self.connection_id,
             })
             .into_actor(self)
-            .then(|res, act, ctx| {
-                match res {
-                    Ok(res) => act.connection_id = res,
-                    // something is wrong with chat server
-                    _ => ctx.stop(),
-                }
+            .then(|_res, _act, _ctx| {
+                // match res {
+                //     Ok(res) => act.connection_id = res,
+                //     // something is wrong with chat server
+                //     _ => ctx.stop(),
+                // }
                 fut::ready(())
             })
             .wait(ctx);

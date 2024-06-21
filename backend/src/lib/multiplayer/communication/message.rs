@@ -1,5 +1,6 @@
 use crate::claims::Claims;
 use actix::prelude::*;
+use uuid::Uuid;
 
 /// This file defines various messages and data structures used in the
 /// Actix actor-based communication system of the application. These
@@ -26,10 +27,12 @@ pub struct Connect {
 
 /// Message sent when a new chat session is created
 #[derive(Message)]
-#[rtype(result = "String")]
+#[rtype(result = "()")]
 pub struct RegisterWebSocket {
     /// Address of the recipient actor for this session
     pub addr: Recipient<Message>,
+
+    pub connection_id: Uuid,
 }
 /// Message sent when a session is disconnected
 #[derive(Message, Debug)]

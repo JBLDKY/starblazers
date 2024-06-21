@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::configuration::Settings;
 use crate::database::db::DatabaseClient;
+use crate::multiplayer::actors::UserStateManager;
 use crate::multiplayer::LobbyManager;
 use crate::routes::config_server;
 
@@ -44,7 +45,8 @@ impl Application {
 fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::io::Error> {
     let db_client = web::Data::new(Arc::new(db_client));
 
-    let lobby_server = web::Data::new(LobbyManager::new().start());
+    let lobby_manager = web::Data::new(LobbyManager::new().start());
+    let user_state_manager = web::Data::new(UserStateManager::new().start());
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
@@ -57,7 +59,8 @@ fn run(listener: TcpListener, db_client: DatabaseClient) -> Result<Server, std::
         App::new()
             .wrap(cors)
             .app_data(db_client.clone())
-            .app_data(lobby_server.clone())
+            .app_data(lobby_manager.clone())
+            .app_data(user_state_manager.clone())
             .configure(config_server)
     })
     .listen(listener)?
