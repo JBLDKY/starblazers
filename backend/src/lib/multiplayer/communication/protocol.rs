@@ -1,6 +1,6 @@
 use super::{
     common::{CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest},
-    message::Connect,
+    message::{Connect, RegisterWebSocket},
     user_state::{UserEvent, UserState},
 };
 use crate::{
@@ -10,6 +10,7 @@ use crate::{
 use actix::prelude::*;
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// This file defines data structures specifically used for sending and
 /// receiving data over WebSocket connections. These structures are
@@ -61,14 +62,18 @@ impl WebsocketAuthJwt {
 }
 
 impl ProtocolHandler for WebsocketAuthJwt {
-    fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsLobbySession, _ctx: &mut ws::WebsocketContext<WsLobbySession>) {
         let claims = self.claims().expect("Failed to parse claims");
         let event = UserEvent::Login(claims.uuid().expect("Invalid Uuid"));
-        let addr = ctx.address().into();
+        // let addr = ctx.address().into();
 
-        session.user_state.transition(event);
+        // session.user_state.transition(event);
 
-        session.lobby_manager_addr.do_send(Connect { addr, claims });
+        // session.lobby_manager_addr.do_send(Connect { addr, claims });
+        session.user_state_manager_addr.do_send(TransitionEvent {
+            connection_id: session.connection_id,
+            event,
+        });
     }
 }
 
@@ -84,4 +89,11 @@ impl From<UserState> for SynchronizeState {
     fn from(user_state: UserState) -> Self {
         Self { state: user_state }
     }
+}
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+pub struct TransitionEvent {
+    pub connection_id: Uuid,
+    pub event: UserEvent,
 }

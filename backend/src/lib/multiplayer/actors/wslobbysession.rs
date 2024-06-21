@@ -33,10 +33,10 @@ pub struct WsLobbySession {
     /// otherwise we drop connection.
     pub hb: Instant,
 
-    /// Chat server
+    /// Lobby manager server
     pub lobby_manager_addr: Addr<LobbyManager>,
 
-    /// Chat server
+    /// User state manager
     pub user_state_manager_addr: Addr<UserStateManager>,
 }
 

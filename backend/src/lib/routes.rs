@@ -255,7 +255,7 @@ async fn lobby_websocket(
 ) -> Result<HttpResponse, actix_web::Error> {
     ws::start(
         WsLobbySession {
-            connection_id: Uuid::nil(),
+            connection_id: Uuid::new_v4(),
             user_state: UserState::Unauthenticated,
             hb: Instant::now(),
             lobby_manager_addr: lm.get_ref().clone(),
