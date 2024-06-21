@@ -18,7 +18,7 @@ import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuKind } from '$lib/entity/entity_index';
 import { GameStateManager } from '$lib/system/game_state_manager';
-import type { SynchronizeStateMessage } from '$lib/types';
+import type { SynchronizeStateMessage, UserState } from '$lib/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -324,34 +324,12 @@ export class SpaceInvadersGame {
 	setSynchronizedState(data: SynchronizeStateMessage): void {
 		const state = data.state;
 		if (state.Authenticated) {
-			if (
-				this.currentMenu.kind === MenuKind.SomeoneElsesLobby ||
-				this.currentMenu.kind === MenuKind.CurrentPlayerOwnLobby
-			) {
-				this.state = GameState.MENU;
-				this.setCurrentMenu(MenuKind.Main);
-			}
+			this.handleAuthenticatedState();
 		} else if (state.Unauthenticated) {
+			this.handleUnauthenticatedState();
 		} else if (state.InLobby) {
+			this.handleInLobbyState(data.state);
 			// For some reason, if in someone elses lobby, it says ur in ur own lobby.
-			if (state.InLobby.lobby_id !== this.user.uuid) {
-				if (this.state !== GameState.MENU || this.currentMenu.kind !== MenuKind.SomeoneElsesLobby) {
-					this.state = GameState.MENU;
-					this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
-				}
-			} else {
-				if (
-					this.state !== GameState.MENU ||
-					this.currentMenu.kind !== MenuKind.CurrentPlayerOwnLobby
-				) {
-					this.state = GameState.MENU;
-					this.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
-				}
-			}
-			console.log(
-				'In Lobby:',
-				`Player ID: ${state.InLobby.player_id}, Lobby ID: ${state.InLobby.lobby_id}`
-			);
 		} else if (state.InGame) {
 			console.log(
 				'In Game:',
@@ -360,5 +338,60 @@ export class SpaceInvadersGame {
 		} else {
 			console.error('Unknown state type or malformed data');
 		}
+	}
+
+	handleUnauthenticatedState() {
+		// TODO: If a player is not authenticated, he should not be in the game
+		// Not sure if this code is even reachable if a player is not authenticated
+	}
+	handleAuthenticatedState() {
+		if (this.currentMenu === null) {
+			return;
+		}
+
+		if (
+			// These are the invalid states for when a player is merely authenticated
+			this.currentMenu.getKind() !== MenuKind.SomeoneElsesLobby ||
+			this.currentMenu.getKind() !== MenuKind.CurrentPlayerOwnLobby
+		) {
+			return;
+		}
+
+		this.state = GameState.MENU;
+		this.setCurrentMenu(MenuKind.Main);
+	}
+
+	handleInLobbyState(state: UserState) {
+		if (typeof state.InLobby === 'undefined') {
+			// Received invalid data
+			console.warn('Received bad state data: ', state, 'State should be `InLobby`.');
+			return;
+		}
+		if (
+			this.currentMenu !== null &&
+			[MenuKind.SomeoneElsesLobby, MenuKind.CurrentPlayerOwnLobby].includes(
+				this.currentMenu.getKind()
+			)
+		) {
+			// This is a correct situation
+			return;
+		}
+
+		// Player may or may not be in a menu, either way we set the GameState to in menu
+		this.state = GameState.MENU;
+
+		// Player is in his own lobby
+		if (this.user.uuid === state.InLobby.lobby_id) {
+			this.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
+			return;
+		}
+
+		// Player is in someone else's lobby
+		this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
+
+		console.log(
+			'In Lobby:',
+			`Player ID: ${state.InLobby.player_id}, Lobby ID: ${state.InLobby.lobby_id}`
+		);
 	}
 }

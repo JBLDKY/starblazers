@@ -34,10 +34,13 @@ export class WebSocketManager {
 			let data;
 			try {
 				data = JSON.parse(event.data);
-				this.handleReceivedWebSocketData(data);
 			} catch (error) {
+				console.log(event.data);
 				console.error('couldnt parse data received from websocket into json');
+				return;
 			}
+
+			this.handleReceivedWebSocketData(data);
 		};
 
 		this.ws.onclose = (event) => {
