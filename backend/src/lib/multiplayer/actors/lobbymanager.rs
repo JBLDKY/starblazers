@@ -193,35 +193,6 @@ impl Handler<ClientMessage> for LobbyManager {
     }
 }
 
-/// Join room, send disconnect message to old room
-/// send join message to new room
-impl Handler<Join> for LobbyManager {
-    type Result = ();
-
-    fn handle(&mut self, msg: Join, _: &mut Context<Self>) {
-        let Join { id, name } = msg;
-
-        // remove session from all lobbies
-        // for (n, sessions) in &mut self.lobbies.0 {
-        //     if sessions.remove(&id.to_string()) {
-        //         lobbies.push(n.to_owned());
-        //     }
-        // }
-        // send message to other users
-        // for room in lobbies {
-        //     self.send_message(&room, "Someone disconnected", id.to_string());
-        // }
-
-        // self.lobbies
-        //     .get_lobbies()
-        //     .entry(name.clone())
-        //     .or_default()
-        //     .insert(id.to_string());
-
-        // self.send_message(&name, "Someone connected", id.to_string());
-    }
-}
-
 impl Handler<GameState> for LobbyManager {
     type Result = ();
 
