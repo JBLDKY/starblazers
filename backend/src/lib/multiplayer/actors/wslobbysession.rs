@@ -82,6 +82,10 @@ impl WsLobbySession {
     pub fn player_state_mut(&mut self) -> &mut UserState {
         &mut self.user_state
     }
+
+    pub fn user_id(&self) -> Option<Uuid> {
+        self.user_state.user_id()
+    }
 }
 
 impl Actor for WsLobbySession {

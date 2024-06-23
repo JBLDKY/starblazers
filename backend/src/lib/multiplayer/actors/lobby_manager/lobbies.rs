@@ -62,6 +62,7 @@ impl Lobbies {
     ) -> Result<(), InvalidDataError> {
         if let Some(players) = self.lobbies.get_mut(&lobby_name) {
             players.insert(player);
+            self.player_to_lobby.insert(player, lobby_name);
             Ok(())
         } else {
             Err(InvalidDataError::LobbyDoesNotExist(lobby_name))
@@ -78,6 +79,7 @@ impl Lobbies {
             .ok_or_else(|| InvalidDataError::LobbyDoesNotExist(lobby_name.clone()))
             .and_then(|players| {
                 if players.remove(&player) {
+                    self.player_to_lobby.remove(&player);
                     Ok(())
                 } else {
                     Err(InvalidDataError::PlayerIsNotInLobby(lobby_name))

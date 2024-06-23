@@ -8,7 +8,7 @@ use crate::multiplayer::communication::common::{
     CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest,
 };
 use crate::multiplayer::communication::message::{
-    ClientMessage, Connect, Disconnect, Message, PlayersInLobby,
+    ClientMessage, Connect, Disconnect, PlayersInLobby,
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
 use crate::multiplayer::ListLobbies;
@@ -20,7 +20,6 @@ use super::lobbies::Lobbies;
 
 #[derive(Debug)]
 pub struct LobbyManager {
-    sessions: HashMap<String, Recipient<Message>>,
     lobbies: Lobbies,
     ring: HashMap<String, RingBuffer<GameState, 5>>,
 }
@@ -30,7 +29,6 @@ impl LobbyManager {
         // default room
 
         LobbyManager {
-            sessions: HashMap::new(),
             lobbies: Lobbies::new(),
             ring: HashMap::new(),
         }
@@ -60,7 +58,6 @@ impl Handler<Connect> for LobbyManager {
         // register session with random id
         let id = msg.claims.uuid.clone();
         log::info!("Connected: {}", id);
-        self.sessions.insert(id.clone(), msg.addr);
 
         let ring_buffer: RingBuffer<GameState, 5> = RingBuffer::new();
         self.ring.insert(id.clone(), ring_buffer);
