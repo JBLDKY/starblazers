@@ -1,10 +1,9 @@
+use crate::types::UserRecord;
+use actix_web::http::header::HeaderValue;
 use anyhow::anyhow;
 use jsonwebtoken::{decode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use warp::{http::header::HeaderValue, reject::Reject};
-
-use crate::types::UserRecord;
 
 const JWT_EXPIRY: Option<chrono::TimeDelta> = chrono::TimeDelta::try_minutes(30);
 
@@ -16,8 +15,6 @@ pub struct Claims {
     pub authority_level: String,
     pub uuid: String,
 }
-
-impl Reject for TokenError {}
 
 #[derive(Error, Debug, Deserialize, Serialize)]
 pub enum TokenError {

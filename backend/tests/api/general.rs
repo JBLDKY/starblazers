@@ -1,4 +1,4 @@
-use service::types::User;
+use service::types::{SignupError, User};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
@@ -14,7 +14,7 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    pub async fn new_test_user(&self) -> Result<User, sqlx::Error> {
+    pub async fn new_test_user(&self) -> Result<User, SignupError> {
         let user = User {
             id: None,
             email: "test@test.com".to_string(),

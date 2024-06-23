@@ -1,5 +1,7 @@
 use crate::claims::Claims;
-use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
+use crate::types::{
+    LoginDetails, LoginError, LoginMethod, Player, PublicUserRecord, SignupError, User,
+};
 use crate::websocket::MyWebSocket;
 use crate::{database::db::ArcDb, websocket::INDEX_HTML};
 use actix_web::http::header::{ContentType, HeaderValue};
@@ -37,14 +39,15 @@ async fn echo_websocket(
     ws::start(MyWebSocket::new(), &req, stream)
 }
 
-/// POST /auth/signup -> Returns TODO
+/// POST /auth/signup
 #[post("/auth/signup")]
-async fn sign_up(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, actix_web::Error> {
-    let user = serde_json::from_slice::<User>(&body)?;
+async fn sign_up(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, SignupError> {
+    let user = serde_json::from_slice::<User>(&body)
+        .map_err(|_| SignupError::Catchall("Not valid signup structure".to_string()))?; // TODO: check this string
     dbg!(&user);
     match db.create_user(&user).await {
         Ok(_) => Ok(HttpResponse::Ok().json(json!({"message:": user.username}))),
-        Err(e) => Err(actix_web::error::ErrorBadRequest(e)),
+        Err(e) => Err(e),
     }
 }
 
@@ -73,7 +76,7 @@ async fn players_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Er
 
     match result {
         Ok(players) => Ok(HttpResponse::Ok().json(players)),
-        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
+        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
     }
 }
 
@@ -86,14 +89,16 @@ async fn users_all(db: web::Data<ArcDb>) -> Result<HttpResponse, actix_web::Erro
 
     match result {
         Ok(users) => Ok(HttpResponse::Ok().json(users)),
-        Err(e) => Err(actix_web::error::ErrorImATeapot(e)),
+        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
     }
 }
 
 /// POST /auth/login -> Try to login
 #[post("/auth/login")]
-async fn login(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, actix_web::Error> {
-    let login_details = serde_json::from_slice::<LoginDetails>(&body)?;
+async fn login(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, LoginError> {
+    let login_details = serde_json::from_slice::<LoginDetails>(&body)
+        .map_err(|_| LoginError::Catchall("Not valid login structure".to_string()))?; // TODO: check this
+                                                                                      // string
     match db.check_login_details(&login_details).await {
         Ok(jwt) => {
             log::info!("Logged in!");
@@ -104,7 +109,7 @@ async fn login(db: web::Data<ArcDb>, body: web::Bytes) -> Result<HttpResponse, a
         }
         Err(e) => {
             log::error!("Error during login: {}", e);
-            Err(actix_web::error::ErrorImATeapot(e))
+            Err(e)
         }
     }
 }

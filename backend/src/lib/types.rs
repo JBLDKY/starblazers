@@ -1,14 +1,9 @@
 use std::fmt;
 
+use actix_web::{http::StatusCode, ResponseError};
 use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
-use warp::reject::Reject;
-
-#[derive(Debug)]
-pub struct DatabaseError(pub sqlx::Error);
-
-impl Reject for DatabaseError {}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct User {
@@ -79,7 +74,27 @@ impl From<UserRecord> for PublicUserRecord {
     }
 }
 
-#[derive(Error, Debug)]
+impl From<sqlx::Error> for SignupError {
+    fn from(err: sqlx::Error) -> Self {
+        SignupError::SqlError(err.to_string())
+    }
+}
+
+impl ResponseError for SignupError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        match *self {
+            SignupError::InvalidPassword
+            | SignupError::InvalidUsername
+            | SignupError::InvalidEmail => StatusCode::UNPROCESSABLE_ENTITY,
+            SignupError::UsernameUnavailable => StatusCode::CONFLICT,
+            SignupError::Catchall(_)
+            | SignupError::SqlError(_)
+            | SignupError::PasswordHashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+#[derive(Error, Debug, Serialize, Deserialize)]
 pub enum SignupError {
     #[error("Username already in use")]
     UsernameUnavailable,
@@ -92,11 +107,40 @@ pub enum SignupError {
 
     #[error("Password cannot be empty")]
     InvalidPassword,
+
+    #[error("Failed to hash the password: {0}")]
+    PasswordHashingError(String),
+
+    #[error("Encountered error: {0}")]
+    Catchall(String),
+
+    #[error("User input does not match expect format because: {0}")]
+    SqlError(String),
 }
 
-impl Reject for LoginError {}
+impl From<sqlx::Error> for LoginError {
+    fn from(err: sqlx::Error) -> Self {
+        LoginError::SqlError(err.to_string())
+    }
+}
 
-#[derive(Error, Debug)]
+// error_response returns json text with the below error text
+impl ResponseError for LoginError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        match *self {
+            LoginError::InvalidPassword
+            | LoginError::InvalidInputSentByUser(_)
+            | LoginError::UserDoesntExist
+            | LoginError::MissingCredentials => StatusCode::UNAUTHORIZED,
+            LoginError::Unhandled
+            | LoginError::Catchall(_)
+            | LoginError::SqlError(_)
+            | LoginError::PasswordHashingError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+#[derive(Error, Debug, Serialize, Deserialize)]
 pub enum LoginError {
     #[error("No username or email provided")]
     MissingCredentials,
@@ -119,6 +163,6 @@ pub enum LoginError {
     #[error("User input does not match expect format because: {0}")]
     InvalidInputSentByUser(String),
 
-    #[error(transparent)]
-    SqlError(#[from] sqlx::Error),
+    #[error("User input does not match expect format because: {0}")]
+    SqlError(String),
 }

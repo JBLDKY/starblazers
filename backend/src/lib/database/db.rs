@@ -1,6 +1,7 @@
 use anyhow::Result;
 use email_address::EmailAddress;
 use std::sync::Arc;
+use tokio::task;
 use uuid::Uuid;
 
 use crate::{
@@ -30,14 +31,18 @@ fn verify_password(hashed: &str, password: &str) -> Result<bool, argon2::passwor
 }
 
 /// Returns the password's (salted) hash
-fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
+async fn hash_password(password: String) -> Result<String, argon2::password_hash::Error> {
     let salt = SaltString::generate(&mut OsRng);
 
     let argon2 = Argon2::default();
 
-    let password_hash = argon2
-        .hash_password(password.as_bytes(), &salt)?
-        .to_string();
+    let password_hash = task::spawn_blocking(move || {
+        argon2
+            .hash_password(password.as_bytes(), &salt)
+            .map(|hash| hash.to_string())
+    })
+    .await
+    .expect("Argon2 Hashing Error")?;
 
     Ok(password_hash)
 }
@@ -66,7 +71,7 @@ impl DatabaseClient {
     }
 
     /// Create a new user with the provided parameters
-    pub async fn create_user(&self, user: &User) -> Result<(), sqlx::Error> {
+    pub async fn create_user(&self, user: &User) -> Result<(), SignupError> {
         log::info!("Creating new account....");
         let creation_date = if let Some(creation_date) = user.creation_date {
             creation_date // Use the provided value if provided
@@ -77,35 +82,28 @@ impl DatabaseClient {
         // valid format email check
         if !EmailAddress::is_valid(&user.email) {
             log::error!("Email address is invalid");
-            return Err(SignupError::InvalidEmail)
-                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+            return Err(SignupError::InvalidEmail);
         }
 
         // check non-empty username
         if user.username.is_empty() {
             log::error!("Username is empty");
-            return Err(SignupError::InvalidUsername)
-                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+            return Err(SignupError::InvalidUsername);
         }
 
         // check non-empty password
         if user.password.is_empty() {
             log::error!("Password is empty");
-            return Err(SignupError::InvalidPassword)
-                .map_err(|e| sqlx::Error::Configuration(e.to_string().into()));
+            return Err(SignupError::InvalidPassword);
         }
 
         let games_played = 0;
 
         let authority = "user";
 
-        let hashed_password = hash_password(&user.password).map_err(|e| {
-            log::error!("Failed to hash password: {}", e);
-
-            // convert error so the return type
-            // doesnt need changing
-            sqlx::Error::Configuration(e.to_string().into())
-        })?;
+        let hashed_password = hash_password(user.password.clone())
+            .await
+            .map_err(|_| SignupError::PasswordHashingError("Argon2 Hashing Error".to_string()))?;
 
         // generate UUID for player identification
         let uuid = Uuid::new_v4();
