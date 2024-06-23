@@ -84,12 +84,12 @@ pub struct GetState {
 #[derive(Message)]
 #[rtype(result = "Result<(), ServiceError>")]
 pub struct SetState {
-    pub connection_id: usize,
+    pub connection_id: Uuid,
     pub state: UserState,
 }
 
 #[derive(Message)]
 #[rtype(result = "Result<(), ServiceError>")]
 pub struct DeleteState {
-    pub connection_id: usize,
+    pub connection_id: Uuid,
 }

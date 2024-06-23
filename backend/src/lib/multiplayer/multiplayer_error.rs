@@ -1,4 +1,5 @@
 use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Error, Debug)]
 pub enum ServiceError {
@@ -13,4 +14,7 @@ pub enum ServiceError {
 
     #[error("Player is not in this lobby.")]
     PlayerIsNotInLobby(String),
+
+    #[error("The connection with ID `{0}` is not currently registered.")]
+    ConnectionNotRegistered(Uuid),
 }
