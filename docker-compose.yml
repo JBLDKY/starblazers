@@ -1,0 +1,41 @@
+services:
+  frontend:
+    build:
+      context: ./sveltblazers
+      dockerfile: Dockerfile
+    volumes:
+      - ./sveltblazers:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - API_URL=http://backend:3030
+
+  backend:
+    restart: on-failure
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    ports:
+      - "3030:3030"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgres://postgres:password@db/starblazers"
+
+  db:
+    image: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=starblazers
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+  node_modules:
