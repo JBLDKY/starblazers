@@ -52,8 +52,6 @@ impl WsLobbySession {
                 return;
             }
 
-            // heartbeat timed out
-
             // stop actor
             ctx.stop();
         });

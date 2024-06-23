@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::multiplayer::communication::common::JoinLobbyRequest;
 use crate::multiplayer::communication::message::{DeleteState, SetState, UpdateState};
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
@@ -185,5 +186,21 @@ impl Handler<UpdateState> for UserStateManager {
         self.users.insert(*player_id, msg.state.clone());
 
         Ok(())
+    }
+}
+
+impl Handler<JoinLobbyRequest> for UserStateManager {
+    type Result = ();
+    fn handle(&mut self, req: JoinLobbyRequest, _ctx: &mut Self::Context) {
+        // TODO:  Handle errors
+        let player_id =
+            uuid::Uuid::parse_str(&req.player_id).unwrap_or_else(|_| return Default::default());
+
+        let lobby_id =
+            uuid::Uuid::parse_str(&req.lobby_name).unwrap_or_else(|_| return Default::default());
+
+        if let Some(state) = self.users.get_mut(&player_id) {
+            state.transition(UserEvent::JoinLobby(lobby_id))
+        }
     }
 }

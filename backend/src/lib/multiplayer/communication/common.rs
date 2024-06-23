@@ -67,8 +67,9 @@ impl ProtocolHandler for CreateLobbyRequest {
         } else {
             // This shouldn't happen...
             log::error!(
-                "Could not create a lobby because user has no uuid.\nUser state: {:?}",
-                session.user_state
+                "Could not create a lobby because user has no uuid.\nUser state: {:?}, user {:?}",
+                session.user_state,
+                session.connection_id
             );
         };
     }
@@ -76,7 +77,7 @@ impl ProtocolHandler for CreateLobbyRequest {
 
 #[derive(Message)]
 #[rtype(result = "()")]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JoinLobbyRequest {
     pub lobby_name: String,
     pub player_id: String,
@@ -89,7 +90,8 @@ impl ProtocolHandler for JoinLobbyRequest {
         let lobby_id = Uuid::parse_str(&self.lobby_name).expect("failed to parse to uuid");
 
         // Send the CreateLobbyRequest to the LobbyManager to create the lobby and add the user to it
-        session.lobby_manager_addr.do_send(self);
+        session.lobby_manager_addr.do_send(self.clone());
+        session.user_state_manager_addr.do_send(self);
 
         session
             .user_state
