@@ -62,13 +62,13 @@ impl WebsocketAuthJwt {
 
 impl ProtocolHandler for WebsocketAuthJwt {
     fn handle(self, session: &mut WsLobbySession, _ctx: &mut ws::WebsocketContext<WsLobbySession>) {
-        let claims = self.claims().expect("Failed to parse claims");
+        let claims = self.claims();
+        if claims.is_err() {
+            return;
+        }
+        let claims = claims.unwrap();
+
         let event = UserEvent::Login(claims.uuid().expect("Invalid Uuid"));
-        // let addr = ctx.address().into();
-
-        // session.user_state.transition(event);
-
-        // session.lobby_manager_addr.do_send(Connect { addr, claims });
         session.user_state_manager_addr.do_send(TransitionEvent {
             connection_id: session.connection_id,
             event,

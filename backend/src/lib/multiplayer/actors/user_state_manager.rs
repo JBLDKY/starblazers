@@ -15,8 +15,8 @@ use uuid::Uuid;
 
 #[derive(Default)]
 pub struct UserStateManager {
-    users: HashMap<Uuid, UserState>,
-    sessions: HashMap<Uuid, Uuid>, // websocket connection uuid to player_id
+    users: HashMap<Uuid, UserState>, // connectiond id to player_id
+    sessions: HashMap<Uuid, Uuid>,   // websocket connection uuid to player_id
 }
 impl UserStateManager {
     pub fn new() -> Self {
@@ -49,7 +49,7 @@ impl Handler<TransitionEvent> for UserStateManager {
                     UserState::Authenticated { player_id }
                     | UserState::InLobby { player_id, .. }
                     | UserState::InGame { player_id, .. } => {
-                        if user_id == *player_id {
+                        if &user_id == player_id {
                             connection_id = *cid;
                             already_connected = true;
                             break;
@@ -68,6 +68,7 @@ impl Handler<TransitionEvent> for UserStateManager {
             }
 
             log::info!("User login event: {}", user_id);
+            self.sessions.insert(connection_id, user_id);
         }
 
         if let Some(state) = self.users.get_mut(&event.connection_id) {
@@ -77,7 +78,8 @@ impl Handler<TransitionEvent> for UserStateManager {
         }
 
         log::info!("User transitioned: {}", event.connection_id);
-        log::info!("All sessions: {:#?}", self.users);
+        log::info!("All users: {:#?}", self.users);
+        log::info!("All sessions: {:#?}", self.sessions);
     }
 }
 

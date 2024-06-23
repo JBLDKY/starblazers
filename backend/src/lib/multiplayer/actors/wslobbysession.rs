@@ -68,7 +68,6 @@ impl WsLobbySession {
             log::debug!("{:?}", &self.connection_id);
             ctx.ping(b"");
             ctx.text(s);
-            // self.addr.do_send(DebugLog); // Use this to print the LobbyManager
         } else {
             // Heartbeat timed out
             ctx.stop();
