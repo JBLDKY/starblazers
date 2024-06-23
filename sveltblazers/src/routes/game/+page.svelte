@@ -2,18 +2,16 @@
 	import P5, { type Sketch } from 'p5-svelte';
 	import { onMount } from 'svelte';
 	import { SpaceInvadersGame } from '../../lib/game/game';
-	import { jwtStore } from '../../store/auth';
+	import { jwtStore, playerInfoStore } from '../../store/auth';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import ChatBox from './ChatBox.svelte';
 	import { validateJwt } from '../../hooks/withJwt';
-	import { get_player_info, type PublicPlayerData } from '../helpers';
+	import { get_player_info } from '../helpers';
 
 	const toastStore = getToastStore();
 	let spaceInvadersGame: SpaceInvadersGame;
-
-	let player_info: PublicPlayerData;
 
 	onMount(async () => {
 		// This is a protected page; login is required
@@ -25,6 +23,14 @@
 			goto('/login');
 		} else {
 			try {
+				const player_info = await get_player_info();
+				playerInfoStore.set(player_info);
+			} catch (error) {
+				console.error(error);
+				toastStore.trigger({ message: 'Who are you?' });
+				goto('/login');
+			}
+			try {
 				await validateJwt();
 				console.log('JWT is valid');
 			} catch (error) {
@@ -32,14 +38,6 @@
 				toastStore.trigger({ message: 'Session expired' });
 				goto('/login');
 			}
-		}
-
-		try {
-			player_info = await get_player_info();
-		} catch (error) {
-			console.error(error);
-			toastStore.trigger({ message: 'Who are you?' });
-			goto('/login');
 		}
 	});
 
@@ -51,27 +49,32 @@
 				p.fill('deeppink');
 				p.textFont(font);
 
+				const res = get(playerInfoStore);
+
 				// Wait for our font to load before starting the game, else the main menu will not be centered
-				if (player_info) {
-					const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(
-						p,
-						player_info['uuid']
-					);
-					spaceInvadersGame.start();
-				}
+				const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p, res['uuid']);
+				spaceInvadersGame.start();
 			});
 		};
 
-		// p.draw = () => {
-		// 	if (spaceInvadersGame !== undefined) {
-		// 		spaceInvadersGame.update();
-		// 		spaceInvadersGame.draw();
-		// 	}
-		// };
+		p.draw = () => {
+			if (spaceInvadersGame !== undefined) {
+				spaceInvadersGame.update();
+				spaceInvadersGame.draw();
+			}
+		};
 	};
 </script>
 
 <div class="game m-0 flex h-screen w-screen flex-col items-center justify-center bg-black p-0">
+	<!-- {#await get(playerInfoStore)} -->
+	<!-- 	<div>connecting ...</div> -->
+	<!-- {:then whatever} -->
 	<P5 {sketch} />
 	<ChatBox />
+	<!-- {:catch error} -->
+	<!-- 	<div> -->
+	<!-- 		<span>Could not authenticate: {error.message} </span> -->
+	<!-- 	</div> -->
+	<!-- {/await} -->
 </div>
