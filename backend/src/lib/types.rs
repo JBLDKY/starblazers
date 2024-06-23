@@ -96,7 +96,7 @@ pub enum SignupError {
 
 impl Reject for LoginError {}
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize)]
 pub enum LoginError {
     #[error("No username or email provided")]
     MissingCredentials,
@@ -119,6 +119,12 @@ pub enum LoginError {
     #[error("User input does not match expect format because: {0}")]
     InvalidInputSentByUser(String),
 
-    #[error(transparent)]
-    SqlError(#[from] sqlx::Error),
+    #[error("User input does not match expect format because: {0}")]
+    SqlError(String),
+}
+
+impl From<sqlx::Error> for LoginError {
+    fn from(err: sqlx::Error) -> Self {
+        LoginError::SqlError(err.to_string())
+    }
 }

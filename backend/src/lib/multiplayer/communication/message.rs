@@ -1,14 +1,15 @@
 use crate::claims::Claims;
+use crate::multiplayer::multiplayer_error::ServiceError;
 use actix::prelude::*;
 use uuid::Uuid;
+
+use super::user_state::UserState;
 
 /// This file defines various messages and data structures used exclusively within the
 /// Actix actor-based communication system of the application. These
 /// messages facilitate interactions between different components,
-/// such as chat sessions, game state synchronization, and client-server
-/// communication in a multiplayer environment. Each message is tailored
-/// to be used within the Actix actor framework, ensuring type-safe
-/// and asynchronous communication.
+/// such as chat sessions, game state synchronization, and client-server communication in a multiplayer environment. Each message is tailored to be used within the Actix actor framework, ensuring type-safe and asynchronous communication.
+///
 
 /// A simple message structure wrapping a String
 #[derive(Message)]
@@ -73,3 +74,22 @@ pub struct PlayersInLobby {
 #[derive(Message)]
 #[rtype(result = "Vec<String>")]
 pub struct ListLobbies;
+
+#[derive(Message)]
+#[rtype(result = "Option<UserState>")]
+pub struct GetState {
+    pub connection_id: Uuid,
+}
+
+#[derive(Message)]
+#[rtype(result = "Result<(), ServiceError>")]
+pub struct SetState {
+    pub connection_id: usize,
+    pub state: UserState,
+}
+
+#[derive(Message)]
+#[rtype(result = "Result<(), ServiceError>")]
+pub struct DeleteState {
+    pub connection_id: usize,
+}

@@ -1,21 +1,27 @@
 use std::collections::HashMap;
 
-use actix::{Actor, Context, Handler};
-use uuid::Uuid;
-
+use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
-    communication::{message::RegisterWebSocket, protocol::TransitionEvent, user_state::UserEvent},
+    communication::{
+        message::{GetState, RegisterWebSocket},
+        protocol::TransitionEvent,
+        user_state::UserEvent,
+    },
     UserState,
 };
+use actix::{Actor, Context, Handler};
+use uuid::Uuid;
 
 #[derive(Default)]
 pub struct UserStateManager {
     users: HashMap<Uuid, UserState>,
+    sessions: HashMap<Uuid, Uuid>, // websocket connection uuid to player_id
 }
 impl UserStateManager {
     pub fn new() -> Self {
         Self {
             users: HashMap::new(),
+            sessions: HashMap::new(),
         }
     }
 }
@@ -91,5 +97,16 @@ impl Handler<RegisterWebSocket> for UserStateManager {
 
         log::info!("New session registered: {}", msg.connection_id);
         log::info!("All sessions: {:#?}", self.users);
+    }
+}
+
+impl Handler<GetState> for UserStateManager {
+    type Result = Option<UserState>;
+
+    fn handle(&mut self, msg: GetState, _: &mut Context<Self>) -> Self::Result {
+        self.sessions
+            .get(&msg.connection_id)
+            .and_then(|player_id| self.users.get(player_id))
+            .cloned()
     }
 }
