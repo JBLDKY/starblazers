@@ -17,4 +17,7 @@ pub enum ServiceError {
 
     #[error("The connection with ID `{0}` is not currently registered.")]
     ConnectionNotRegistered(Uuid),
+
+    #[error("The connection with ID `{0}` Does not have a registered state. This error is critical; each connection must have a state.")]
+    StateNotRegistered(Uuid),
 }

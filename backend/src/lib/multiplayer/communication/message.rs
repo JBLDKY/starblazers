@@ -93,3 +93,10 @@ pub struct SetState {
 pub struct DeleteState {
     pub connection_id: Uuid,
 }
+
+#[derive(Message)]
+#[rtype(result = "Result<(), ServiceError>")]
+pub struct UpdateState {
+    pub connection_id: Uuid,
+    pub state: UserState,
+}

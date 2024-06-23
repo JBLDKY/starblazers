@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::multiplayer::communication::message::SetState;
+use crate::multiplayer::communication::message::{DeleteState, SetState};
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
     communication::{
@@ -137,6 +137,27 @@ impl Handler<SetState> for UserStateManager {
                 msg.connection_id,
                 msg.state.clone()
             );
+        }
+
+        Ok(())
+    }
+}
+
+impl Handler<DeleteState> for UserStateManager {
+    type Result = Result<(), ServiceError>;
+
+    fn handle(&mut self, msg: DeleteState, _: &mut Context<Self>) -> Self::Result {
+        let player_id = self.sessions.get(&msg.connection_id);
+
+        if player_id.is_none() {
+            return Err(ServiceError::ConnectionNotRegistered(msg.connection_id));
+        }
+        let player_id = player_id.unwrap();
+
+        let old_state = self.users.remove(player_id);
+
+        if old_state.is_none() {
+            return Err(ServiceError::StateNotRegistered(*player_id));
         }
 
         Ok(())
