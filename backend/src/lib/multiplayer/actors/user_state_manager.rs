@@ -3,14 +3,9 @@ use std::collections::HashMap;
 use actix::{Actor, Context, Handler};
 use uuid::Uuid;
 
-use crate::{
-    multiplayer::{
-        communication::{
-            message::RegisterWebSocket, protocol::TransitionEvent, user_state::UserEvent,
-        },
-        UserState,
-    },
-    types::User,
+use crate::multiplayer::{
+    communication::{message::RegisterWebSocket, protocol::TransitionEvent, user_state::UserEvent},
+    UserState,
 };
 
 #[derive(Default)]
@@ -39,6 +34,7 @@ impl Handler<TransitionEvent> for UserStateManager {
         let mut connection_id = Uuid::default();
         let mut already_connected = false;
 
+        // Check if the user is already registered with the websocket
         if let UserEvent::Login(user_id) = event.event {
             for (cid, user_state) in &self.users {
                 match user_state {
@@ -85,7 +81,7 @@ impl Handler<RegisterWebSocket> for UserStateManager {
         // TODO: This should probably fail if the user is already connected, or rather
         // the old connection should be restored instead
         if let Some(state) = self.users.get_mut(&msg.connection_id) {
-            log::info!("OLD SESSION REGISTERED: {}", msg.connection_id);
+            log::error!("OLD SESSION REGISTERED: {}", msg.connection_id);
             *state = UserState::Unauthenticated;
             return;
         };

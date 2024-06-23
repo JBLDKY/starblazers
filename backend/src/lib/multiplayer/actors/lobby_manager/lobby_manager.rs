@@ -8,107 +8,15 @@ use crate::multiplayer::communication::common::{
     CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest,
 };
 use crate::multiplayer::communication::message::{
-    ClientMessage, Connect, Disconnect, Join, Message, RegisterWebSocket,
+    ClientMessage, Connect, Disconnect, Message, PlayersInLobby,
 };
 use crate::multiplayer::ringbuffer::RingBuffer;
-use crate::multiplayer::InvalidDataError;
+use crate::multiplayer::ListLobbies;
 use actix::prelude::*;
 use std::collections::{HashMap, HashSet};
-use std::fmt;
 use uuid::Uuid;
 
-#[derive(Debug)]
-pub struct Lobbies {
-    lobbies: HashMap<String, HashSet<Uuid>>,
-    player_to_lobby: HashMap<Uuid, String>,
-}
-
-impl Lobbies {
-    pub fn get(&self) -> &HashMap<String, HashSet<Uuid>> {
-        &self.lobbies
-    }
-
-    pub fn new() -> Self {
-        Self {
-            lobbies: HashMap::new(),
-            player_to_lobby: HashMap::new(),
-        }
-    }
-
-    pub fn new_lobby(&mut self, lobby_name: String) -> Result<(), InvalidDataError> {
-        if self.lobbies.contains_key(&lobby_name) {
-            return Err(InvalidDataError::LobbyAlreadyExists);
-        }
-
-        self.lobbies.insert(lobby_name, HashSet::new());
-
-        Ok(())
-    }
-
-    pub fn empty_lobbies(&self) -> Vec<String> {
-        self.lobbies
-            .iter()
-            .filter_map(|(key, value)| {
-                if value.is_empty() {
-                    Some(key.to_owned())
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    pub fn remove_empty(&mut self) {
-        for key in self.empty_lobbies() {
-            log::info!("Removing empty lobby: {}", &key);
-            self.lobbies.remove(&key);
-        }
-    }
-
-    pub fn add_player_to(
-        &mut self,
-        player: Uuid,
-        lobby_name: String,
-    ) -> Result<(), InvalidDataError> {
-        if let Some(players) = self.lobbies.get_mut(&lobby_name) {
-            players.insert(player);
-            Ok(())
-        } else {
-            Err(InvalidDataError::LobbyDoesNotExist(lobby_name))
-        }
-    }
-
-    pub fn remove_lobby(&mut self, lobby_name: &str) -> Option<HashSet<Uuid>> {
-        self.lobbies.remove(lobby_name)
-    }
-
-    pub fn remove_player_from_lobby(
-        &mut self,
-        player: Uuid,
-        lobby_name: String,
-    ) -> Result<(), InvalidDataError> {
-        self.lobbies
-            .get_mut(&lobby_name)
-            .ok_or_else(|| InvalidDataError::LobbyDoesNotExist(lobby_name.clone()))
-            .and_then(|players| {
-                if players.remove(&player) {
-                    Ok(())
-                } else {
-                    Err(InvalidDataError::PlayerIsNotInLobby(lobby_name))
-                }
-            })
-    }
-}
-
-impl fmt::Display for Lobbies {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Lobbies: {:?}\nPlayer-To-Lobby: {:?}",
-            self.lobbies, self.player_to_lobby
-        )
-    }
-}
+use super::lobbies::Lobbies;
 
 #[derive(Debug)]
 pub struct LobbyManager {
@@ -127,19 +35,6 @@ impl LobbyManager {
             ring: HashMap::new(),
         }
     }
-
-    // /// Send message to all users in the room
-    // fn send_message(&self, room: &str, message: &str, skip_id: Uuid) {
-    //     if let Some(sessions) = self.lobbies.lobbies.get(room) {
-    //         for id in sessions {
-    //             if *id != skip_id {
-    //                 if let Some(addr) = self.sessions.get(id) {
-    //                     addr.do_send(Message(message.to_owned()));
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 }
 
 impl Default for LobbyManager {
@@ -188,8 +83,8 @@ impl Handler<Disconnect> for LobbyManager {
 impl Handler<ClientMessage> for LobbyManager {
     type Result = ();
 
-    fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
-        // self.send_message(&msg.lobby, msg.msg.as_str(), msg.id.to_string());
+    fn handle(&mut self, _msg: ClientMessage, _: &mut Context<Self>) {
+        todo!()
     }
 }
 
@@ -229,7 +124,7 @@ impl Handler<CreateLobbyRequest> for LobbyManager {
 
 impl Handler<JoinLobbyRequest> for LobbyManager {
     type Result = ();
-    fn handle(&mut self, req: JoinLobbyRequest, ctx: &mut Self::Context) {
+    fn handle(&mut self, req: JoinLobbyRequest, _ctx: &mut Self::Context) {
         log::info!("\njoin lobby request: {:#?}", req);
         log::info!(
             "Player `{}` joined lobby `{}`, current lobbies:\n",
@@ -243,10 +138,6 @@ impl Handler<JoinLobbyRequest> for LobbyManager {
         log::info!("{:#?}\n", &self.lobbies);
     }
 }
-
-#[derive(Message)]
-#[rtype(result = "Vec<String>")]
-pub struct ListLobbies;
 
 impl Handler<ListLobbies> for LobbyManager {
     type Result = MessageResult<ListLobbies>;
@@ -280,12 +171,6 @@ impl Handler<LeaveLobbyRequest> for LobbyManager {
     }
 }
 
-#[derive(Message, Debug)]
-#[rtype(result = "Vec<String>")]
-pub struct PlayersInLobby {
-    pub lobby_name: String,
-}
-
 impl Handler<PlayersInLobby> for LobbyManager {
     type Result = MessageResult<PlayersInLobby>;
 
@@ -300,16 +185,5 @@ impl Handler<PlayersInLobby> for LobbyManager {
             .collect();
 
         MessageResult(players)
-    }
-}
-
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct DebugLog;
-
-impl Handler<DebugLog> for LobbyManager {
-    type Result = ();
-    fn handle(&mut self, _: DebugLog, _: &mut Self::Context) {
-        log::info!("{:#?}", &self);
     }
 }

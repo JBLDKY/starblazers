@@ -1,6 +1,5 @@
 use super::{
     common::{CreateLobbyRequest, GameState, JoinLobbyRequest, LeaveLobbyRequest},
-    message::{Connect, RegisterWebSocket},
     user_state::{UserEvent, UserState},
 };
 use crate::{
@@ -12,7 +11,7 @@ use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// This file defines data structures specifically used for sending and
+/// This file defines data structures specifically used exclusively for sending and
 /// receiving data over WebSocket connections. These structures are
 /// serialized and deserialized for communication between the client
 /// and server in real-time.

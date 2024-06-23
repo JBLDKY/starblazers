@@ -3,7 +3,8 @@ pub mod communication;
 pub mod multiplayer_error;
 pub mod ringbuffer;
 
-pub use actors::{ListLobbies, LobbyManager, PlayersInLobby, WsLobbySession};
+pub use actors::{LobbyManager, WsLobbySession};
+pub use communication::message::{ListLobbies, PlayersInLobby};
 pub use communication::user_state::UserState;
 pub use multiplayer_error::InvalidDataError;
 pub use ringbuffer::RingBuffer;

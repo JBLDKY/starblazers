@@ -127,15 +127,6 @@ impl Actor for WsLobbySession {
     }
 }
 
-/// Handle messages from chat server, we simply send it to peer websocket
-impl Handler<Message> for WsLobbySession {
-    type Result = ();
-
-    fn handle(&mut self, msg: Message, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
-    }
-}
-
 /// WebSocket message handler
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
@@ -180,5 +171,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
             }
             ws::Message::Nop => (),
         }
+    }
+}
+
+/// Handle messages from chat server, we simply send it to peer websocket
+impl Handler<Message> for WsLobbySession {
+    type Result = ();
+
+    fn handle(&mut self, msg: Message, ctx: &mut Self::Context) {
+        ctx.text(msg.0);
     }
 }

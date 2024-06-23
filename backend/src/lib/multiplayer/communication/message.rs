@@ -2,7 +2,7 @@ use crate::claims::Claims;
 use actix::prelude::*;
 use uuid::Uuid;
 
-/// This file defines various messages and data structures used in the
+/// This file defines various messages and data structures used exclusively within the
 /// Actix actor-based communication system of the application. These
 /// messages facilitate interactions between different components,
 /// such as chat sessions, game state synchronization, and client-server
@@ -63,3 +63,13 @@ pub struct Join {
     /// The name of the room to join
     pub name: String,
 }
+
+#[derive(Message, Debug)]
+#[rtype(result = "Vec<String>")]
+pub struct PlayersInLobby {
+    pub lobby_name: String,
+}
+
+#[derive(Message)]
+#[rtype(result = "Vec<String>")]
+pub struct ListLobbies;
