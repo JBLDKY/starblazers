@@ -253,9 +253,33 @@ async fn lobby_websocket(
     lm: actix_web::web::Data<Addr<LobbyManager>>,
     usm: actix_web::web::Data<Addr<UserStateManager>>,
 ) -> Result<HttpResponse, actix_web::Error> {
+    let header_value: Option<&HeaderValue> = req.headers().get("cookie");
+
+    let claims;
+
+    match header_value {
+        Some(header_value) => match Claims::from_header_value(header_value) {
+            Ok(v) => claims = v,
+            Err(e) => {
+                log::error!("Error validating jwt: {}", e);
+                return Ok(HttpResponse::Unauthorized().finish());
+            }
+        },
+        None => {
+            log::error!("Authorization header not found!");
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+    }
+
+    let user_id = match claims.uuid() {
+        Ok(v) => v,
+        Err(_) => return Ok(HttpResponse::Unauthorized().finish()),
+    };
+
     ws::start(
         WsLobbySession {
             connection_id: Uuid::new_v4(),
+            user_id,
             user_state: UserState::Unauthenticated,
             hb: Instant::now(),
             lobby_manager_addr: lm.get_ref().clone(),

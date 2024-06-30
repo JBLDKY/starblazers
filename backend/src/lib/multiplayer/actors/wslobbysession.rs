@@ -26,6 +26,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct WsLobbySession {
     /// Player's Uuid to identify the connection
     pub user_state: UserState,
+    pub user_id: Uuid,
 
     pub connection_id: Uuid,
 

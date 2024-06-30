@@ -23,6 +23,8 @@ export class WebSocketManager {
 	}
 
 	connect() {
+		document.cookie = 'Authorization=' + get(jwtStore) + '; path=/';
+
 		this.ws = new WebSocket(this.url);
 
 		this.ws.onopen = () => {
