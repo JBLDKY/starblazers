@@ -79,9 +79,9 @@ impl UserState {
 
     pub fn user_id(&self) -> Option<Uuid> {
         match self {
-            UserState::Authenticated { player_id } => Some(*player_id),
-            UserState::InLobby { player_id, .. } => Some(*player_id),
-            UserState::InGame { player_id, .. } => Some(*player_id),
+            UserState::Authenticated { player_id }
+            | UserState::InLobby { player_id, .. }
+            | UserState::InGame { player_id, .. } => Some(*player_id),
         }
     }
 }
