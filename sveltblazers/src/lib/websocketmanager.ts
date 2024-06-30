@@ -64,7 +64,7 @@ export class WebSocketManager {
 	}
 
 	sendMessage(data: BaseWebSocketMessage) {
-		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+		if (this.ws === null || this.ws.readyState !== WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
 			this.close();
 			return;
@@ -89,6 +89,10 @@ export class WebSocketManager {
 		if (this.ws) {
 			this.ws.close();
 		}
+	}
+
+	isOk(): boolean {
+		return Boolean(this.ws !== null && this.ws.readyState == 1);
 	}
 }
 

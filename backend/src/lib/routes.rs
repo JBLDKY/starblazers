@@ -281,11 +281,19 @@ async fn lobby_websocket(
         }
     };
 
-    let ws_connection_exists = usm.send(CheckExistingConnection { user_id }).await.ok();
-    if ws_connection_exists.unwrap_or(false) {
-        log::error!("Websocket connection for {} already exists", user_id);
-        return Ok(HttpResponse::Ok().finish());
-    }
+    let connection_id = Uuid::new_v4();
+    let ws_connection_exists = usm
+        .send(CheckExistingConnection {
+            connection_id,
+            user_id,
+        })
+        .await
+        .ok();
+
+    // if ws_connection_exists.unwrap_or(false) {
+    //     log::error!("Websocket connection for {} already exists", user_id);
+    //     return Ok(HttpResponse::Ok().finish());
+    // }
 
     log::info!("Connecting new connection for {}", claims.username);
 

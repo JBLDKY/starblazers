@@ -28,6 +28,21 @@ impl UserStateManager {
             states: HashMap::new(),
         }
     }
+
+    pub fn get_connection_id_by_player_id(&self, player_id: Uuid) -> Option<Uuid> {
+        for (key, value) in self.states.iter() {
+            let registered_player_id = match value {
+                UserState::Authenticated { player_id }
+                | UserState::InGame { player_id, .. }
+                | UserState::InLobby { player_id, .. } => player_id,
+            };
+
+            if player_id == *registered_player_id {
+                return Some(*key);
+            }
+        }
+        None
+    }
 }
 
 /// Make actor from `LobbyServer`
@@ -108,16 +123,25 @@ impl Handler<GetState> for UserStateManager {
 impl Handler<CheckExistingConnection> for UserStateManager {
     type Result = bool;
     fn handle(&mut self, msg: CheckExistingConnection, _: &mut Context<Self>) -> Self::Result {
-        for state in self.states.values() {
-            let player_uuid = match state {
-                UserState::Authenticated { player_id } => player_id,
-                UserState::InGame { player_id, .. } => player_id,
-                UserState::InLobby { player_id, .. } => player_id,
-            };
-            if *player_uuid == msg.user_id {
-                return true;
-            }
-        }
+        let already_connected_connection_id = self.get_connection_id_by_player_id(msg.user_id);
+
+        if let Some(already_connected_connection_id) = already_connected_connection_id {
+            let s = self
+                .states
+                .remove(&already_connected_connection_id)
+                .expect("Key not in hashmap");
+
+            self.states.insert(msg.connection_id, s);
+
+            log::warn!(
+                "Player is already connected: {}\n Old connection_id: {}\n New connection_id: {}",
+                msg.user_id,
+                already_connected_connection_id,
+                msg.connection_id,
+            );
+            return true;
+        };
+
         false
     }
 }
