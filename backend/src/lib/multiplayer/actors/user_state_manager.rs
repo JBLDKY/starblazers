@@ -121,28 +121,38 @@ impl Handler<GetState> for UserStateManager {
 }
 
 impl Handler<CheckExistingConnection> for UserStateManager {
-    type Result = bool;
+    type Result = ();
     fn handle(&mut self, msg: CheckExistingConnection, _: &mut Context<Self>) -> Self::Result {
         let already_connected_connection_id = self.get_connection_id_by_player_id(msg.user_id);
 
         if let Some(already_connected_connection_id) = already_connected_connection_id {
-            let s = self
+            let state = self
                 .states
                 .remove(&already_connected_connection_id)
                 .expect("Key not in hashmap");
 
-            self.states.insert(msg.connection_id, s);
+            // Player is already connected, update his old state with his new connection id
+            self.states.insert(msg.connection_id, state);
 
             log::warn!(
-                "Player is already connected: {}\n Old connection_id: {}\n New connection_id: {}",
+                "Player is already connected: {:?}\n Old connection_id: {:?}\n New connection_id: {:?}",
                 msg.user_id,
                 already_connected_connection_id,
                 msg.connection_id,
             );
-            return true;
+            log::info!("All sessions: {:?}", self.states);
+            return;
         };
 
-        false
+        // Register new websocket for new user that was not previously connected
+        self.states.insert(
+            msg.connection_id,
+            UserState::Authenticated {
+                player_id: msg.user_id,
+            },
+        );
+
+        log::info!("All sessions: {:?}", self.states);
     }
 }
 

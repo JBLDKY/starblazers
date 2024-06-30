@@ -87,29 +87,7 @@ impl Actor for WsSession {
     fn started(&mut self, ctx: &mut Self::Context) {
         // we'll start heartbeat process on session start.
         self.hb(ctx);
-
-        // register self in UserStateManager. `AsyncContext::wait` register
-        // future within context, but context waits until this future resolves
-        // before processing any other events.
-        // HttpContext::state() is instance of WsLobbySession, state is shared
-        // across all routes within application
-        let addr = ctx.address();
-        self.user_state_manager_addr
-            .send(RegisterWebSocket {
-                addr: addr.recipient(),
-                connection_id: self.connection_id,
-                user_id: self.user_id,
-            })
-            .into_actor(self)
-            .then(|_res, _act, _ctx| {
-                // match res {
-                //     Ok(res) => act.connection_id = res,
-                //     // something is wrong with chat server
-                //     _ => ctx.stop(),
-                // }
-                fut::ready(())
-            })
-            .wait(ctx);
+        // Registering the connection was moved to the endpoint.
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
@@ -137,14 +115,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
         };
 
         match msg {
-            ws::Message::Ping(msg) => {
-                self.hb = Instant::now();
-                ctx.pong(&msg);
-            }
+            ws::Message::Ping(_) => (), // We are the ones who Ping.
             ws::Message::Pong(_) => {
                 self.hb = Instant::now();
-                log::info!("pong:");
-                log::info!("{:?}", self.user_id);
             }
             ws::Message::Text(text) => {
                 let m = text.trim();
@@ -161,8 +134,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
                     }
                 }
             }
-            ws::Message::Binary(_) => println!("Unexpected binary"),
+            ws::Message::Binary(_) => log::error!("Received binary message."),
             ws::Message::Close(reason) => {
+                log::warn!("Connection closed: {:?}", reason);
                 ctx.close(reason);
                 ctx.stop();
             }

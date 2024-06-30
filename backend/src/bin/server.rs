@@ -6,7 +6,7 @@ async fn main() -> Result<(), std::io::Error> {
     if dotenv::dotenv().is_err() {
         log::error!("Warning: Did not find .env file in current working directory!");
     }
-    std::env::set_var("RUST_LOG", "debug");
+    std::env::set_var("RUST_LOG", "info");
     pretty_env_logger::init();
 
     let settings = get_settings();

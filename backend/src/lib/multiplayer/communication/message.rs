@@ -27,7 +27,7 @@ pub struct Connect {
 }
 
 #[derive(Message)]
-#[rtype(result = "bool")]
+#[rtype(result = "()")]
 pub struct CheckExistingConnection {
     pub connection_id: Uuid,
     pub user_id: Uuid,

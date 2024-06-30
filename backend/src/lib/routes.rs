@@ -254,7 +254,6 @@ async fn lobby_websocket(
     lm: actix_web::web::Data<Addr<LobbyManager>>,
     usm: actix_web::web::Data<Addr<UserStateManager>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    log::info!("connecting");
     let header_value: Option<&HeaderValue> = req.headers().get("cookie");
 
     let claims;
@@ -282,20 +281,13 @@ async fn lobby_websocket(
     };
 
     let connection_id = Uuid::new_v4();
-    let ws_connection_exists = usm
-        .send(CheckExistingConnection {
-            connection_id,
-            user_id,
-        })
-        .await
-        .ok();
 
-    // if ws_connection_exists.unwrap_or(false) {
-    //     log::error!("Websocket connection for {} already exists", user_id);
-    //     return Ok(HttpResponse::Ok().finish());
-    // }
-
-    log::info!("Connecting new connection for {}", claims.username);
+    usm.send(CheckExistingConnection {
+        connection_id,
+        user_id,
+    })
+    .await
+    .expect("Failed to register new connection");
 
     ws::start(
         WsSession {
