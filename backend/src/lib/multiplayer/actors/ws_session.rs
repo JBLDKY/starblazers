@@ -23,11 +23,12 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
-pub struct WsLobbySession {
-    /// Player's Uuid to identify the connection
+pub struct WsSession {
+    /// Player's user state to identify the state and connection
     pub user_state: UserState,
     pub user_id: Uuid,
 
+    ///Unique id for the websocket session for a user
     pub connection_id: Uuid,
 
     /// Client must send ping at least once per 10 seconds (CLIENT_TIMEOUT),
@@ -41,23 +42,15 @@ pub struct WsLobbySession {
     pub user_state_manager_addr: Addr<UserStateManager>,
 }
 
-impl WsLobbySession {
+impl WsSession {
     /// helper method that sends ping to client every 5 seconds (HEARTBEAT_INTERVAL).
     ///
     /// also this method checks heartbeats from client
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, move |act, ctx| {
-            // check client heartbeats
-            if Instant::now().duration_since(act.hb) < CLIENT_TIMEOUT {
-                act.check_heartbeat(ctx);
-                return;
-            }
-
-            // stop actor
-            ctx.stop();
-        });
+        ctx.run_interval(HEARTBEAT_INTERVAL, move |act, ctx| act.check_heartbeat(ctx));
     }
 
+    /// Runs every HEARTBEAT_INTERVAL, stops if hb times out
     fn check_heartbeat(&mut self, ctx: &mut ws::WebsocketContext<Self>) {
         // Log the current state at each interval
         let state = SynchronizeState::from(self.user_state.clone());
@@ -86,7 +79,7 @@ impl WsLobbySession {
     }
 }
 
-impl Actor for WsLobbySession {
+impl Actor for WsSession {
     type Context = ws::WebsocketContext<Self>;
 
     /// Method is called on actor start.
@@ -105,6 +98,7 @@ impl Actor for WsLobbySession {
             .send(RegisterWebSocket {
                 addr: addr.recipient(),
                 connection_id: self.connection_id,
+                user_id: self.user_id,
             })
             .into_actor(self)
             .then(|_res, _act, _ctx| {
@@ -130,7 +124,7 @@ impl Actor for WsLobbySession {
 }
 
 /// WebSocket message handler
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         let msg = match msg {
             Err(_) => {
@@ -158,8 +152,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
                 match serde_json::from_str::<WebSocketMessage>(m) {
                     Ok(message) => message.handle(self, ctx),
                     Err(e) => {
-                        log::debug!("Failed to parse message: {}", e);
-                        log::debug!("Message contents: {}", m);
+                        log::error!("Failed to parse message: {}", e);
+                        log::error!("Message contents: {}", m);
                     }
                 }
             }
@@ -177,7 +171,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsLobbySession {
 }
 
 /// Handle messages from chat server, we simply send it to peer websocket
-impl Handler<Message> for WsLobbySession {
+impl Handler<Message> for WsSession {
     type Result = ();
 
     fn handle(&mut self, msg: Message, ctx: &mut Self::Context) {

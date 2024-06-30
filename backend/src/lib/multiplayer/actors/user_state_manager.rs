@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use crate::multiplayer::communication::common::JoinLobbyRequest;
-use crate::multiplayer::communication::message::{DeleteState, SetState, UpdateState};
+use crate::multiplayer::communication::message::{
+    CheckExistingConnection, DeleteState, SetState, UpdateState,
+};
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
     communication::{
@@ -14,16 +16,16 @@ use crate::multiplayer::{
 use actix::{Actor, Context, Handler};
 use uuid::Uuid;
 
+/// Maps websocket connection UUIDs to player UUIDs and UserStates
 #[derive(Default)]
 pub struct UserStateManager {
-    users: HashMap<Uuid, UserState>, // connectiond id to player_id
-    sessions: HashMap<Uuid, Uuid>,   // websocket connection uuid to player_id
+    states: HashMap<Uuid, UserState>, // ws connection uuid -> user state
 }
+
 impl UserStateManager {
     pub fn new() -> Self {
         Self {
-            users: HashMap::new(),
-            sessions: HashMap::new(),
+            states: HashMap::new(),
         }
     }
 }
@@ -44,9 +46,8 @@ impl Handler<TransitionEvent> for UserStateManager {
 
         // Check if the user is already registered with the websocket
         if let UserEvent::Login(user_id) = event.event {
-            for (cid, user_state) in &self.users {
+            for (cid, user_state) in &self.states {
                 match user_state {
-                    UserState::Unauthenticated => (),
                     UserState::Authenticated { player_id }
                     | UserState::InLobby { player_id, .. }
                     | UserState::InGame { player_id, .. } => {
@@ -67,20 +68,16 @@ impl Handler<TransitionEvent> for UserStateManager {
                 );
                 return;
             }
-
-            log::info!("User login event: {}", user_id);
-            self.sessions.insert(connection_id, user_id);
         }
 
-        if let Some(state) = self.users.get_mut(&event.connection_id) {
+        if let Some(state) = self.states.get_mut(&event.connection_id) {
             state.transition(event.event);
         } else {
             log::warn!("Connection ID not found: {}", event.connection_id);
         }
 
         log::info!("User transitioned: {}", event.connection_id);
-        log::info!("All users: {:#?}", self.users);
-        log::info!("All sessions: {:#?}", self.sessions);
+        log::info!("All users: {:#?}", self.states);
     }
 }
 
@@ -88,19 +85,15 @@ impl Handler<RegisterWebSocket> for UserStateManager {
     type Result = ();
 
     fn handle(&mut self, msg: RegisterWebSocket, _: &mut Context<Self>) {
-        // TODO: This should probably fail if the user is already connected, or rather
-        // the old connection should be restored instead
-        if let Some(state) = self.users.get_mut(&msg.connection_id) {
-            log::error!("OLD SESSION REGISTERED: {}", msg.connection_id);
-            *state = UserState::Unauthenticated;
-            return;
-        };
-
-        self.users
-            .insert(msg.connection_id, UserState::Unauthenticated);
+        self.states.insert(
+            msg.connection_id,
+            UserState::Authenticated {
+                player_id: msg.user_id,
+            },
+        );
 
         log::info!("New session registered: {}", msg.connection_id);
-        log::info!("All sessions: {:#?}", self.users);
+        log::info!("All sessions: {:#?}", self.states);
     }
 }
 
@@ -108,10 +101,24 @@ impl Handler<GetState> for UserStateManager {
     type Result = Option<UserState>;
 
     fn handle(&mut self, msg: GetState, _: &mut Context<Self>) -> Self::Result {
-        self.sessions
-            .get(&msg.connection_id)
-            .and_then(|player_id| self.users.get(player_id))
-            .cloned()
+        self.states.get(&msg.connection_id).cloned()
+    }
+}
+
+impl Handler<CheckExistingConnection> for UserStateManager {
+    type Result = bool;
+    fn handle(&mut self, msg: CheckExistingConnection, _: &mut Context<Self>) -> Self::Result {
+        for state in self.states.values() {
+            let player_uuid = match state {
+                UserState::Authenticated { player_id } => player_id,
+                UserState::InGame { player_id, .. } => player_id,
+                UserState::InLobby { player_id, .. } => player_id,
+            };
+            if *player_uuid == msg.user_id {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -119,13 +126,7 @@ impl Handler<SetState> for UserStateManager {
     type Result = Result<(), ServiceError>;
 
     fn handle(&mut self, msg: SetState, _: &mut Context<Self>) -> Self::Result {
-        let player_id = self.sessions.get(&msg.connection_id);
-
-        if player_id.is_none() {
-            return Err(ServiceError::ConnectionNotRegistered(msg.connection_id));
-        }
-
-        let old_state = self.users.insert(*player_id.unwrap(), msg.state.clone());
+        let old_state = self.states.insert(msg.connection_id, msg.state.clone());
 
         if let Some(s) = old_state {
             log::info!(
@@ -146,49 +147,6 @@ impl Handler<SetState> for UserStateManager {
     }
 }
 
-impl Handler<DeleteState> for UserStateManager {
-    type Result = Result<(), ServiceError>;
-
-    fn handle(&mut self, msg: DeleteState, _: &mut Context<Self>) -> Self::Result {
-        let player_id = self.sessions.get(&msg.connection_id);
-
-        if player_id.is_none() {
-            return Err(ServiceError::ConnectionNotRegistered(msg.connection_id));
-        }
-        let player_id = player_id.unwrap();
-
-        let old_state = self.users.remove(player_id);
-
-        if old_state.is_none() {
-            return Err(ServiceError::StateNotRegistered(*player_id));
-        }
-
-        Ok(())
-    }
-}
-
-impl Handler<UpdateState> for UserStateManager {
-    type Result = Result<(), ServiceError>;
-
-    fn handle(&mut self, msg: UpdateState, _: &mut Context<Self>) -> Self::Result {
-        let player_id = self.sessions.get(&msg.connection_id);
-
-        if player_id.is_none() {
-            return Err(ServiceError::ConnectionNotRegistered(msg.connection_id));
-        }
-
-        let player_id = player_id.unwrap();
-
-        if !self.users.contains_key(player_id) {
-            return Err(ServiceError::StateNotRegistered(*player_id));
-        };
-
-        self.users.insert(*player_id, msg.state.clone());
-
-        Ok(())
-    }
-}
-
 impl Handler<JoinLobbyRequest> for UserStateManager {
     type Result = ();
     fn handle(&mut self, req: JoinLobbyRequest, _ctx: &mut Self::Context) {
@@ -199,7 +157,7 @@ impl Handler<JoinLobbyRequest> for UserStateManager {
         let lobby_id =
             uuid::Uuid::parse_str(&req.lobby_name).unwrap_or_else(|_| return Default::default());
 
-        if let Some(state) = self.users.get_mut(&player_id) {
+        if let Some(state) = self.states.get_mut(&player_id) {
             state.transition(UserEvent::JoinLobby(lobby_id))
         }
     }

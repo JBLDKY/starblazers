@@ -1,6 +1,6 @@
 use crate::claims::Claims;
 use crate::multiplayer::actors::UserStateManager;
-use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsLobbySession};
+use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsSession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
 use actix::Addr;
@@ -277,10 +277,10 @@ async fn lobby_websocket(
     };
 
     ws::start(
-        WsLobbySession {
+        WsSession {
             connection_id: Uuid::new_v4(),
             user_id,
-            user_state: UserState::Unauthenticated,
+            user_state: UserState::Authenticated { player_id: user_id },
             hb: Instant::now(),
             lobby_manager_addr: lm.get_ref().clone(),
             user_state_manager_addr: usm.get_ref().clone(),

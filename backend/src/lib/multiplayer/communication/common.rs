@@ -3,7 +3,7 @@ use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::multiplayer::WsLobbySession;
+use crate::multiplayer::WsSession;
 
 use super::{protocol::ProtocolHandler, user_state::UserEvent};
 
@@ -42,7 +42,7 @@ impl GameState {
 }
 
 impl ProtocolHandler for GameState {
-    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsSession, _: &mut ws::WebsocketContext<WsSession>) {
         session.lobby_manager_addr.do_send(self);
     }
 }
@@ -56,7 +56,7 @@ pub struct CreateLobbyRequest {
 }
 
 impl ProtocolHandler for CreateLobbyRequest {
-    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsSession, _: &mut ws::WebsocketContext<WsSession>) {
         // Send the CreateLobbyRequest to the LobbyManager to create the lobby and add the user to it
         session.lobby_manager_addr.do_send(self);
 
@@ -84,7 +84,7 @@ pub struct JoinLobbyRequest {
 }
 
 impl ProtocolHandler for JoinLobbyRequest {
-    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsSession, _: &mut ws::WebsocketContext<WsSession>) {
         // If the user state correctly contains a uuid, transition to the InLobby state with the
         // JoinLobby event.
         let lobby_id = Uuid::parse_str(&self.lobby_name).expect("failed to parse to uuid");
@@ -108,7 +108,7 @@ pub struct LeaveLobbyRequest {
 }
 
 impl ProtocolHandler for LeaveLobbyRequest {
-    fn handle(self, session: &mut WsLobbySession, _: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsSession, _: &mut ws::WebsocketContext<WsSession>) {
         // Send the LeaveLobbyRequest to the LobbyManager to make it leave the lobby
         session.lobby_manager_addr.do_send(self);
 

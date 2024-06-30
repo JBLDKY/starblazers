@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     claims::{Claims, TokenError},
-    multiplayer::WsLobbySession,
+    multiplayer::WsSession,
 };
 use actix::prelude::*;
 use actix_web_actors::ws;
@@ -16,7 +16,7 @@ use uuid::Uuid;
 /// serialized and deserialized for communication between the client
 /// and server in real-time.
 pub trait ProtocolHandler {
-    fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>);
+    fn handle(self, session: &mut WsSession, ctx: &mut ws::WebsocketContext<WsSession>);
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,7 +29,7 @@ pub enum WebSocketMessage {
     LeaveLobby(LeaveLobbyRequest),
 }
 impl ProtocolHandler for WebSocketMessage {
-    fn handle(self, session: &mut WsLobbySession, ctx: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsSession, ctx: &mut ws::WebsocketContext<WsSession>) {
         log::info!("Received message: {:?}", &self);
         match self {
             WebSocketMessage::Auth(auth) => auth.handle(session, ctx),
@@ -61,7 +61,8 @@ impl WebsocketAuthJwt {
 }
 
 impl ProtocolHandler for WebsocketAuthJwt {
-    fn handle(self, session: &mut WsLobbySession, _ctx: &mut ws::WebsocketContext<WsLobbySession>) {
+    fn handle(self, session: &mut WsSession, _ctx: &mut ws::WebsocketContext<WsSession>) {
+        // abort and remove the session if a websocket session already exists for this player
         let claims = self.claims();
         if claims.is_err() {
             return;

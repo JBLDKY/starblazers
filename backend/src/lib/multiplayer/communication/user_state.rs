@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UserState {
-    Unauthenticated,
     Authenticated { player_id: Uuid },
     InLobby { player_id: Uuid, lobby_id: Uuid },
     InGame { player_id: Uuid, game_id: Uuid },
@@ -14,7 +13,6 @@ pub enum UserState {
 impl fmt::Display for UserState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UserState::Unauthenticated => write!(f, "Unauthenticated"),
             UserState::Authenticated { player_id } => write!(f, "Authenticated: {}", player_id),
             UserState::InLobby {
                 player_id,
@@ -39,11 +37,6 @@ pub enum UserEvent {
 impl UserState {
     pub fn transition(&mut self, event: UserEvent) {
         match (&self, event) {
-            // Initial handshake with websocket
-            (UserState::Unauthenticated, UserEvent::Login(player_id)) => {
-                *self = UserState::Authenticated { player_id }
-            }
-
             // Join a lobby after authenticating
             (UserState::Authenticated { player_id }, UserEvent::JoinLobby(lobby_id)) => {
                 *self = UserState::InLobby {
@@ -86,7 +79,6 @@ impl UserState {
 
     pub fn user_id(&self) -> Option<Uuid> {
         match self {
-            UserState::Unauthenticated => None,
             UserState::Authenticated { player_id } => Some(*player_id),
             UserState::InLobby { player_id, .. } => Some(*player_id),
             UserState::InGame { player_id, .. } => Some(*player_id),

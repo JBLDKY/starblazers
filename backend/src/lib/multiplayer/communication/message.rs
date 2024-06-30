@@ -26,6 +26,12 @@ pub struct Connect {
     pub claims: Claims,
 }
 
+#[derive(Message)]
+#[rtype(result = "bool")]
+pub struct CheckExistingConnection {
+    pub user_id: Uuid,
+}
+
 /// Message sent when a new chat session is created
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -34,6 +40,7 @@ pub struct RegisterWebSocket {
     pub addr: Recipient<Message>,
 
     pub connection_id: Uuid,
+    pub user_id: Uuid,
 }
 /// Message sent when a session is disconnected
 #[derive(Message, Debug)]
