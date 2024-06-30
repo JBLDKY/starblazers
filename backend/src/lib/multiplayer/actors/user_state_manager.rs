@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::multiplayer::communication::common::JoinLobbyRequest;
 use crate::multiplayer::communication::message::{
-    CheckExistingConnection, DeleteState, SetState, UpdateState,
+    CheckExistingConnection, DeleteState, Disconnect, SetState, UpdateState,
 };
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
@@ -160,5 +160,13 @@ impl Handler<JoinLobbyRequest> for UserStateManager {
         if let Some(state) = self.states.get_mut(&player_id) {
             state.transition(UserEvent::JoinLobby(lobby_id))
         }
+    }
+}
+
+impl Handler<Disconnect> for UserStateManager {
+    type Result = ();
+
+    fn handle(&mut self, req: Disconnect, _ctx: &mut Self::Context) {
+        self.states.remove(&req.connection_id);
     }
 }

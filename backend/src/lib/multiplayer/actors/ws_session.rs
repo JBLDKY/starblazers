@@ -113,11 +113,13 @@ impl Actor for WsSession {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        if let Some(id) = self.user_state.user_id() {
-            // notify chat server
-            self.lobby_manager_addr
-                .do_send(Disconnect { id: id.to_string() });
-        }
+        let connection_id = self.connection_id;
+        // notify chat server
+        self.lobby_manager_addr
+            .do_send(Disconnect { connection_id });
+
+        self.user_state_manager_addr
+            .do_send(Disconnect { connection_id });
 
         Running::Stop
     }

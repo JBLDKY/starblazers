@@ -47,7 +47,7 @@ pub struct RegisterWebSocket {
 #[rtype(result = "()")]
 pub struct Disconnect {
     /// Unique identifier for the disconnected session
-    pub id: String,
+    pub connection_id: Uuid,
 }
 
 /// Message sent to a specific room containing a client's message
