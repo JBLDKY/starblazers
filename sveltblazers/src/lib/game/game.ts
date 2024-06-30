@@ -369,31 +369,42 @@ export class SpaceInvadersGame {
 			console.warn('Received bad state data: ', state, 'State should be `InLobby`.');
 			return;
 		}
-		if (
-			this.currentMenu !== null &&
-			[MenuKind.SomeoneElsesLobby, MenuKind.CurrentPlayerOwnLobby].includes(
-				this.currentMenu.getKind()
-			)
-		) {
-			// This is a correct situation
+		const inOwnLobby = this.userUuid() === state.InLobby.lobby_id;
+
+		if (this.currentMenu === null) {
+			// Player is not in any menu, this situation is most certainly wrong
+			this.state = GameState.MENU;
+
+			if (inOwnLobby) {
+				// Player must be forced into his own lobby
+				this.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
+				return;
+			}
+
+			// Player must be forced into someone elses lobby
+			this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
 			return;
 		}
 
-		// Player may or may not be in a menu, either way we set the GameState to in menu
-		this.state = GameState.MENU;
+		// player is already in a menu, just need to verify if it is the correct one
+		const menuKind = this.currentMenu.getKind();
 
-		// Player is in his own lobby
-		if (this.user.uuid === state.InLobby.lobby_id) {
+		if (
+			(inOwnLobby && menuKind === MenuKind.CurrentPlayerOwnLobby) ||
+			(!inOwnLobby && menuKind == MenuKind.SomeoneElsesLobby)
+		) {
+			// Current situation is correct, player is in his own lobby or someone elses lobby
+			return;
+		}
+
+		if (inOwnLobby && menuKind !== MenuKind.CurrentPlayerOwnLobby) {
 			this.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
 			return;
 		}
 
-		// Player is in someone else's lobby
-		this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
-
-		console.log(
-			'In Lobby:',
-			`Player ID: ${state.InLobby.player_id}, Lobby ID: ${state.InLobby.lobby_id}`
-		);
+		if (!inOwnLobby && menuKind !== MenuKind.SomeoneElsesLobby) {
+			this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
+			return;
+		}
 	}
 }
