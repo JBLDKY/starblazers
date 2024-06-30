@@ -250,9 +250,9 @@ export class SpaceInvadersGame {
 			}
 		}
 
-		if (this.fpsManager.shouldPingWebSocket(timestamp)) {
-			this.websocket.sendMessage('ping');
-		}
+		// if (this.fpsManager.shouldPingWebSocket(timestamp)) {
+		// 	this.websocket.sendMessage('ping');
+		// }
 		// this.chatBox.receiveMessage();
 		this.fpsManager.update(timestamp);
 	}
@@ -327,7 +327,7 @@ export class SpaceInvadersGame {
 		if (state.Authenticated) {
 			this.handleAuthenticatedState();
 		} else if (state.Unauthenticated) {
-			this.handleUnauthenticatedState();
+			console.warn('deprecated');
 		} else if (state.InLobby) {
 			this.handleInLobbyState(state);
 			// For some reason, if in someone elses lobby, it says ur in ur own lobby.
@@ -342,10 +342,6 @@ export class SpaceInvadersGame {
 		}
 	}
 
-	handleUnauthenticatedState() {
-		// TODO: If a player is not authenticated, he should not be in the game
-		// Not sure if this code is even reachable if a player is not authenticated
-	}
 	handleAuthenticatedState() {
 		if (this.currentMenu === null) {
 			return;

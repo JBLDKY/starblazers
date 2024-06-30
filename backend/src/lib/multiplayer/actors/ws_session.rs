@@ -141,6 +141,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
             }
             ws::Message::Pong(_) => {
                 self.hb = Instant::now();
+                log::info!("pong:");
+                log::info!("{:?}", self.user_id);
             }
             ws::Message::Text(text) => {
                 let m = text.trim();

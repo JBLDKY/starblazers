@@ -25,17 +25,16 @@ export class WebSocketManager {
 	connect() {
 		document.cookie = 'Authorization=' + get(jwtStore) + '; path=/';
 
+		console.log('Connecting!');
 		this.ws = new WebSocket(this.url);
 
-		this.ws.onopen = () => {
-			const jwt = get(jwtStore);
-			this.ws.send(JSON.stringify({ type: 'Auth', jwt: jwt }));
-		};
+		this.ws.onopen = () => {};
 
 		this.ws.onmessage = (event) => {
 			let data;
 			try {
 				data = JSON.parse(event.data);
+				console.log(event.data);
 			} catch (error) {
 				console.log(event.data);
 				console.error('couldnt parse data received from websocket into json');
@@ -46,14 +45,14 @@ export class WebSocketManager {
 		};
 
 		this.ws.onclose = (event) => {
-			console.log('WebSocket connection closed', event.code, event.reason);
-			this.reconnect();
+			// console.log('WebSocket connection closed', event.code, event.reason);
+			// this.reconnect();
 		};
 
 		this.ws.onerror = (error) => {
-			this.ws = new WebSocket(this.url);
-
-			console.error('WebSocket error', error);
+			// this.ws = new WebSocket(this.url);
+			//
+			// console.error('WebSocket error', error);
 		};
 	}
 
@@ -67,6 +66,7 @@ export class WebSocketManager {
 	sendMessage(data: BaseWebSocketMessage) {
 		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
 			console.error('WebSocket is not connected');
+			this.close();
 			return;
 		}
 
@@ -74,13 +74,14 @@ export class WebSocketManager {
 			this.ws.send(JSON.stringify(data));
 		} catch (error) {
 			console.log('caught error, reconnecting');
-			this.connect();
+			this.close();
+			// this.connect();
 		}
 	}
 	reconnect() {
 		setTimeout(() => {
 			console.log('Reconnecting to WebSocket...');
-			this.connect();
+			// this.connect();
 		}, 5000); // Attempt to reconnect every 5 seconds
 	}
 
@@ -108,5 +109,3 @@ interface UserState {
 	lobby_id?: string; // UUID
 	game_id?: string; // UUID
 }
-
-// You can extend this with more specific message types as needed
