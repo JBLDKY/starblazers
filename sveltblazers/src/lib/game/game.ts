@@ -399,10 +399,12 @@ export class SpaceInvadersGame {
 
 		if (inOwnLobby && menuKind !== MenuKind.CurrentPlayerOwnLobby) {
 			this.setCurrentMenu(MenuKind.CurrentPlayerOwnLobby);
+			return;
 		}
 
 		if (!inOwnLobby && menuKind !== MenuKind.SomeoneElsesLobby) {
 			this.setCurrentMenu(MenuKind.SomeoneElsesLobby, state.InLobby.lobby_id);
+			return;
 		}
 	}
 }
