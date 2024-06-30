@@ -1,5 +1,6 @@
 use crate::claims::Claims;
 use crate::multiplayer::actors::UserStateManager;
+use crate::multiplayer::communication::message::CheckExistingConnection;
 use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsSession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
@@ -276,6 +277,11 @@ async fn lobby_websocket(
         Err(_) => return Ok(HttpResponse::Unauthorized().finish()),
     };
 
+    let ws_connection_exists = usm.send(CheckExistingConnection { user_id }).await.ok();
+    if ws_connection_exists.unwrap_or(false) {
+        log::debug!("Websocket connection for {} already exists", user_id);
+        return Ok(HttpResponse::Ok().finish());
+    }
     ws::start(
         WsSession {
             connection_id: Uuid::new_v4(),
