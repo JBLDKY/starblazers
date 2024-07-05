@@ -5,6 +5,9 @@ use std::fs::File;
 use daemonize::Daemonize;
 
 fn main() {
+    std::env::set_var("RUST_LOG", "debug");
+    pretty_env_logger::init();
+
     let stdout = File::create("/tmp/daemon.out").unwrap();
     let stderr = File::create("/tmp/daemon.err").unwrap();
 
