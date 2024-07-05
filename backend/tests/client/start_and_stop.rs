@@ -10,29 +10,8 @@ fn is_daemon_running() -> bool {
     std::path::Path::new("/tmp/test.pid").exists()
 }
 
-// #[test]
-// fn test_start_daemon() {
-//     let mut cmd = Command::cargo_bin("daemon").unwrap();
-//     let assert = cmd.arg("start").assert();
-//     assert
-//         .success()
-//         .stdout(predicate::str::contains("Daemon started"));
-//
-//     thread::sleep(Duration::from_secs(1)); // Give the daemon time to start
-//
-//     assert!(
-//         is_daemon_running(),
-//         "Daemon should be running after start command"
-//     );
-//
-//     // Cleanup: stop the daemon
-//     let _ = StdCommand::new("cargo")
-//         .args(["run", "--bin", "daemon", "stop"])
-//         .output();
-// }
-
 #[test]
-fn test_stop_daemon() {
+fn test_start_stop_daemon() {
     // First, start the daemon
     let _ = StdCommand::new("cargo")
         .args(["run", "--bin", "daemon"])

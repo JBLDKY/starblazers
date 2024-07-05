@@ -32,7 +32,6 @@ fn main() {
             }
 
             std::thread::sleep(std::time::Duration::from_secs(5));
-            log::info!("Heartbeat");
             writeln!(stdout, "Daemon is still alive").unwrap();
             stdout.flush().unwrap();
         },
