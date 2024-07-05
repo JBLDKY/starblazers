@@ -282,6 +282,7 @@ async fn lobby_websocket(
 
     let connection_id = Uuid::new_v4();
 
+    log::debug!("Lobby endpoint");
     ws::start(
         WsSession {
             connection_id,

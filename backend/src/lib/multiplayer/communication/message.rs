@@ -36,6 +36,9 @@ pub struct RegisterWebsocket {
     pub user_id: Uuid,
 }
 
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct KillSession {}
 /// Message sent when a new chat session is created
 // #[derive(Message)]
 // #[rtype(result = "()")]

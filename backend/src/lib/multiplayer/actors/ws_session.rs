@@ -5,7 +5,9 @@
 // `LobbyManager` actor for further processing.
 
 use super::{LobbyManager, UserStateManager};
-use crate::multiplayer::communication::message::{Disconnect, Message, RegisterWebsocket};
+use crate::multiplayer::communication::message::{
+    Disconnect, KillSession, Message, RegisterWebsocket,
+};
 use crate::multiplayer::communication::protocol::{
     ProtocolHandler, SynchronizeState, WebSocketMessage,
 };
@@ -160,5 +162,12 @@ impl Handler<Message> for WsSession {
 
     fn handle(&mut self, msg: Message, ctx: &mut Self::Context) {
         ctx.text(msg.0);
+    }
+}
+
+impl Handler<KillSession> for WsSession {
+    type Result = ();
+    fn handle(&mut self, _msg: KillSession, ctx: &mut Self::Context) {
+        ctx.stop();
     }
 }

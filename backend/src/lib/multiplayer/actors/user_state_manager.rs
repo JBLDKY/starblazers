@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::multiplayer::communication::common::JoinLobbyRequest;
 use crate::multiplayer::communication::message::{
-    DeleteState, Disconnect, RegisterWebsocket, SetState, UpdateState,
+    DeleteState, Disconnect, KillSession, RegisterWebsocket, SetState, UpdateState,
 };
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
@@ -119,7 +119,7 @@ impl Handler<RegisterWebsocket> for UserStateManager {
             self.states.insert(msg.connection_id, state);
             // terminate the wssession for the old connection
             if let Some(addr) = self.sessions.remove(&already_connected_connection_id) {
-                // addr.do_send(); FIXME: can't figure out the appropriate argument
+                addr.do_send(KillSession {});
                 self.sessions.insert(msg.connection_id, msg.ws_addr);
             }
 
