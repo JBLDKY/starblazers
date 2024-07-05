@@ -2,30 +2,30 @@ use std::collections::HashMap;
 
 use crate::multiplayer::communication::common::JoinLobbyRequest;
 use crate::multiplayer::communication::message::{
-    CheckExistingConnection, DeleteState, Disconnect, SetState, UpdateState,
+    DeleteState, Disconnect, RegisterWebsocket, SetState, UpdateState,
 };
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
-    communication::{
-        message::{GetState, RegisterWebSocket},
-        protocol::TransitionEvent,
-        user_state::UserEvent,
-    },
+    communication::{message::GetState, protocol::TransitionEvent, user_state::UserEvent},
     UserState,
 };
-use actix::{Actor, Context, Handler};
+use actix::{Actor, Addr, Context, Handler, Message};
 use uuid::Uuid;
+
+use super::WsSession;
 
 /// Maps websocket connection UUIDs to player UUIDs and UserStates
 #[derive(Default)]
 pub struct UserStateManager {
     states: HashMap<Uuid, UserState>, // ws connection uuid -> user state
+    sessions: HashMap<Uuid, Addr<WsSession>>,
 }
 
 impl UserStateManager {
     pub fn new() -> Self {
         Self {
             states: HashMap::new(),
+            sessions: HashMap::new(),
         }
     }
 
@@ -96,22 +96,6 @@ impl Handler<TransitionEvent> for UserStateManager {
     }
 }
 
-impl Handler<RegisterWebSocket> for UserStateManager {
-    type Result = ();
-
-    fn handle(&mut self, msg: RegisterWebSocket, _: &mut Context<Self>) {
-        self.states.insert(
-            msg.connection_id,
-            UserState::Authenticated {
-                player_id: msg.user_id,
-            },
-        );
-
-        log::info!("New session registered: {}", msg.connection_id);
-        log::info!("All sessions: {:#?}", self.states);
-    }
-}
-
 impl Handler<GetState> for UserStateManager {
     type Result = Option<UserState>;
 
@@ -120,9 +104,9 @@ impl Handler<GetState> for UserStateManager {
     }
 }
 
-impl Handler<CheckExistingConnection> for UserStateManager {
+impl Handler<RegisterWebsocket> for UserStateManager {
     type Result = ();
-    fn handle(&mut self, msg: CheckExistingConnection, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: RegisterWebsocket, _: &mut Context<Self>) -> Self::Result {
         let already_connected_connection_id = self.get_connection_id_by_player_id(msg.user_id);
 
         if let Some(already_connected_connection_id) = already_connected_connection_id {
@@ -133,6 +117,11 @@ impl Handler<CheckExistingConnection> for UserStateManager {
 
             // Player is already connected, update his old state with his new connection id
             self.states.insert(msg.connection_id, state);
+            // terminate the wssession for the old connection
+            if let Some(addr) = self.sessions.remove(&already_connected_connection_id) {
+                // addr.do_send(); FIXME: can't figure out the appropriate argument
+                self.sessions.insert(msg.connection_id, msg.ws_addr);
+            }
 
             log::warn!(
                 "Player is already connected: {:?}\n Old connection_id: {:?}\n New connection_id: {:?}",
@@ -151,6 +140,7 @@ impl Handler<CheckExistingConnection> for UserStateManager {
                 player_id: msg.user_id,
             },
         );
+        self.sessions.insert(msg.connection_id, msg.ws_addr);
 
         log::info!("All sessions: {:?}", self.states);
     }

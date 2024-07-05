@@ -1,5 +1,6 @@
 use crate::claims::Claims;
 use crate::multiplayer::multiplayer_error::ServiceError;
+use crate::multiplayer::WsSession;
 use actix::prelude::*;
 use uuid::Uuid;
 
@@ -26,23 +27,25 @@ pub struct Connect {
     pub claims: Claims,
 }
 
+/// Message sent when new session is created
 #[derive(Message)]
 #[rtype(result = "()")]
-pub struct CheckExistingConnection {
+pub struct RegisterWebsocket {
     pub connection_id: Uuid,
+    pub ws_addr: Addr<WsSession>,
     pub user_id: Uuid,
 }
 
 /// Message sent when a new chat session is created
-#[derive(Message)]
-#[rtype(result = "()")]
-pub struct RegisterWebSocket {
-    /// Address of the recipient actor for this session
-    pub addr: Recipient<Message>,
-
-    pub connection_id: Uuid,
-    pub user_id: Uuid,
-}
+// #[derive(Message)]
+// #[rtype(result = "()")]
+// pub struct RegisterWebSocket {
+//     /// Address of the recipient actor for this session
+//     pub addr: Recipient<Message>,
+//
+//     pub connection_id: Uuid,
+//     pub user_id: Uuid,
+// }
 /// Message sent when a session is disconnected
 #[derive(Message, Debug)]
 #[rtype(result = "()")]

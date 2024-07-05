@@ -1,6 +1,6 @@
 use crate::claims::Claims;
 use crate::multiplayer::actors::UserStateManager;
-use crate::multiplayer::communication::message::CheckExistingConnection;
+use crate::multiplayer::communication::message::RegisterWebsocket;
 use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsSession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
@@ -282,16 +282,9 @@ async fn lobby_websocket(
 
     let connection_id = Uuid::new_v4();
 
-    usm.send(CheckExistingConnection {
-        connection_id,
-        user_id,
-    })
-    .await
-    .expect("Failed to register new connection");
-
     ws::start(
         WsSession {
-            connection_id: Uuid::new_v4(),
+            connection_id,
             user_id,
             user_state: UserState::Authenticated { player_id: user_id },
             hb: Instant::now(),

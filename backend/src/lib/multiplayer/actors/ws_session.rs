@@ -5,7 +5,7 @@
 // `LobbyManager` actor for further processing.
 
 use super::{LobbyManager, UserStateManager};
-use crate::multiplayer::communication::message::{Disconnect, Message, RegisterWebSocket};
+use crate::multiplayer::communication::message::{Disconnect, Message, RegisterWebsocket};
 use crate::multiplayer::communication::protocol::{
     ProtocolHandler, SynchronizeState, WebSocketMessage,
 };
@@ -87,7 +87,13 @@ impl Actor for WsSession {
     fn started(&mut self, ctx: &mut Self::Context) {
         // we'll start heartbeat process on session start.
         self.hb(ctx);
-        // Registering the connection was moved to the endpoint.
+
+        // register websocket
+        self.user_state_manager_addr.do_send(RegisterWebsocket {
+            connection_id: self.connection_id,
+            user_id: self.user_id,
+            ws_addr: ctx.address(), // reference to address for stopping later
+        });
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
