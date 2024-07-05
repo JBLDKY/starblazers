@@ -5,5 +5,6 @@ pub mod configuration;
 pub mod database;
 pub mod index;
 pub mod multiplayer;
+pub mod pid_file;
 pub mod routes;
 pub mod types;

@@ -21,7 +21,7 @@ name = "client"
 path = "src/bin/client.rs"
 
 [[bin]]
-name = "daemon"
+name = "sb-daemon"
 path = "src/bin/daemon.rs"
 
 [dependencies.sqlx]
