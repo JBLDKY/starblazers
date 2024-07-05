@@ -17,6 +17,10 @@ path = "src/bin/server.rs"
 name = "client"
 path = "src/bin/client.rs"
 
+[[bin]]
+name = "daemon"
+path = "src/bin/daemon.rs"
+
 [dependencies.sqlx]
 version = "0.7.4"
 default-features = false
@@ -62,3 +66,4 @@ config = "0.14.0"
 
 [dev-dependencies]
 reqwest = { version = "0.12.4", features = ["json"]}
+daemonize = "0.5.0"
