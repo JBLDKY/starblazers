@@ -1,3 +1,5 @@
+#![cfg(feature = "daemon")]
+
 use std::fs::File;
 
 use daemonize::Daemonize;
