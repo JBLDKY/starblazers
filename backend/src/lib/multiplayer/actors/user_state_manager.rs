@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
 use crate::multiplayer::communication::common::JoinLobbyRequest;
-use crate::multiplayer::communication::message::{
-    DeleteState, Disconnect, RegisterWebsocket, SetState, UpdateState,
-};
+use crate::multiplayer::communication::message::{Disconnect, RegisterWebsocket, SetState};
 use crate::multiplayer::multiplayer_error::ServiceError;
 use crate::multiplayer::{
     communication::{message::GetState, protocol::TransitionEvent, user_state::UserEvent},
     UserState,
 };
-use actix::{Actor, Addr, Context, Handler, Message};
+use actix::{Actor, Addr, Context, Handler};
 use uuid::Uuid;
 
 use super::WsSession;
@@ -118,7 +116,7 @@ impl Handler<RegisterWebsocket> for UserStateManager {
             // Player is already connected, update his old state with his new connection id
             self.states.insert(msg.connection_id, state);
             // terminate the wssession for the old connection
-            if let Some(addr) = self.sessions.remove(&already_connected_connection_id) {
+            if let Some(_addr) = self.sessions.remove(&already_connected_connection_id) {
                 // addr.do_send(); FIXME: can't figure out the appropriate argument
                 self.sessions.insert(msg.connection_id, msg.ws_addr);
             }

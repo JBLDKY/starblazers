@@ -1,6 +1,5 @@
 use crate::claims::Claims;
 use crate::multiplayer::actors::UserStateManager;
-use crate::multiplayer::communication::message::RegisterWebsocket;
 use crate::multiplayer::{ListLobbies, LobbyManager, PlayersInLobby, UserState, WsSession};
 use crate::types::{LoginDetails, LoginMethod, Player, PublicUserRecord, User};
 use crate::{database::db::ArcDb, index::INDEX_HTML};
