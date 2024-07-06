@@ -1,14 +1,9 @@
 #![cfg(feature = "daemon")]
-use predicates::prelude::*;
-use service::pid_file::{ERROUT, PID_FILE, STDOUT};
-use std::fs::File;
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
-use std::process::Command as StdCommand;
-use std::thread;
-use std::time::Duration;
+use std::{io::Read, process::Command};
 
-fn start_daemon() {
+use crate::pid_file::PID_FILE;
+
+pub fn start_daemon() {
     if is_daemon_running() {
         println!("Daemon is already running.");
         return;
@@ -29,7 +24,7 @@ fn start_daemon() {
     }
 }
 
-fn stop_daemon() {
+pub fn stop_daemon() {
     if !is_daemon_running() {
         log::info!("Daemon is not running.");
         return;
@@ -60,7 +55,7 @@ fn stop_daemon() {
     }
 }
 
-fn is_daemon_running() -> bool {
+pub fn is_daemon_running() -> bool {
     if !std::path::Path::new(PID_FILE).exists() {
         return false;
     }
@@ -77,4 +72,12 @@ fn is_daemon_running() -> bool {
         .status()
         .map(|status| status.success())
         .unwrap_or(false)
+}
+
+pub fn get_daemon_status() {
+    if is_daemon_running() {
+        log::info!("Daemon status: running.");
+    } else {
+        log::info!("Daemon status: stopped.");
+    }
 }
