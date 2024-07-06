@@ -8,30 +8,32 @@ use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 use tokio::net::UnixListener;
+use tokio_tungstenite::{connect_async, WebSocketStream};
 
-struct SimulatedPlayer {
-    id: String,
-}
-
-impl Actor for SimulatedPlayer {
-    type Context = ws::WebsocketContext<Self>;
-
-    fn started(&mut self, ctx: &mut Self::Context) {
-        ctx.run_interval(Duration::from_secs(1), |act, ctx| {
-            let msg = format!("{{\"type\": \"move\", \"player\": \"{}\"}}", act.id);
-            ctx.text(msg);
-        });
-    }
-}
-
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for SimulatedPlayer {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        if let Ok(ws::Message::Text(text)) = msg {
-            println!("Received: {}", text);
-        }
-    }
-}
+// struct SimulatedPlayer {
+//     id: String,
+// }
+//
+// impl Actor for SimulatedPlayer {
+//     type Context = ws::WebsocketContext<Self>;
+//
+//     fn started(&mut self, ctx: &mut Self::Context) {
+//         ctx.run_interval(Duration::from_secs(1), |act, ctx| {
+//             let msg = format!("{{\"type\": \"move\", \"player\": \"{}\"}}", act.id);
+//             ctx.text(msg);
+//         });
+//     }
+// }
+//
+// impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for SimulatedPlayer {
+//     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+//         if let Ok(ws::Message::Text(text)) = msg {
+//             println!("Received: {}", text);
+//         }
+//     }
+// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -50,6 +52,7 @@ async fn main() -> std::io::Result<()> {
 
             let response = match command.trim() {
                 "helloworld" => handle_hello_world().await,
+                "ws" => new_websocket().await,
                 _ => "Unknown command".to_string(),
             };
 
@@ -102,4 +105,17 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
     let listener = UnixListener::bind(SOCKET_PATH)?;
 
     Ok(listener)
+}
+
+struct SimulatedPlayer {
+    id: String,
+    ws: Option<WebSocketStream<TcpStream>>,
+}
+
+async fn new_websocket() -> String {
+    let (ws_stream, _) = connect_async("ws://localhost:3030/lobby")
+        .await
+        .expect("Failed to connect");
+
+    String::new()
 }

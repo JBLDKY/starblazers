@@ -60,6 +60,7 @@ struct ServerCommand {
 #[derive(Parser, Debug)]
 pub enum ServerSubCommand {
     Helloworld,
+    Ws,
 }
 
 #[derive(Parser, Debug)]
@@ -108,6 +109,9 @@ async fn main() -> Result<(), anyhow::Error> {
 async fn handle_server_command(server_command: ServerCommand) {
     match server_command.command {
         ServerSubCommand::Helloworld => hello_world().await.expect("Couldn't retrieve helloworld"),
+        ServerSubCommand::Ws => websocket()
+            .await
+            .expect("Couldn't establish websocket connection"),
     }
 }
 
@@ -126,6 +130,18 @@ fn handle_daemon_command(daemon_command: DaemonCommand) {
 async fn hello_world() -> Result<(), anyhow::Error> {
     let mut stream = UnixStream::connect(SOCKET_PATH).await?;
     stream.write_all(b"helloworld").await?;
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).await?;
+
+    log::info!("Response from Daemon: {}", &response);
+
+    Ok(())
+}
+
+async fn websocket() -> Result<(), anyhow::Error> {
+    let mut stream = UnixStream::connect(SOCKET_PATH).await?;
+    stream.write_all(b"ws").await?;
 
     let mut response = String::new();
     stream.read_to_string(&mut response).await?;
