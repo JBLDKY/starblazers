@@ -103,7 +103,7 @@ pub async fn create_player() -> Result<(String, String), anyhow::Error> {
     };
 
     let response = Client::new()
-        .post("http://localhost:3030/auth/signup")
+        .post(format!("{}auth/signup", get_local_address()))
         .json(&new_user)
         .send()
         .await?;
@@ -125,7 +125,7 @@ pub async fn create_player_and_get_jwt() -> Result<String, anyhow::Error> {
     };
 
     let response = Client::new()
-        .post("http://localhost:3030/auth/login")
+        .post(format!("{}auth/login", get_local_address()))
         .json(&login_details)
         .send()
         .await?;
@@ -145,4 +145,14 @@ pub async fn create_player_and_get_jwt() -> Result<String, anyhow::Error> {
     println!("{:?}", jwt);
 
     Ok(jwt)
+}
+
+pub fn get_local_address() -> String {
+    std::env::var("LOCALHOST").expect("Add localhost to .env")
+}
+
+pub fn get_local_websockt() -> String {
+    let arg = std::env::var("LOCALWS").expect("Add localws to .env");
+    dbg!(&arg);
+    arg
 }

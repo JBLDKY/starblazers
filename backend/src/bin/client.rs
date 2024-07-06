@@ -1,7 +1,8 @@
 #![cfg(feature = "daemon")]
 use clap::Parser;
+use dotenv::dotenv;
 use service::{
-    daemon::basic::{get_daemon_status, start_daemon, stop_daemon},
+    daemon::basic::{get_daemon_status, get_local_websockt, start_daemon, stop_daemon},
     pid_file::SOCKET_PATH,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -96,6 +97,7 @@ pub enum GameSubCommand {
 async fn main() -> Result<(), anyhow::Error> {
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
+    dotenv().ok();
 
     let cli = Args::parse();
 
@@ -142,6 +144,7 @@ fn handle_daemon_command(daemon_command: DaemonCommand) {
 }
 
 async fn send_message_to_daemon(msg: String) -> Result<(), anyhow::Error> {
+    get_local_websockt();
     let mut stream = UnixStream::connect(SOCKET_PATH).await?;
     stream.write_all(msg.as_bytes()).await?;
 

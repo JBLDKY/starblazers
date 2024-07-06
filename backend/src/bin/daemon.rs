@@ -1,8 +1,11 @@
 #![cfg(feature = "daemon")]
 use daemonize::Daemonize;
+use dotenv::dotenv;
 use futures_util::SinkExt;
 use futures_util::StreamExt;
 use reqwest::Client;
+use service::daemon::basic::get_local_address;
+use service::daemon::basic::get_local_websockt;
 use service::daemon::basic::{create_player, create_player_and_get_jwt};
 use service::pid_file::{ERROUT, PID_FILE, SOCKET_PATH, STDOUT};
 use std::collections::HashMap;
@@ -37,11 +40,13 @@ impl GlobalState {
 async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
+    dotenv().ok();
 
     // Keep the daemon running and waiting for commands
     let listener = init_daemon().expect("Failed to init daemon");
     let state = Arc::new(Mutex::new(GlobalState::new()));
 
+    println!("Starting loop.");
     loop {
         let (mut stream, _) = listener.accept().await?;
         let state = Arc::clone(&state);
@@ -68,15 +73,17 @@ async fn main() -> std::io::Result<()> {
                 _ => "Unknown command".to_string(),
             };
 
+            println!("Successfully executed: {}", command.trim());
             stream.write_all(response.as_bytes()).await.unwrap();
         });
     }
 }
 
 async fn handle_hello_world() -> String {
+    println!("Handling hello world.");
     let client = Client::new();
     match client
-        .get("http://localhost:3030/helloworld".to_string())
+        .get(format!("{}/helloworld", get_local_address()))
         .send()
         .await
     {
@@ -90,8 +97,7 @@ async fn handle_hello_world() -> String {
 
 fn init_daemon() -> Result<UnixListener, anyhow::Error> {
     let stdout = File::create(STDOUT)?;
-    let stderr = File::create(ERROUT)?; // Remove the socket file if it already exists
-                                        //
+    //
     if std::path::Path::new(SOCKET_PATH).exists() {
         std::fs::remove_file(SOCKET_PATH)?;
     }
@@ -102,10 +108,10 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
         .working_directory("/tmp")
         .umask(0o022)
         .stdout(stdout.try_clone()?)
-        .stderr(stderr.try_clone()?);
+        .stderr(stdout.try_clone()?);
 
     if let Err(e) = daemonize.start() {
-        eprintln!("Failed to initialize Daemon: {}", e)
+        println!("Failed to initialize Daemon: {}", e)
     }
 
     if let Ok(metadata) = std::fs::metadata(PID_FILE) {
@@ -116,20 +122,21 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
 
     let listener = UnixListener::bind(SOCKET_PATH)?;
 
+    println!("Initialized");
     Ok(listener)
 }
 
 fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>> {
     tokio::spawn(async move {
-        let url = "ws://localhost:3030/lobby";
+        let url = get_local_websockt();
         let jwt = create_player_and_get_jwt()
             .await
             .expect("Failed to create new player and get jwt");
         let request = Request::builder()
             .method("GET")
-            .uri(url)
+            .uri(&url)
             .header("Cookie", format!("Authorization={}", jwt))
-            .header("Host", url)
+            .header("Host", &url)
             .header("Connection", "Upgrade")
             .header("Upgrade", "websocket")
             .header("Sec-WebSocket-Version", "13")
@@ -152,7 +159,7 @@ fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + S
                             println!("ping");
                             *last_ping.lock().unwrap() = Instant::now();
                             if let Err(e) = write.send(Message::Pong(ping)).await {
-                                eprintln!("Error sending pong: {:?}", e);
+                                println!("Error sending pong: {:?}", e);
                                 break;
                             }
                         }
@@ -162,7 +169,7 @@ fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + S
                         _ => println!("OTher message: {:?}", msg),
                     },
                     Err(e) => {
-                        eprintln!("Error: {:?}", e);
+                        println!("Error: {:?}", e);
                         break;
                     }
                 }
@@ -175,7 +182,7 @@ fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + S
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 let last_ping = timeout_check.lock().unwrap();
                 if Instant::now().duration_since(*last_ping) > Duration::from_secs(10) {
-                    eprintln!("Connection timed out");
+                    println!("Connection timed out");
                     break;
                 }
             }
