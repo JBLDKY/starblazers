@@ -171,15 +171,16 @@ async fn send_message_to_daemon(msg: String) -> Result<(), anyhow::Error> {
 fn read_last_n_lines(n: usize) -> Result<(), anyhow::Error> {
     let file = File::open(STDOUT)?;
 
-    let mut lines = BufReader::new(file)
+    let lines = BufReader::new(file)
         .lines()
-        .map(|line| line.unwrap_or(String::new()))
+        .map(|line| line.unwrap_or_default())
         .collect::<Vec<String>>();
 
-    let count = 0;
+    let mut count = 0;
     for line in lines.iter().rev() {
         println!("{}", line);
 
+        count += 1;
         if count >= n {
             break;
         }
