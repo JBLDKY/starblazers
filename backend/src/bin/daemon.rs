@@ -38,34 +38,9 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
 
-    let stdout = File::create(STDOUT)?;
-    let stderr = File::create(ERROUT)?; // Remove the socket file if it already exists
-                                        //
-    if std::path::Path::new(SOCKET_PATH).exists() {
-        std::fs::remove_file(SOCKET_PATH)?;
-    }
-
-    let daemonize = Daemonize::new()
-        .pid_file(PID_FILE)
-        .chown_pid_file(false)
-        .working_directory("/tmp")
-        .umask(0o022)
-        .stdout(stdout.try_clone()?)
-        .stderr(stderr.try_clone()?);
-
-    if let Err(e) = daemonize.start() {
-        eprintln!("Failed to initialize Daemon: {}", e)
-    }
-
-    if let Ok(metadata) = std::fs::metadata(PID_FILE) {
-        let mut perms = metadata.permissions();
-        perms.set_mode(0o644);
-        std::fs::set_permissions(PID_FILE, perms)?;
-    }
-
-    let listener = UnixListener::bind(SOCKET_PATH)?;
-
     // Keep the daemon running and waiting for commands
+    let listener = init_daemon().expect("Failed to init daemon");
+
     loop {
         let (mut stream, _) = listener.accept().await?;
         tokio::spawn(async move {
@@ -96,4 +71,35 @@ async fn handle_hello_world() -> String {
             .unwrap_or_else(|_| "Failed to get response text".to_string()),
         Err(e) => format!("Request failed: {}", e),
     }
+}
+
+fn init_daemon() -> Result<UnixListener, anyhow::Error> {
+    let stdout = File::create(STDOUT)?;
+    let stderr = File::create(ERROUT)?; // Remove the socket file if it already exists
+                                        //
+    if std::path::Path::new(SOCKET_PATH).exists() {
+        std::fs::remove_file(SOCKET_PATH)?;
+    }
+
+    let daemonize = Daemonize::new()
+        .pid_file(PID_FILE)
+        .chown_pid_file(false)
+        .working_directory("/tmp")
+        .umask(0o022)
+        .stdout(stdout.try_clone()?)
+        .stderr(stderr.try_clone()?);
+
+    if let Err(e) = daemonize.start() {
+        eprintln!("Failed to initialize Daemon: {}", e)
+    }
+
+    if let Ok(metadata) = std::fs::metadata(PID_FILE) {
+        let mut perms = metadata.permissions();
+        perms.set_mode(0o644);
+        std::fs::set_permissions(PID_FILE, perms)?;
+    }
+
+    let listener = UnixListener::bind(SOCKET_PATH)?;
+
+    Ok(listener)
 }
