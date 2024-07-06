@@ -3,7 +3,7 @@ use clap::Parser;
 use service::daemon::basic::{get_daemon_status, start_daemon, stop_daemon};
 
 #[derive(Parser, Debug)]
-#[command(author = "Sb Co.", version = "0.1.0", about, long_about = None)]
+#[command(author = "Sb Co.", version = "0.1.0", about, long_about = None, infer_long_args = true, infer_subcommands = true)]
 struct Args {
     #[command(subcommand)]
     command: StarblazersCommand,
@@ -11,12 +11,17 @@ struct Args {
 
 #[derive(Parser, Debug)]
 enum StarblazersCommand {
+    /// The Starblazers Daemon for simulating real player connections to the server.
+    /// Must be running most of this CLI to be able to do anything.
     #[command()]
     Daemon(DaemonCommand),
+    /// The Starblazers Server related commands.
     #[command()]
     Server(ServerCommand),
+    /// The Starblazers Lobby related commands.
     #[command()]
     Lobby(LobbyCommand),
+    /// The Starblazers Game related commands.
     #[command()]
     Game(GameCommand),
 }
@@ -29,8 +34,11 @@ struct DaemonCommand {
 
 #[derive(Parser, Debug)]
 pub enum DaemonSubCommand {
-    Start,
-    Stop,
+    /// Launch the daemon if it is not already running.
+    Run,
+    /// Terminate the daemon if it is not already stopped.
+    Kill,
+    /// Get the status of the daemon (Running or Stopped).
     Status,
 }
 
@@ -86,8 +94,8 @@ fn main() {
 
 fn handle_daemon_command(daemon_command: DaemonCommand) {
     match daemon_command.command {
-        DaemonSubCommand::Start => start_daemon(),
-        DaemonSubCommand::Stop => stop_daemon(),
+        DaemonSubCommand::Run => start_daemon(),
+        DaemonSubCommand::Kill => stop_daemon(),
         DaemonSubCommand::Status => get_daemon_status(),
     }
 }
