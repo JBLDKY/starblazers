@@ -7,7 +7,7 @@ use reqwest::Client;
 use service::daemon::basic::get_local_address;
 use service::daemon::basic::get_local_websockt;
 use service::daemon::basic::{create_player, create_player_and_get_jwt};
-use service::pid_file::{ERROUT, PID_FILE, SOCKET_PATH, STDOUT};
+use service::pid_file::{PID_FILE, SOCKET_PATH, STDOUT};
 use std::collections::HashMap;
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
@@ -46,15 +46,16 @@ async fn main() -> std::io::Result<()> {
     let listener = init_daemon().expect("Failed to init daemon");
     let state = Arc::new(Mutex::new(GlobalState::new()));
 
-    println!("Starting loop.");
+    log::info!("Starting loop.");
     loop {
         let (mut stream, _) = listener.accept().await?;
         let state = Arc::clone(&state);
         tokio::spawn(async move {
             let mut buffer = [0; 1024];
             let n = stream.read(&mut buffer).await.unwrap();
-            let command = std::str::from_utf8(&buffer[..n]).unwrap();
+            let command = std::str::from_utf8(&buffer[..n]).unwrap().trim();
 
+            log::info!("[DAEMON] Received command: {}", command);
             let response = match command.trim() {
                 "helloworld" => handle_hello_world().await,
                 "np" => {
@@ -73,14 +74,13 @@ async fn main() -> std::io::Result<()> {
                 _ => "Unknown command".to_string(),
             };
 
-            println!("Successfully executed: {}", command.trim());
+            log::info!("Successfully executed: {}", command.trim());
             stream.write_all(response.as_bytes()).await.unwrap();
         });
     }
 }
 
 async fn handle_hello_world() -> String {
-    println!("Handling hello world.");
     let client = Client::new();
     match client
         .get(format!("{}/helloworld", get_local_address()))
@@ -111,7 +111,7 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
         .stderr(stdout.try_clone()?);
 
     if let Err(e) = daemonize.start() {
-        println!("Failed to initialize Daemon: {}", e)
+        log::info!("Failed to initialize Daemon: {}", e)
     }
 
     if let Ok(metadata) = std::fs::metadata(PID_FILE) {
@@ -122,7 +122,7 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
 
     let listener = UnixListener::bind(SOCKET_PATH)?;
 
-    println!("Initialized");
+    log::info!("Initialized");
     Ok(listener)
 }
 
@@ -149,32 +149,32 @@ fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + S
         let last_ping = Arc::new(Mutex::new(Instant::now()));
         let timeout_check = Arc::clone(&last_ping);
 
-        println!("WebSocket connection established successfully");
+        log::info!("WebSocket connection established successfully");
 
         let read_task = tokio::spawn(async move {
             while let Some(message) = read.next().await {
                 match message {
                     Ok(msg) => match msg {
                         Message::Ping(ping) => {
-                            println!("ping");
+                            log::info!("ping");
                             *last_ping.lock().unwrap() = Instant::now();
                             if let Err(e) = write.send(Message::Pong(ping)).await {
-                                println!("Error sending pong: {:?}", e);
+                                log::info!("Error sending pong: {:?}", e);
                                 break;
                             }
                         }
                         Message::Text(text) => {
-                            println!("Message: {}", text);
+                            log::info!("Message: {}", text);
                         }
-                        _ => println!("OTher message: {:?}", msg),
+                        _ => log::info!("OTher message: {:?}", msg),
                     },
                     Err(e) => {
-                        println!("Error: {:?}", e);
+                        log::info!("Error: {:?}", e);
                         break;
                     }
                 }
             }
-            println!("WebSocket read task died");
+            log::info!("WebSocket read task died");
         });
 
         let timeout_task = tokio::spawn(async move {
@@ -182,15 +182,15 @@ fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + S
                 tokio::time::sleep(Duration::from_secs(1)).await;
                 let last_ping = timeout_check.lock().unwrap();
                 if Instant::now().duration_since(*last_ping) > Duration::from_secs(10) {
-                    println!("Connection timed out");
+                    log::info!("Connection timed out");
                     break;
                 }
             }
         });
 
         tokio::select! {
-            _ = read_task => println!("Read task finished"),
-            _ = timeout_task => println!("Timeout task finished"),
+            _ = read_task => log::info!("Read task finished"),
+            _ = timeout_task => log::info!("Timeout task finished"),
         }
 
         Ok(())

@@ -11,7 +11,7 @@ use crate::{
 
 pub fn start_daemon() {
     if is_daemon_running() {
-        println!("Daemon is already running.");
+        log::info!("Daemon is already running.");
         return;
     }
 
@@ -23,7 +23,7 @@ pub fn start_daemon() {
     if output.status.success() {
         log::info!("Starblazers Daemon started");
     } else {
-        println!(
+        log::info!(
             "Failed to start daemon: {:?}",
             String::from_utf8_lossy(&output.stderr)
         );
@@ -35,7 +35,7 @@ pub fn stop_daemon() {
         log::info!("Daemon is not running.");
         return;
     }
-    println!("Starting daemon");
+    log::info!("Starting daemon");
 
     // Read the PID from the file
     let mut file = std::fs::File::open(PID_FILE).expect("Failed to open PID file");
@@ -142,7 +142,7 @@ pub async fn create_player_and_get_jwt() -> Result<String, anyhow::Error> {
         .unwrap()
         .to_owned();
 
-    println!("{:?}", jwt);
+    log::info!("{:?}", jwt);
 
     Ok(jwt)
 }
@@ -152,7 +152,5 @@ pub fn get_local_address() -> String {
 }
 
 pub fn get_local_websockt() -> String {
-    let arg = std::env::var("LOCALWS").expect("Add localws to .env");
-    dbg!(&arg);
-    arg
+    std::env::var("LOCALWS").expect("Add localws to .env")
 }

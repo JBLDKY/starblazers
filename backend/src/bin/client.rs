@@ -1,9 +1,12 @@
 #![cfg(feature = "daemon")]
+use std::io::BufRead;
+use std::{fs::File, io::BufReader};
+
 use clap::Parser;
 use dotenv::dotenv;
 use service::{
     daemon::basic::{get_daemon_status, get_local_websockt, start_daemon, stop_daemon},
-    pid_file::SOCKET_PATH,
+    pid_file::{SOCKET_PATH, STDOUT},
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
@@ -30,6 +33,12 @@ enum StarblazersCommand {
     /// The Starblazers Game related commands.
     #[command()]
     Game(GameCommand),
+    /// The daemon's logs.
+    #[command()]
+    Log {
+        #[arg(short, long, default_value = "10")]
+        n: usize,
+    },
 }
 
 #[derive(Parser, Debug)]
@@ -106,6 +115,9 @@ async fn main() -> Result<(), anyhow::Error> {
         StarblazersCommand::Game(_command) => unimplemented!(),
         StarblazersCommand::Server(command) => handle_server_command(command).await,
         StarblazersCommand::Lobby(_command) => unimplemented!(),
+        StarblazersCommand::Log { n } => {
+            read_last_n_lines(n).expect("Could not read last `n` lines.")
+        }
     }
 
     Ok(())
@@ -152,6 +164,26 @@ async fn send_message_to_daemon(msg: String) -> Result<(), anyhow::Error> {
     stream.read_to_string(&mut response).await?;
 
     log::info!("Response from Daemon: {}", &response);
+
+    Ok(())
+}
+
+fn read_last_n_lines(n: usize) -> Result<(), anyhow::Error> {
+    let file = File::open(STDOUT)?;
+
+    let mut lines = BufReader::new(file)
+        .lines()
+        .map(|line| line.unwrap_or(String::new()))
+        .collect::<Vec<String>>();
+
+    let count = 0;
+    for line in lines.iter().rev() {
+        println!("{}", line);
+
+        if count >= n {
+            break;
+        }
+    }
 
     Ok(())
 }
