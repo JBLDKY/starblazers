@@ -1,15 +1,15 @@
 #![cfg(feature = "daemon")]
-use actix::prelude::*;
-use actix_web_actors::ws;
 use daemonize::Daemonize;
+use futures_util::StreamExt;
 use reqwest::Client;
 use service::pid_file::{ERROUT, PID_FILE, SOCKET_PATH, STDOUT};
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
-use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::net::UnixListener;
+use tokio_tungstenite::tungstenite::handshake::client::generate_key;
+use tokio_tungstenite::tungstenite::http::Request;
 use tokio_tungstenite::{connect_async, WebSocketStream};
 
 // struct SimulatedPlayer {
@@ -52,7 +52,9 @@ async fn main() -> std::io::Result<()> {
 
             let response = match command.trim() {
                 "helloworld" => handle_hello_world().await,
-                "ws" => new_websocket().await,
+                "ws" => new_websocket()
+                    .await
+                    .unwrap_or("Error occurred.".to_string()),
                 _ => "Unknown command".to_string(),
             };
 
@@ -107,15 +109,37 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
     Ok(listener)
 }
 
-struct SimulatedPlayer {
-    id: String,
-    ws: Option<WebSocketStream<TcpStream>>,
-}
+async fn new_websocket() -> Result<String, Box<dyn std::error::Error>> {
+    let url = "ws://localhost:3030/lobby";
+    let jwt = "";
+    let ws_key = generate_key();
 
-async fn new_websocket() -> String {
-    let (ws_stream, _) = connect_async("ws://localhost:3030/lobby")
-        .await
-        .expect("Failed to connect");
+    println!("building request");
+    let request = Request::builder()
+        .method("GET")
+        .uri(url)
+        .header("Cookie", format!("Authorization={}", jwt))
+        .header("Host", url)
+        .header("Connection", "Upgrade")
+        .header("Upgrade", "websocket")
+        .header("Sec-WebSocket-Version", "13")
+        .header("Sec-WebSocket-Key", ws_key)
+        .body(())
+        .unwrap();
 
-    String::new()
+    println!("building request succeeded");
+
+    // Connect with the custom request
+    let (ws_stream, _) = match connect_async(request).await {
+        Ok((w, r)) => (w, r),
+        Err(e) => return Ok(e.to_string()),
+    };
+
+    // At this point, you have a connected WebSocket stream
+    // You might want to spawn a task to handle incoming messages, for example:
+    tokio::spawn(async move {
+        let (write, read) = ws_stream.split();
+    });
+
+    Ok("WebSocket connection established successfully".to_string())
 }

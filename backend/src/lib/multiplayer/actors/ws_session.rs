@@ -61,6 +61,7 @@ impl WsSession {
             ctx.ping(b"");
             ctx.text(s);
         } else {
+            // FIXME: This seems to not happen?
             // Heartbeat timed out
             ctx.stop();
         }
