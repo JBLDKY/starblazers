@@ -74,24 +74,26 @@ async fn main() -> std::io::Result<()> {
             let command = std::str::from_utf8(&buffer[..n]).unwrap();
 
             let response = match command.trim() {
-                "helloworld" => {
-                    let client = Client::new();
-                    match client
-                        .get("http://localhost:3030/helloworld".to_string())
-                        .send()
-                        .await
-                    {
-                        Ok(resp) => resp
-                            .text()
-                            .await
-                            .unwrap_or_else(|_| "Failed to get response text".to_string()),
-                        Err(e) => format!("Request failed: {}", e),
-                    }
-                }
+                "helloworld" => handle_hello_world().await,
                 _ => "Unknown command".to_string(),
             };
 
             stream.write_all(response.as_bytes()).await.unwrap();
         });
+    }
+}
+
+async fn handle_hello_world() -> String {
+    let client = Client::new();
+    match client
+        .get("http://localhost:3030/helloworld".to_string())
+        .send()
+        .await
+    {
+        Ok(resp) => resp
+            .text()
+            .await
+            .unwrap_or_else(|_| "Failed to get response text".to_string()),
+        Err(e) => format!("Request failed: {}", e),
     }
 }
