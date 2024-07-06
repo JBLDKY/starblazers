@@ -3,14 +3,12 @@ use actix::prelude::*;
 use actix_web_actors::ws;
 use daemonize::Daemonize;
 use reqwest::Client;
-use service::configuration::get_settings;
 use service::pid_file::{ERROUT, PID_FILE, SOCKET_PATH, STDOUT};
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{UnixListener, UnixStream};
+use tokio::net::UnixListener;
 
 struct SimulatedPlayer {
     id: String,
@@ -55,51 +53,45 @@ async fn main() -> std::io::Result<()> {
         .stdout(stdout.try_clone()?)
         .stderr(stderr.try_clone()?);
 
-    let settings = get_settings().expect("Failed to get settings");
-
-    match daemonize.start() {
-        Ok(_) => {
-            if let Ok(metadata) = std::fs::metadata(PID_FILE) {
-                let mut perms = metadata.permissions();
-                perms.set_mode(0o644);
-                std::fs::set_permissions(PID_FILE, perms)?;
-            }
-
-            let socket_path = SOCKET_PATH;
-            let listener = UnixListener::bind(socket_path)?;
-
-            // Keep the daemon running and waiting for commands
-            loop {
-                let (mut stream, _) = listener.accept().await?;
-                tokio::spawn(async move {
-                    let mut buffer = [0; 1024];
-                    let n = stream.read(&mut buffer).await.unwrap();
-                    let command = std::str::from_utf8(&buffer[..n]).unwrap();
-
-                    let response = match command.trim() {
-                        "helloworld" => {
-                            let client = Client::new();
-                            match client
-                                .get("http://localhost:3030/helloworld".to_string())
-                                .send()
-                                .await
-                            {
-                                Ok(resp) => resp
-                                    .text()
-                                    .await
-                                    .unwrap_or_else(|_| "Failed to get response text".to_string()),
-                                Err(e) => format!("Request failed: {}", e),
-                            }
-                        }
-                        _ => "Unknown command".to_string(),
-                    };
-
-                    stream.write_all(response.as_bytes()).await.unwrap();
-                });
-            }
-        }
-        Err(e) => eprintln!("Error starting daemon: {}", e),
+    if let Err(e) = daemonize.start() {
+        eprintln!("Failed to initialize Daemon: {}", e)
     }
 
-    Ok(())
+    if let Ok(metadata) = std::fs::metadata(PID_FILE) {
+        let mut perms = metadata.permissions();
+        perms.set_mode(0o644);
+        std::fs::set_permissions(PID_FILE, perms)?;
+    }
+
+    let listener = UnixListener::bind(SOCKET_PATH)?;
+
+    // Keep the daemon running and waiting for commands
+    loop {
+        let (mut stream, _) = listener.accept().await?;
+        tokio::spawn(async move {
+            let mut buffer = [0; 1024];
+            let n = stream.read(&mut buffer).await.unwrap();
+            let command = std::str::from_utf8(&buffer[..n]).unwrap();
+
+            let response = match command.trim() {
+                "helloworld" => {
+                    let client = Client::new();
+                    match client
+                        .get("http://localhost:3030/helloworld".to_string())
+                        .send()
+                        .await
+                    {
+                        Ok(resp) => resp
+                            .text()
+                            .await
+                            .unwrap_or_else(|_| "Failed to get response text".to_string()),
+                        Err(e) => format!("Request failed: {}", e),
+                    }
+                }
+                _ => "Unknown command".to_string(),
+            };
+
+            stream.write_all(response.as_bytes()).await.unwrap();
+        });
+    }
 }
