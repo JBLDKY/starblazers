@@ -1,7 +1,13 @@
 #![cfg(feature = "daemon")]
 use std::{io::Read, process::Command};
 
-use crate::pid_file::PID_FILE;
+use reqwest::Client;
+use uuid::Uuid;
+
+use crate::{
+    pid_file::PID_FILE,
+    types::{LoginDetails, LoginError, User},
+};
 
 pub fn start_daemon() {
     if is_daemon_running() {
@@ -81,4 +87,62 @@ pub fn get_daemon_status() {
     } else {
         log::info!("Daemon status: stopped.");
     }
+}
+
+pub async fn create_player() -> Result<(String, String), anyhow::Error> {
+    let password = Uuid::new_v4().to_string();
+    let email = format!("player_{}@mail.com", Uuid::new_v4());
+    let new_user = User {
+        email: email.clone(),
+        username: format!(
+            "Player_{}",
+            Uuid::new_v4().to_string().split('-').next().unwrap()
+        ),
+        password: password.clone(), // Generate a random password
+        ..Default::default()
+    };
+
+    let response = Client::new()
+        .post("http://localhost:3030/auth/signup")
+        .json(&new_user)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(LoginError::InvalidInputSentByUser("".to_string()).into());
+    }
+
+    Ok((email, password))
+}
+
+pub async fn create_player_and_get_jwt() -> Result<String, anyhow::Error> {
+    let (email, password) = create_player().await.expect("Failed to create player");
+
+    let login_details = LoginDetails {
+        email: Some(email),
+        username: None,
+        password,
+    };
+
+    let response = Client::new()
+        .post("http://localhost:3030/auth/login")
+        .json(&login_details)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        return Err(LoginError::InvalidInputSentByUser("".to_string()).into());
+    }
+
+    let jwt: String = response
+        .headers()
+        .get("Authorization")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned();
+
+    println!("{:?}", jwt);
+
+    Ok(jwt)
 }

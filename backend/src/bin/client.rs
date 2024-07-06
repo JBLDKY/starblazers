@@ -61,6 +61,9 @@ struct ServerCommand {
 pub enum ServerSubCommand {
     Helloworld,
     Ws,
+    Newplayer,
+    Jwt,
+    List,
 }
 
 #[derive(Parser, Debug)]
@@ -108,10 +111,21 @@ async fn main() -> Result<(), anyhow::Error> {
 
 async fn handle_server_command(server_command: ServerCommand) {
     match server_command.command {
-        ServerSubCommand::Helloworld => hello_world().await.expect("Couldn't retrieve helloworld"),
-        ServerSubCommand::Ws => websocket()
+        ServerSubCommand::Helloworld => send_message_to_daemon("helloworld".to_string())
             .await
-            .expect("Couldn't establish websocket connection"),
+            .expect("failed"),
+        ServerSubCommand::Newplayer => send_message_to_daemon("np".to_string())
+            .await
+            .expect("Failed"),
+        ServerSubCommand::Jwt => send_message_to_daemon("jwt".to_string())
+            .await
+            .expect("Failed"),
+        ServerSubCommand::Ws => send_message_to_daemon("ws".to_string())
+            .await
+            .expect("Failed"),
+        ServerSubCommand::List => send_message_to_daemon("list".to_string())
+            .await
+            .expect("Failed"),
     }
 }
 
@@ -127,21 +141,9 @@ fn handle_daemon_command(daemon_command: DaemonCommand) {
     }
 }
 
-async fn hello_world() -> Result<(), anyhow::Error> {
+async fn send_message_to_daemon(msg: String) -> Result<(), anyhow::Error> {
     let mut stream = UnixStream::connect(SOCKET_PATH).await?;
-    stream.write_all(b"helloworld").await?;
-
-    let mut response = String::new();
-    stream.read_to_string(&mut response).await?;
-
-    log::info!("Response from Daemon: {}", &response);
-
-    Ok(())
-}
-
-async fn websocket() -> Result<(), anyhow::Error> {
-    let mut stream = UnixStream::connect(SOCKET_PATH).await?;
-    stream.write_all(b"ws").await?;
+    stream.write_all(msg.as_bytes()).await?;
 
     let mut response = String::new();
     stream.read_to_string(&mut response).await?;

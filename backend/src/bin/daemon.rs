@@ -1,39 +1,37 @@
 #![cfg(feature = "daemon")]
 use daemonize::Daemonize;
+use futures_util::SinkExt;
 use futures_util::StreamExt;
 use reqwest::Client;
+use service::daemon::basic::{create_player, create_player_and_get_jwt};
 use service::pid_file::{ERROUT, PID_FILE, SOCKET_PATH, STDOUT};
+use std::collections::HashMap;
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 use tokio::net::UnixListener;
+use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
-use tokio_tungstenite::{connect_async, WebSocketStream};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use uuid::Uuid;
 
-// struct SimulatedPlayer {
-//     id: String,
-// }
-//
-// impl Actor for SimulatedPlayer {
-//     type Context = ws::WebsocketContext<Self>;
-//
-//     fn started(&mut self, ctx: &mut Self::Context) {
-//         ctx.run_interval(Duration::from_secs(1), |act, ctx| {
-//             let msg = format!("{{\"type\": \"move\", \"player\": \"{}\"}}", act.id);
-//             ctx.text(msg);
-//         });
-//     }
-// }
-//
-// impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for SimulatedPlayer {
-//     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-//         if let Ok(ws::Message::Text(text)) = msg {
-//             println!("Received: {}", text);
-//         }
-//     }
-// }
+type WebSocketHandle = JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>;
+
+#[derive(Debug)]
+struct GlobalState {
+    websocket_handles: HashMap<Uuid, WebSocketHandle>,
+}
+
+impl GlobalState {
+    fn new() -> Self {
+        GlobalState {
+            websocket_handles: HashMap::new(),
+        }
+    }
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -42,9 +40,11 @@ async fn main() -> std::io::Result<()> {
 
     // Keep the daemon running and waiting for commands
     let listener = init_daemon().expect("Failed to init daemon");
+    let state = Arc::new(Mutex::new(GlobalState::new()));
 
     loop {
         let (mut stream, _) = listener.accept().await?;
+        let state = Arc::clone(&state);
         tokio::spawn(async move {
             let mut buffer = [0; 1024];
             let n = stream.read(&mut buffer).await.unwrap();
@@ -52,9 +52,19 @@ async fn main() -> std::io::Result<()> {
 
             let response = match command.trim() {
                 "helloworld" => handle_hello_world().await,
-                "ws" => new_websocket()
-                    .await
-                    .unwrap_or("Error occurred.".to_string()),
+                "np" => {
+                    let (user, pass) = create_player().await.expect("Couldnt create player");
+                    format!("user: {}/pass: {}", user, pass)
+                }
+
+                "jwt" => create_player_and_get_jwt().await.expect("No jwt for u"),
+                "list" => format!("{:#?}", state),
+                "ws" => {
+                    let handle = new_websocket();
+                    let id = Uuid::new_v4();
+                    state.lock().unwrap().websocket_handles.insert(id, handle);
+                    "WebSocket connection spawned".to_string()
+                }
                 _ => "Unknown command".to_string(),
             };
 
@@ -109,37 +119,73 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
     Ok(listener)
 }
 
-async fn new_websocket() -> Result<String, Box<dyn std::error::Error>> {
-    let url = "ws://localhost:3030/lobby";
-    let jwt = "";
-    let ws_key = generate_key();
-
-    println!("building request");
-    let request = Request::builder()
-        .method("GET")
-        .uri(url)
-        .header("Cookie", format!("Authorization={}", jwt))
-        .header("Host", url)
-        .header("Connection", "Upgrade")
-        .header("Upgrade", "websocket")
-        .header("Sec-WebSocket-Version", "13")
-        .header("Sec-WebSocket-Key", ws_key)
-        .body(())
-        .unwrap();
-
-    println!("building request succeeded");
-
-    // Connect with the custom request
-    let (ws_stream, _) = match connect_async(request).await {
-        Ok((w, r)) => (w, r),
-        Err(e) => return Ok(e.to_string()),
-    };
-
-    // At this point, you have a connected WebSocket stream
-    // You might want to spawn a task to handle incoming messages, for example:
+fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>> {
     tokio::spawn(async move {
-        let (write, read) = ws_stream.split();
-    });
+        let url = "ws://localhost:3030/lobby";
+        let jwt = create_player_and_get_jwt()
+            .await
+            .expect("Failed to create new player and get jwt");
+        let request = Request::builder()
+            .method("GET")
+            .uri(url)
+            .header("Cookie", format!("Authorization={}", jwt))
+            .header("Host", url)
+            .header("Connection", "Upgrade")
+            .header("Upgrade", "websocket")
+            .header("Sec-WebSocket-Version", "13")
+            .header("Sec-WebSocket-Key", generate_key())
+            .body(())
+            .unwrap();
 
-    Ok("WebSocket connection established successfully".to_string())
+        let (ws_stream, _) = connect_async(request).await?;
+        let (mut write, mut read) = ws_stream.split();
+        let last_ping = Arc::new(Mutex::new(Instant::now()));
+        let timeout_check = Arc::clone(&last_ping);
+
+        println!("WebSocket connection established successfully");
+
+        let read_task = tokio::spawn(async move {
+            while let Some(message) = read.next().await {
+                match message {
+                    Ok(msg) => match msg {
+                        Message::Ping(ping) => {
+                            println!("ping");
+                            *last_ping.lock().unwrap() = Instant::now();
+                            if let Err(e) = write.send(Message::Pong(ping)).await {
+                                eprintln!("Error sending pong: {:?}", e);
+                                break;
+                            }
+                        }
+                        Message::Text(text) => {
+                            println!("Message: {}", text);
+                        }
+                        _ => println!("OTher message: {:?}", msg),
+                    },
+                    Err(e) => {
+                        eprintln!("Error: {:?}", e);
+                        break;
+                    }
+                }
+            }
+            println!("WebSocket read task died");
+        });
+
+        let timeout_task = tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                let last_ping = timeout_check.lock().unwrap();
+                if Instant::now().duration_since(*last_ping) > Duration::from_secs(10) {
+                    eprintln!("Connection timed out");
+                    break;
+                }
+            }
+        });
+
+        tokio::select! {
+            _ = read_task => println!("Read task finished"),
+            _ = timeout_task => println!("Timeout task finished"),
+        }
+
+        Ok(())
+    })
 }
