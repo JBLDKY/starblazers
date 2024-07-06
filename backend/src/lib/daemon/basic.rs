@@ -1,3 +1,13 @@
+#![cfg(feature = "daemon")]
+use predicates::prelude::*;
+use service::pid_file::{ERROUT, PID_FILE, STDOUT};
+use std::fs::File;
+use std::io::Write;
+use std::os::unix::fs::PermissionsExt;
+use std::process::Command as StdCommand;
+use std::thread;
+use std::time::Duration;
+
 fn start_daemon() {
     if is_daemon_running() {
         println!("Daemon is already running.");
