@@ -29,6 +29,7 @@ pub fn stop_daemon() {
         log::info!("Daemon is not running.");
         return;
     }
+    println!("Starting daemon");
 
     // Read the PID from the file
     let mut file = std::fs::File::open(PID_FILE).expect("Failed to open PID file");
