@@ -8,3 +8,6 @@ pub mod multiplayer;
 pub mod pid_file;
 pub mod routes;
 pub mod types;
+
+#[cfg(feature = "daemon")]
+pub mod daemon;
