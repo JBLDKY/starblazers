@@ -1,17 +1,72 @@
 use std::{io::Read, process::Command};
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use service::pid_file::PID_FILE;
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
+#[command(author = "Sb Co.", version = "0.1.0", about, long_about = None)]
+struct Args {
     #[command(subcommand)]
-    command: Option<Commands>,
+    command: StarblazersCommand,
 }
 
-#[derive(clap::Subcommand, Debug)]
-enum Commands {
+#[derive(Parser, Debug)]
+enum StarblazersCommand {
+    #[command()]
+    Daemon(DaemonCommand),
+    #[command()]
+    Server(ServerCommand),
+    #[command()]
+    Lobby(LobbyCommand),
+    #[command()]
+    Game(GameCommand),
+}
+
+#[derive(Parser, Debug)]
+struct DaemonCommand {
+    #[command(subcommand)]
+    command: DaemonSubCommand,
+}
+
+#[derive(Parser, Debug)]
+pub enum DaemonSubCommand {
+    Start,
+    Stop,
+    Status,
+}
+
+#[derive(Parser, Debug)]
+struct ServerCommand {
+    #[command(subcommand)]
+    command: ServerSubCommand,
+}
+
+#[derive(Parser, Debug)]
+pub enum ServerSubCommand {
+    Start,
+    Stop,
+}
+
+#[derive(Parser, Debug)]
+struct LobbyCommand {
+    #[command(subcommand)]
+    command: LobbySubCommand,
+}
+
+#[derive(Parser, Debug)]
+pub enum LobbySubCommand {
+    Start,
+    Stop,
+}
+
+#[derive(Parser, Debug)]
+struct GameCommand {
+    #[command(subcommand)]
+    command: GameSubCommand,
+}
+
+#[derive(Parser, Debug)]
+pub enum GameSubCommand {
     Start,
     Stop,
 }
@@ -20,11 +75,10 @@ fn main() {
     std::env::set_var("RUST_LOG", "debug");
     pretty_env_logger::init();
 
-    let cli = Cli::parse();
+    let cli = Args::parse();
 
-    match &cli.command {
-        Some(Commands::Start) => start_daemon(),
-        Some(Commands::Stop) => stop_daemon(),
+    match cli.command {
+        ArgCommand { sub } => handle_daemon_command(sub),
         None => println!("No command specified. Use --help for usage information."),
     }
 }
@@ -98,4 +152,9 @@ fn is_daemon_running() -> bool {
         .status()
         .map(|status| status.success())
         .unwrap_or(false)
+}
+
+pub fn handle_daemon_command(command: DaemonCommand) {
+    dbg!(command);
+    println!("hi");
 }

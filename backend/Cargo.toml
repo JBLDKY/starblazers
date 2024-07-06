@@ -10,7 +10,10 @@ name = "service"
 path = "src/lib/lib.rs"
 
 [features]
-daemon = ["daemonize"]
+default = ["daemon"]
+daemon = ["dep:daemonize"]
+production = []
+
 
 [[bin]]
 name = "server"
