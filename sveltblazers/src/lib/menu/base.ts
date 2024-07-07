@@ -19,7 +19,7 @@ export abstract class BaseMenu {
 	protected builder: MenuItemBuilder;
 	protected navigator: Navigator;
 	protected inputHandler: InputHandler;
-	protected websocket;
+	protected websocket: WebSocketManager | undefined;
 	protected playerInfo: PublicPlayerData;
 
 	private kind: MenuKind = MenuKind.Undefined;

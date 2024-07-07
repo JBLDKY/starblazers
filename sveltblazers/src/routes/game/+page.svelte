@@ -15,6 +15,10 @@
 	let spaceInvadersGame: SpaceInvadersGame;
 	let gameConnection: GameConnection;
 
+	function delay(ms = LOGIN_DELAY) {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
 	onMount(async () => {
 		// This is a protected page; login is required
 		// If this is not inside onMount(), it will raise an error that
@@ -43,9 +47,9 @@
 		}
 
 		if (get(playerInfoStore)) {
-			const playerUuid = get(playerInfoStore).uuid;
-			gameConnection = new GameConnection(playerUuid);
+			gameConnection = new GameConnection();
 			gameConnection.connect();
+			delay(3);
 		}
 	});
 
@@ -74,7 +78,6 @@
 		p.draw = () => {
 			if (spaceInvadersGame) {
 				spaceInvadersGame.update();
-				spaceInvadersGame.draw();
 			}
 		};
 	};

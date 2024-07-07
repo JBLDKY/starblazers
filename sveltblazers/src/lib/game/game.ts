@@ -43,6 +43,7 @@ export class SpaceInvadersGame {
 	public debugManager: DebugManager = new DebugManager();
 	public spawnHandler: SpawnHandler;
 	public gcm: GameConnection;
+	public webSocketManager: WebSocketManager;
 	// public gameStateManager: GameStateManager;
 
 	/**
@@ -98,12 +99,13 @@ export class SpaceInvadersGame {
 	 * Updates the state of all game entities every loop/frame.
 	 */
 	public update(timestamp: number): void {
-		if (!this.isTypingInChat()) {
-			this.handleInput(timestamp);
-		} else {
-			this.handleInputWhileTyping();
-		}
+		// if (!this.isTypingInChat()) {
+		// 	this.handleInput(timestamp);
+		// } else {
+		// 	this.handleInputWhileTyping();
+		// }
 
+		this.handleInput(timestamp);
 		this.entityManager.cleanInactiveEntities();
 		this.collisions();
 
@@ -138,9 +140,10 @@ export class SpaceInvadersGame {
 	}
 
 	private debugInfo(): void {
+		console.log('Debuginfo');
 		const debugMessages = [
 			'FPS: ' + Math.round(this.p.frameRate()),
-			'Chatting: ' + this.isTypingInChat(),
+			// 'Chatting: ' + this.isTypingInChat(),
 			'Dev command: ' + this.inputHandler.shouldHandleDevCommand(this.fpsManager.getInGameTime()),
 			'Last dev cmd time: ' + this.inputHandler.getLastDevCommandTime(),
 			'Debug: ' + DebugManager.debugMode,
@@ -171,9 +174,10 @@ export class SpaceInvadersGame {
 	// 	this.chatBox.startTypingMessage();
 	// }
 	//
-	// cancelMessage(): void {
-	// 	this.chatBox.cancelMessage();
-	// }
+	cancelMessage(): void {
+		return;
+		this.chatBox.cancelMessage();
+	}
 	//
 	// sendMessage(): void {
 	// 	this.chatBox.sendMessage(this.devConsole);
@@ -210,7 +214,7 @@ export class SpaceInvadersGame {
 			this.p,
 			menuIndex,
 			this.inputHandler,
-			this.gcm,
+			this.webSocketManager,
 			args
 		);
 
@@ -243,8 +247,10 @@ export class SpaceInvadersGame {
 	private gameLoop(timestamp: number): void {
 		requestAnimationFrame(this.gameLoop.bind(this));
 		if (this.fpsManager.shouldDraw(timestamp)) {
+			console.log(this.state);
 			switch (this.state) {
 				case GameState.RUN:
+					console.log('Drawing game');
 					this.update(timestamp);
 					this.draw();
 					// this.gameStateManager.sendGameState(); // Send game state update

@@ -5,15 +5,16 @@ import type { GameConnection } from './gcm';
 export class WebSocketManager {
 	private ws: WebSocket | null = null;
 	public messages: string[];
-	private setGameStateData: (state: any) => void;
 	private setSynchronizedState: (state: SynchronizeStateMessage) => void;
 
 	constructor(
 		setGameStateData: (state?: any) => void,
-		setSynchronizedState: (state?: SynchronizeStateMessage) => void
-		gcm: GameConnection,
+		setSynchronizedState: (message?: SynchronizeStateMessage) => void,
+		gcm: GameConnection
 	) {
-		this.ws = gcm.socket
+		console.log('gcm.socket');
+		console.log(gcm.socket);
+		this.ws = gcm.socket;
 		this.messages = [];
 		this.setGameStateData = setGameStateData;
 		this.setSynchronizedState = setSynchronizedState;
@@ -29,7 +30,6 @@ export class WebSocketManager {
 			this.ws = null;
 		}
 	}
-
 
 	handleReceivedWebSocketData(data: BaseWebSocketMessage) {
 		switch (data.type) {
