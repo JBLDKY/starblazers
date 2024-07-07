@@ -5,11 +5,15 @@ use futures_util::stream::SplitSink;
 use futures_util::stream::SplitStream;
 use futures_util::SinkExt;
 use futures_util::StreamExt;
+use reqwest::Client;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use service::daemon::basic::get_local_address;
 use service::daemon::basic::get_local_websockt;
 use service::daemon::basic::handle_hello_world;
 use service::daemon::basic::{create_player, create_player_and_get_jwt};
 use service::pid_file::{PID_FILE, SOCKET_PATH, STDOUT};
+use service::types::PublicUserRecord;
 use std::collections::HashMap;
 use std::fs::File;
 use std::os::unix::fs::PermissionsExt;
@@ -37,6 +41,8 @@ const CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
 #[derive(Debug)]
 struct Task {
     id: Uuid,
+    player_id: Uuid,
+    jwt: String,
     handle: WebSocketHandle,
     cancel_sender: watch::Sender<bool>,
 }
@@ -199,7 +205,7 @@ async fn main() -> std::io::Result<()> {
                 UnixSocketMessage::ListWebsockets => format!("{:#?}", state.lock().unwrap()),
                 UnixSocketMessage::NewWebsocket { id } => {
                     let id = id.unwrap_or_else(Uuid::new_v4);
-                    let task = new_websocket(Some(id));
+                    let task = new_websocket(Some(id)).await;
                     state.lock().unwrap().websocket_handles.insert(id, task);
                     format!("WebSocket connection spawned, connection_id: {}", id)
                 }
@@ -293,12 +299,21 @@ async fn new_websocket_request(
 /// Connects a new websocket to the server in an asynchronous task. Runs
 /// until it is manually terminated.
 #[allow(clippy::let_underscore_future)]
-fn new_websocket(connection_id: Option<Uuid>) -> Task {
+async fn new_websocket(connection_id: Option<Uuid>) -> Task {
     let (cancel_sender, mut cancel_receiver) = watch::channel(false);
+
+    let connection_id = connection_id.unwrap_or(Uuid::new_v4());
+
+    // TODO: Handle error
+    let jwt = create_player_and_get_jwt()
+        .await
+        .expect("Failed to create player");
+
+    let request = new_websocket_request(Some(connection_id), Some(jwt.clone())).await;
 
     let handle = tokio::spawn(async move {
         // Establish the WebSocket connection
-        let (read, write) = establish_connection(connection_id).await?;
+        let (read, write) = establish_connection(request).await?;
 
         // Needs to wrapped in Mutex because it is used in the while loop
         let write = Arc::new(TokioMutex::new(write));
@@ -332,10 +347,24 @@ fn new_websocket(connection_id: Option<Uuid>) -> Task {
         Ok(())
     });
 
-    let id = connection_id.unwrap();
+    let player_info = Client::new()
+        .get(format!("{}players/player", get_local_address()))
+        .header("authorization", format!("Bearer {}", &jwt))
+        .send()
+        .await
+        .expect("Failed to send player info request");
+
+    if player_info.status() != StatusCode::OK {
+        log::error!("Did not receive player info in new_websocket function.");
+    }
+
+    let record: PublicUserRecord = player_info.json().await.unwrap();
+    let player_id: Uuid = Uuid::parse_str(&record.uuid).expect("Player has an invalid ID");
 
     Task {
-        id,
+        id: connection_id,
+        jwt,
+        player_id,
         handle,
         cancel_sender,
     }
@@ -344,9 +373,8 @@ fn new_websocket(connection_id: Option<Uuid>) -> Task {
 /// Establishes new websocket connection that is offloaded to an asynchronous task.
 /// A new player is created and authenticated.
 async fn establish_connection(
-    uuid: Option<Uuid>,
+    request: Request<()>,
 ) -> Result<(SStream, SSink), Box<dyn std::error::Error + Send + Sync>> {
-    let request = new_websocket_request(uuid, None).await;
     let (ws_stream, _) = connect_async(request).await?;
     let (write, read) = ws_stream.split();
     log::info!("WebSocket connection established successfully");
