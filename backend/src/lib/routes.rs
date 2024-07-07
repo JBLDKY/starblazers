@@ -283,7 +283,7 @@ async fn lobby_websocket(
 
     let connection_id = req
         .headers()
-        .get("X-Connection-ID")
+        .get("Connection-ID")
         .and_then(|id| id.to_str().ok())
         .and_then(|id| Uuid::parse_str(id).ok())
         .unwrap_or_else(Uuid::new_v4);

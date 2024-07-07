@@ -17,6 +17,7 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::net::UnixListener;
+use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
@@ -33,8 +34,15 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
+struct Task {
+    id: Uuid,
+    handle: WebSocketHandle,
+    cancel_sender: watch::Sender<bool>,
+}
+
+#[derive(Debug)]
 struct GlobalState {
-    websocket_handles: HashMap<Uuid, WebSocketHandle>,
+    websocket_handles: HashMap<Uuid, Task>,
 }
 
 impl GlobalState {
@@ -74,9 +82,9 @@ async fn main() -> std::io::Result<()> {
                 "jwt" => create_player_and_get_jwt().await.expect("No jwt for u"),
                 "list_websocket" => format!("{:#?}", state),
                 "ws" => {
-                    let handle = new_websocket();
                     let id = Uuid::new_v4();
-                    state.lock().unwrap().websocket_handles.insert(id, handle);
+                    let task = new_websocket(Some(id));
+                    state.lock().unwrap().websocket_handles.insert(id, task);
                     "WebSocket connection spawned".to_string()
                 }
                 _ => "Unknown command".to_string(),
@@ -130,9 +138,15 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
 /// If None is provided, a new account will be created and authenticated to get
 /// a fresh JWT.
 async fn new_websocket_request(
+    connection_id: Option<Uuid>,
     jwt: Option<String>,
 ) -> tokio_tungstenite::tungstenite::http::Request<()> {
     let url = get_local_websockt();
+
+    let connection_id: String = match connection_id {
+        Some(v) => v.into(),
+        None => Uuid::new_v4().into(),
+    };
 
     let jwt = match jwt {
         Some(token) => token,
@@ -140,8 +154,6 @@ async fn new_websocket_request(
             .await
             .expect("Failed to create new player and get jwt"),
     };
-
-    let connection_id: String = Uuid::new_v4().into();
 
     Request::builder()
         .method("GET")
@@ -159,35 +171,49 @@ async fn new_websocket_request(
 
 /// Connects a new websocket to the server in an asynchronous task. Runs
 /// until it is manually terminated.
-fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>> {
-    tokio::spawn(async move {
+fn new_websocket(connection_id: Option<Uuid>) -> Task {
+    let (cancel_sender, mut cancel_receiver) = watch::channel(false);
+
+    let handle = tokio::spawn(async move {
         // Establish the WebSocket connection
-        let (read, write) = establish_connection().await?;
+        let (read, write) = establish_connection(connection_id).await?;
 
         // Create a shared timestamp for the last ping received
         let last_ping = Arc::new(Mutex::new(Instant::now()));
 
         // Spawn a task to handle incoming WebSocket messages
-        let read_task = spawn_read_task(read, Arc::clone(&last_ping), write);
+        let _ = spawn_read_task(read, Arc::clone(&last_ping), write);
 
         // Spawn a task to monitor for connection timeouts
-        let timeout_task = spawn_timeout_task(Arc::clone(&last_ping));
+        let _ = spawn_timeout_task(Arc::clone(&last_ping));
 
         // Wait for either the read task or the timeout task to finish
-        tokio::select! {
-            _ = read_task => log::info!("Read task finished"),
-            _ = timeout_task => log::info!("Timeout task finished"),
+        while !*cancel_receiver.borrow() {
+            tokio::select! {
+                _ = cancel_receiver.changed() => { break; }
+                _ = async {
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    } => {}
+            }
         }
-
         Ok(())
-    })
+    });
+
+    let id = connection_id.unwrap();
+
+    Task {
+        id,
+        handle,
+        cancel_sender,
+    }
 }
 
 /// Establishes new websocket connection that is offloaded to an asynchronous task.
 /// A new player is created and authenticated.
-async fn establish_connection() -> Result<(SStream, SSink), Box<dyn std::error::Error + Send + Sync>>
-{
-    let request = new_websocket_request(None).await;
+async fn establish_connection(
+    uuid: Option<Uuid>,
+) -> Result<(SStream, SSink), Box<dyn std::error::Error + Send + Sync>> {
+    let request = new_websocket_request(uuid, None).await;
     let (ws_stream, _) = connect_async(request).await?;
     let (write, read) = ws_stream.split();
     log::info!("WebSocket connection established successfully");
