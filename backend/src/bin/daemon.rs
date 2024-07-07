@@ -8,6 +8,7 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use service::daemon::basic::get_local_address;
 use service::daemon::basic::get_local_websockt;
 use service::daemon::basic::handle_hello_world;
@@ -85,17 +86,25 @@ impl GlobalState {
 
         Some(to_kill)
     }
+
+    pub fn get_full_connection_id(&self, partial: &str) -> Option<Uuid> {
+        self.websocket_handles
+            .keys()
+            .find(|active_id| active_id.to_string().starts_with(&partial))
+            .copied()
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 enum UnixSocketMessage {
     HelloWorld,
     CreatePlayer,
     CreatePlayerAndGetJwt,
     ListWebsockets,
-    NewWebsocket { id: Option<Uuid> },
+    NewWebsocket { connection_id: Option<Uuid> },
     KillWebsocket { substring: String },
     Unknown(String),
+    CreateLobby { substring: String },
 }
 
 impl From<&str> for UnixSocketMessage {
@@ -135,11 +144,11 @@ impl From<&str> for UnixSocketMessage {
 
             // Create a websocket with a specified id
             s if s.starts_with("ws") => {
-                let id = s
+                let connection_id = s
                     .split_whitespace()
                     .nth(1)
-                    .and_then(|id| Uuid::parse_str(id).ok());
-                UnixSocketMessage::NewWebsocket { id }
+                    .and_then(|connection_id| Uuid::parse_str(connection_id).ok());
+                UnixSocketMessage::NewWebsocket { connection_id }
             }
             _ => UnixSocketMessage::Unknown(cmd.to_string()),
         }
@@ -153,8 +162,10 @@ impl From<String> for UnixSocketMessage {
 }
 
 impl From<Uuid> for UnixSocketMessage {
-    fn from(id: Uuid) -> Self {
-        UnixSocketMessage::NewWebsocket { id: Some(id) }
+    fn from(connection_id: Uuid) -> Self {
+        UnixSocketMessage::NewWebsocket {
+            connection_id: Some(connection_id),
+        }
     }
 }
 
@@ -194,27 +205,7 @@ async fn main() -> std::io::Result<()> {
 
             log::info!("Received command: {:?}", command);
 
-            let response = match command {
-                UnixSocketMessage::HelloWorld => handle_hello_world().await,
-                UnixSocketMessage::CreatePlayer => {
-                    let (user, pass) = create_player().await.expect("Couldn't create player");
-                    format!("user: {}/pass: {}", user, pass)
-                }
-                UnixSocketMessage::CreatePlayerAndGetJwt => {
-                    create_player_and_get_jwt().await.expect("No jwt for u")
-                }
-                UnixSocketMessage::ListWebsockets => format!("{:#?}", state.lock().unwrap()),
-                UnixSocketMessage::NewWebsocket { id } => {
-                    let id = id.unwrap_or_else(Uuid::new_v4);
-                    let task = new_websocket(Some(id)).await;
-                    state.lock().unwrap().websocket_handles.insert(id, task);
-                    format!("WebSocket connection spawned, connection_id: {}", id)
-                }
-                UnixSocketMessage::KillWebsocket { ref substring } => {
-                    gracefully_shutdown_websocket(&state, substring.to_string()).await
-                }
-                UnixSocketMessage::Unknown(ref cmd) => format!("Unknown command: {}", cmd),
-            };
+            let response = handle_command(command.clone(), &state).await;
 
             log::info!(
                 "Successfully executed: {:?}. Response: {}",
@@ -225,6 +216,36 @@ async fn main() -> std::io::Result<()> {
             // Return a message to the CLI
             stream.write_all(response.as_bytes()).await.unwrap();
         });
+    }
+}
+
+async fn handle_command(command: UnixSocketMessage, state: &Arc<Mutex<GlobalState>>) -> String {
+    match command {
+        UnixSocketMessage::HelloWorld => handle_hello_world().await,
+        UnixSocketMessage::CreatePlayer => match create_player().await {
+            Ok((user, pass)) => format!("user: {}/pass: {}", user, pass),
+            Err(e) => format!("Failed to create player: {}", e),
+        },
+        UnixSocketMessage::CreatePlayerAndGetJwt => match create_player_and_get_jwt().await {
+            Ok(jwt) => jwt,
+            Err(e) => format!("Failed to get JWT: {}", e),
+        },
+        UnixSocketMessage::ListWebsockets => format!("{:#?}", state.lock().unwrap()),
+        UnixSocketMessage::NewWebsocket { connection_id } => {
+            let id = connection_id.unwrap_or_else(Uuid::new_v4);
+            let task = new_websocket(connection_id).await;
+            "hi".to_string()
+        }
+        UnixSocketMessage::KillWebsocket { ref substring } => {
+            gracefully_shutdown_websocket(state, substring.to_string()).await
+        }
+        UnixSocketMessage::CreateLobby { ref substring } => {
+            match create_lobby(state, substring.to_string()).await {
+                Ok(response) => response,
+                Err(e) => format!("Failed to create lobby: {}", e),
+            }
+        }
+        UnixSocketMessage::Unknown(ref cmd) => format!("Unknown command: {}", cmd),
     }
 }
 
@@ -300,7 +321,9 @@ async fn new_websocket_request(
 /// Connects a new websocket to the server in an asynchronous task. Runs
 /// until it is manually terminated.
 #[allow(clippy::let_underscore_future)]
-async fn new_websocket(connection_id: Option<Uuid>) -> Task {
+async fn new_websocket(
+    connection_id: Option<Uuid>,
+) -> Result<Task, Box<dyn std::error::Error + Send + Sync>> {
     let (cancel_sender, mut cancel_receiver) = watch::channel(false);
 
     let connection_id = connection_id.unwrap_or(Uuid::new_v4());
@@ -371,14 +394,16 @@ async fn new_websocket(connection_id: Option<Uuid>) -> Task {
     let record: PublicUserRecord = player_info.json().await.unwrap();
     let player_id: Uuid = Uuid::parse_str(&record.uuid).expect("Player has an invalid ID");
 
-    Task {
+    let task = Task {
         id: connection_id,
         jwt,
         player_id,
         handle,
         cancel_sender,
         message_sender,
-    }
+    };
+
+    Ok(task)
 }
 
 /// Establishes new websocket connection that is offloaded to an asynchronous task.
@@ -482,47 +507,48 @@ async fn gracefully_shutdown_websocket(
     }
 }
 
-// async fn create_lobby(
-//     state: &GlobalState,
-//     connection_id: Uuid,
-//     lobby_name: String,
-// ) -> Result<(), Box<dyn std::error::Error>> {
-//     let connection = state
-//         .websocket_handles
-//         .get(&connection_id)
-//         .ok_or("Connection not found")?;
-//
-//     let connection = connection.lock().await;
-//
-//     // Verify that the player is authenticated
-//     let player_id = connection
-//         .player_id
-//         .as_ref()
-//         .ok_or("Player not authenticated")?;
-//
-//     // Check if the lobby already exists
-//     let mut lobbies = state.lobbies.lock().await;
-//     if lobbies.contains_key(&lobby_name) {
-//         return Err("Lobby already exists".into());
-//     }
-//
-//     // Create the lobby
-//     let lobby = Lobby {
-//         name: lobby_name.clone(),
-//         host_id: player_id.clone(),
-//         players: vec![player_id.clone()],
-//     };
-//     lobbies.insert(lobby_name.clone(), lobby);
-//
-//     // Send confirmation message to the client
-//     let message = json!({
-//         "type": "LobbyCreated",
-//         "lobby_name": lobby_name,
-//         "player_id": player_id,
-//     });
-//     connection.sender.send(serde_json::to_string(&message)?)?;
-//
-//     println!("Lobby '{}' created by player '{}'", lobby_name, player_id);
-//
-//     Ok(())
-// }
+async fn create_lobby(
+    state: &Arc<Mutex<GlobalState>>,
+    connection_id: String,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let state = state.lock().expect("Failed to lock mutex");
+    let id = state.get_full_connection_id(&connection_id);
+
+    if id.is_none() {
+        return Ok("help".to_string());
+    }
+
+    let connection_id = id.unwrap();
+
+    let connection = state
+        .websocket_handles
+        .get(&connection_id)
+        .ok_or("Connection not found")?;
+
+    // Verify that the player is authenticated
+    let player_id: String = connection.player_id.into();
+
+    // Send confirmation message to the client
+    let message = json!({
+        "type": "CreateLobby",
+        "lobby_name": player_id,
+        "player_id": player_id,
+    });
+
+    let message_string = serde_json::to_string(&message)?;
+
+    // Use try_send instead of send to make it non-blocking
+    match connection.message_sender.try_send(message_string) {
+        Ok(_) => {
+            log::info!("Created lobby on the server");
+            Ok("Created lobby!".to_string())
+        }
+        Err(e) => {
+            log::error!("Failed to send lobby creation message: {}", e);
+            Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to send lobby creation message",
+            )))
+        }
+    }
+}

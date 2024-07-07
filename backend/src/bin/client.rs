@@ -32,7 +32,20 @@ enum StarblazersCommand {
     Server(ServerCommand),
     /// The Starblazers Lobby related commands.
     #[command()]
-    Lobby(LobbyCommand),
+    Lobby {
+        /// Specifies that the target is a websocket
+        /// Options: [websocket, .. wip]
+        #[arg(long, short)]
+        Create: String,
+
+        /// Substring of the ID of the target to kill (min match = first three chars)
+        #[arg(long, short)]
+        Join: String,
+
+        /// Substring of the ID of the target to kill (min match = first three chars)
+        #[arg(long, short)]
+        id: String,
+    },
     /// The Starblazers Game related commands.
     #[command()]
     Game(GameCommand),
