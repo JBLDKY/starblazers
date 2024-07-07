@@ -30,21 +30,13 @@ enum StarblazersCommand {
     /// The Starblazers Server related commands.
     #[command()]
     Server(ServerCommand),
-    /// The Starblazers Lobby related commands.
-    #[command()]
+    /// Create a lobby
     Lobby {
-        /// Specifies that the target is a websocket
-        /// Options: [websocket, .. wip]
-        #[arg(long, short)]
-        Create: String,
-
-        /// Substring of the ID of the target to kill (min match = first three chars)
-        #[arg(long, short)]
-        Join: String,
-
-        /// Substring of the ID of the target to kill (min match = first three chars)
         #[arg(long, short)]
         id: String,
+
+        #[arg(long, short)]
+        join: Option<String>,
     },
     /// The Starblazers Game related commands.
     #[command()]
@@ -81,6 +73,18 @@ enum StarblazersCommand {
 struct DaemonCommand {
     #[command(subcommand)]
     command: DaemonSubCommand,
+}
+
+#[derive(Parser, Debug)]
+#[command(group(clap::ArgGroup::new("join_or_create").required(true).args(["id"])))]
+struct LobbyOptions {
+    /// List WebSocket connections
+    #[arg(short, long, group = "join_or_create")]
+    join: Option<String>,
+
+    /// List active players
+    #[arg(short, long, group = "join_or_create")]
+    id: String,
 }
 
 #[derive(Parser, Debug)]
@@ -175,12 +179,23 @@ async fn main() -> Result<(), anyhow::Error> {
         StarblazersCommand::Daemon(command) => handle_daemon_command(command),
         StarblazersCommand::Game(_command) => unimplemented!(),
         StarblazersCommand::Server(command) => handle_server_command(command).await,
-        StarblazersCommand::Lobby(_command) => unimplemented!(),
         StarblazersCommand::Log { n } => {
             read_last_n_lines(n).expect("Could not read last `n` lines.")
         }
         StarblazersCommand::List(list_options) => handle_list_command(list_options).await,
         StarblazersCommand::Recompile => handle_recompile_command().expect("Failed to recompile"),
+        StarblazersCommand::Lobby { id, join } => {
+            is_valid_partial_id(&id)?;
+            if join.is_some() {
+                // is_valid_partial_id(&join.unwrap())?;
+                // join_lobby(connection_id).await
+                unimplemented!()
+            } else {
+                send_message_to_daemon(format!("create_lobby {}", id))
+                    .await
+                    .expect("Failed to send message to daemon");
+            }
+        }
         StarblazersCommand::Kill { target, id } => {
             if id.len() < 3 {
                 return Err(anyhow!(
@@ -193,6 +208,15 @@ async fn main() -> Result<(), anyhow::Error> {
 
     Ok(())
 }
+
+fn is_valid_partial_id(partial_id: &str) -> Result<(), anyhow::Error> {
+    if partial_id.len() >= 3 {
+        Ok(())
+    } else {
+        Err(anyhow!("ID Entered is too short"))
+    }
+}
+
 async fn handle_list_command(list_options: ListOptions) {
     if list_options.websocket {
         send_message_to_daemon("list_websocket".to_string())

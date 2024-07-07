@@ -25,6 +25,7 @@ use tokio::net::TcpStream;
 use tokio::net::UnixListener;
 use tokio::sync::{mpsc, watch, Mutex as TokioMutex};
 use tokio::task::JoinHandle;
+use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
 use tokio_tungstenite::MaybeTlsStream;
@@ -61,6 +62,10 @@ impl GlobalState {
         }
     }
 
+    fn add(&mut self, connection_id: Uuid, task: Task) {
+        self.websocket_handles.insert(connection_id, task);
+    }
+
     /// Looks for an active websocket id starting with kill_id.
     /// Sends a message to the websocket's receiver channel which is
     /// the signal to close itself.
@@ -78,11 +83,15 @@ impl GlobalState {
             .get(&to_kill)
             .expect("Task not found");
 
-        task.cancel_sender.send(true).ok();
+        // FIXME: Race condition
+        let res = task.cancel_sender.send(true);
+        if res.is_err() {
+            log::error!("Failed to send cancellation signal");
+            return None;
+        }
 
-        self.websocket_handles
-            .remove(&to_kill.clone())
-            .map(|task| task.id);
+        tokio::time::sleep(Duration::from_secs(2));
+        // Wait for the task to complete (with a timeout)
 
         Some(to_kill)
     }
@@ -90,7 +99,7 @@ impl GlobalState {
     pub fn get_full_connection_id(&self, partial: &str) -> Option<Uuid> {
         self.websocket_handles
             .keys()
-            .find(|active_id| active_id.to_string().starts_with(&partial))
+            .find(|active_id| active_id.to_string().starts_with(partial))
             .copied()
     }
 }
@@ -114,6 +123,23 @@ impl From<&str> for UnixSocketMessage {
             "np" => UnixSocketMessage::CreatePlayer,
             "jwt" => UnixSocketMessage::CreatePlayerAndGetJwt,
             "list_websocket" => UnixSocketMessage::ListWebsockets,
+
+            s if s.starts_with("create_lobby") => {
+                // Expected format:
+                // create_lobby <connection_id>
+                let mut command_parts = s.split(" ").skip(1);
+
+                let connection_id = command_parts.next();
+
+                if connection_id.is_none() {
+                    // gracefully handle invalid user input
+                    return UnixSocketMessage::Unknown(cmd.to_string());
+                }
+
+                UnixSocketMessage::CreateLobby {
+                    substring: connection_id.unwrap().to_string(),
+                }
+            }
 
             // TODO: This is dogshit and not scalable
             // waiting until there is other stuff to kill before refactoring.
@@ -233,8 +259,10 @@ async fn handle_command(command: UnixSocketMessage, state: &Arc<Mutex<GlobalStat
         UnixSocketMessage::ListWebsockets => format!("{:#?}", state.lock().unwrap()),
         UnixSocketMessage::NewWebsocket { connection_id } => {
             let id = connection_id.unwrap_or_else(Uuid::new_v4);
-            let task = new_websocket(connection_id).await;
-            "hi".to_string()
+            let task = new_websocket(Some(id)).await.expect("Failed to spawn task");
+            state.lock().expect("failed to lock mutex").add(id, task);
+
+            id.to_string()
         }
         UnixSocketMessage::KillWebsocket { ref substring } => {
             gracefully_shutdown_websocket(state, substring.to_string()).await
@@ -358,11 +386,12 @@ async fn new_websocket(
 
         // Wait for either the read task or the timeout task to finish
         tokio::select! {
-        _ = cancel_receiver.changed() => {
-            let mut write_lock = write.lock().await;
-            // Send `Close` msg over websocket connection
-            write_lock.close().await?;
-        }
+            _ = cancel_receiver.changed() => {
+            log::info!("Received cancel request");
+                let mut write_lock = write.lock().await;
+                // Send Close msg over websocket connection
+                write_lock.close().await?;
+            }
 
             result = read_task => {
                 log::info!("Read task finished: {:?}", result);
@@ -451,7 +480,6 @@ async fn handle_message(
     let mut write_lock = write.lock().await;
     match msg {
         Message::Ping(ping) => {
-            log::info!("Received ping");
             *last_ping.lock().unwrap() = Instant::now();
             if let Err(e) = write_lock.send(Message::Pong(ping)).await {
                 log::error!("Error sending pong: {:?}", e);
@@ -496,6 +524,7 @@ async fn gracefully_shutdown_websocket(
     state: &Arc<Mutex<GlobalState>>,
     connection_id: String,
 ) -> String {
+    log::info!("Graceful shutdown: {}", &connection_id);
     let result = state
         .lock()
         .expect("Failed to lock mutex")
@@ -512,10 +541,13 @@ async fn create_lobby(
     connection_id: String,
 ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let state = state.lock().expect("Failed to lock mutex");
+    log::info!("State: {:#?}", state);
+    log::info!("conn_id: {:?}", connection_id);
     let id = state.get_full_connection_id(&connection_id);
 
+    log::info!("found_id: {:#?}", id);
     if id.is_none() {
-        return Ok("help".to_string());
+        return Ok("Tried to create lobby without an ID".to_string());
     }
 
     let connection_id = id.unwrap();
