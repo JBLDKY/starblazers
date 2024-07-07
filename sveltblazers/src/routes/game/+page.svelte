@@ -10,6 +10,7 @@
 	import ChatBox from './ChatBox.svelte';
 	import { validateJwt } from '../../hooks/withJwt';
 	import { get_player_info } from '../helpers';
+	import { LOGIN_DELAY } from '../../constants';
 
 	const toastStore = getToastStore();
 	let spaceInvadersGame: SpaceInvadersGame;
@@ -49,7 +50,7 @@
 		if (get(playerInfoStore)) {
 			gameConnection = new GameConnection();
 			gameConnection.connect();
-			delay(3);
+			await delay(3);
 		}
 	});
 

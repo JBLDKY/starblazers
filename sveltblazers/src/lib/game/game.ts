@@ -247,7 +247,6 @@ export class SpaceInvadersGame {
 	private gameLoop(timestamp: number): void {
 		requestAnimationFrame(this.gameLoop.bind(this));
 		if (this.fpsManager.shouldDraw(timestamp)) {
-			console.log(this.state);
 			switch (this.state) {
 				case GameState.RUN:
 					console.log('Drawing game');

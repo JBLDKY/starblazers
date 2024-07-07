@@ -12,8 +12,6 @@ export class WebSocketManager {
 		setSynchronizedState: (message?: SynchronizeStateMessage) => void,
 		gcm: GameConnection
 	) {
-		console.log('gcm.socket');
-		console.log(gcm.socket);
 		this.ws = gcm.socket;
 		this.messages = [];
 		this.setGameStateData = setGameStateData;
