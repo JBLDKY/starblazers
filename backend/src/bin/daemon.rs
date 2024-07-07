@@ -5,8 +5,6 @@ use futures_util::stream::SplitSink;
 use futures_util::stream::SplitStream;
 use futures_util::SinkExt;
 use futures_util::StreamExt;
-use reqwest::Client;
-use service::daemon::basic::get_local_address;
 use service::daemon::basic::get_local_websockt;
 use service::daemon::basic::handle_hello_world;
 use service::daemon::basic::{create_player, create_player_and_get_jwt};
