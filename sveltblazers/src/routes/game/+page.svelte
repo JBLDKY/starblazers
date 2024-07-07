@@ -1,10 +1,11 @@
 <script lang="ts">
 	import P5, { type Sketch } from 'p5-svelte';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { SpaceInvadersGame } from '../../lib/game/game';
 	import { jwtStore, playerInfoStore } from '../../store/auth';
 	import { get } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { GameConnection } from '$lib/gcm';
 	import { getToastStore } from '@skeletonlabs/skeleton';
 	import ChatBox from './ChatBox.svelte';
 	import { validateJwt } from '../../hooks/withJwt';
@@ -12,6 +13,7 @@
 
 	const toastStore = getToastStore();
 	let spaceInvadersGame: SpaceInvadersGame;
+	let gameConnection: GameConnection;
 
 	onMount(async () => {
 		// This is a protected page; login is required
@@ -39,26 +41,38 @@
 				goto('/login');
 			}
 		}
+
+		if (get(playerInfoStore)) {
+			const playerUuid = get(playerInfoStore).uuid;
+			gameConnection = new GameConnection(playerUuid);
+			gameConnection.connect();
+		}
+	});
+
+	onDestroy(() => {
+		if (gameConnection) {
+			gameConnection.disconnect();
+		}
 	});
 
 	const sketch: Sketch = (p) => {
 		p.setup = () => {
 			p.createCanvas(1280, 800);
-
 			p.loadFont('/fonts/pressStart2P.ttf', (font) => {
 				p.fill('deeppink');
 				p.textFont(font);
-
 				const res = get(playerInfoStore);
-
 				// Wait for our font to load before starting the game, else the main menu will not be centered
-				const spaceInvadersGame: SpaceInvadersGame = new SpaceInvadersGame(p, res['uuid']);
+				spaceInvadersGame = new SpaceInvadersGame(p, res['uuid'], gameConnection);
 				spaceInvadersGame.start();
+
+				// Pass the gameConnection to your SpaceInvadersGame if needed
+				// spaceInvadersGame.setGameConnection(gameConnection);
 			});
 		};
 
 		p.draw = () => {
-			if (spaceInvadersGame !== undefined) {
+			if (spaceInvadersGame) {
 				spaceInvadersGame.update();
 				spaceInvadersGame.draw();
 			}

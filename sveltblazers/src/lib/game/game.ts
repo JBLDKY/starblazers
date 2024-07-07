@@ -2,9 +2,9 @@ import { Player } from '../entity/player';
 import { Bullet } from '../entity/bullet';
 import { CollisionManager } from './collisionManager';
 import { FPSManager } from './fpsmanager';
-import { ChatBox } from '../chat/chatbox';
+// import { ChatBox } from '../chat/chatbox';
 import { User } from '../user/user';
-import { WebSocketManager } from '../websocketmanager';
+// import { WebSocketManager } from '../websocketmanager';
 import { Colors } from '$lib/assets/color';
 import { GameState } from '../../constants';
 import type p5 from 'p5';
@@ -12,12 +12,13 @@ import type { BaseMenu } from '$lib/menu/base';
 import { MainMenu } from '$lib/menu/main';
 import type { Entity } from '$lib/entity/base';
 import { DevConsole } from '$lib/dev_console';
+import { GameConnection } from '$lib/gcm';
 import { SpawnHandler } from '$lib/system/entities/spawn_handler';
 import DebugManager from '$lib/system/debug_manager';
 import { EntityManager } from '$lib/system/entities/entity_manager';
 import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuKind } from '$lib/entity/entity_index';
-import { GameStateManager } from '$lib/system/game_state_manager';
+// import { GameStateManager } from '$lib/system/game_state_manager';
 import type { SynchronizeStateMessage, UserState } from '$lib/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,8 +30,7 @@ const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) =
 export class SpaceInvadersGame {
 	private p: p5;
 	private collisionManager: CollisionManager;
-	private websocket: WebSocketManager;
-	private chatBox: ChatBox;
+	// private chatBox: ChatBox;
 	private fpsManager: FPSManager;
 	private user: User;
 	private state: GameState = GameState.MENU;
@@ -41,12 +41,13 @@ export class SpaceInvadersGame {
 
 	public debugManager: DebugManager = new DebugManager();
 	public spawnHandler: SpawnHandler;
-	public gameStateManager: GameStateManager;
+	public gcm: GameConnection;
+	// public gameStateManager: GameStateManager;
 
 	/**
 	 * Initializes the game with a given p5 canvas.
 	 */
-	constructor(p: p5, player_id: string) {
+	constructor(p: p5, player_id: string, wsm: GameConnection) {
 		this.p = p;
 
 		// These methods are passed to gameStateManager who calls them
@@ -55,21 +56,21 @@ export class SpaceInvadersGame {
 		this.getGameStateData = this.getGameStateData.bind(this);
 		this.setGameStateData = this.setGameStateData.bind(this);
 		this.setSynchronizedState = this.setSynchronizedState.bind(this);
-		this.websocket = new WebSocketManager(this.setGameStateData, this.setSynchronizedState);
+		this.gcm = wsm;
 
 		this.user = new User('username', player_id);
-		this.chatBox = new ChatBox(this.user, this.websocket);
+		// this.chatBox = new ChatBox(this.user, this.websocket);
 		this.fpsManager = new FPSManager();
 		this.spawnHandler = new SpawnHandler(this.p, this.entityManager);
 		this.inputHandler = new InputHandler(this, this.devConsole);
 		this.currentMenu = new MainMenu(this.p, this.inputHandler);
 		this.collisionManager = new CollisionManager();
 
-		this.gameStateManager = new GameStateManager(
-			this.websocket,
-			this.getGameStateData,
-			this.setGameStateData
-		);
+		// this.gameStateManager = new GameStateManager(
+		// 	this.websocket,
+		// 	this.getGameStateData,
+		// 	this.setGameStateData
+		// );
 	}
 
 	/**
@@ -80,7 +81,7 @@ export class SpaceInvadersGame {
 		this.spawnHandler.spawn_player(this.p.createVector(640, 730), this.user.uuid);
 
 		// Start websocket
-		this.startWebsocket();
+		// this.startWebsocket();
 
 		// Run gameloop through p
 		requestAnimationFrame(() => this.gameLoop(0));
@@ -155,21 +156,21 @@ export class SpaceInvadersGame {
 		}
 	}
 
-	setMessage(value: string): void {
-		this.chatBox.setMessage(value);
-	}
-
-	startTypingMessage(): void {
-		this.chatBox.startTypingMessage();
-	}
-
-	cancelMessage(): void {
-		this.chatBox.cancelMessage();
-	}
-
-	sendMessage(): void {
-		this.chatBox.sendMessage(this.devConsole);
-	}
+	// setMessage(value: string): void {
+	// 	this.chatBox.setMessage(value);
+	// }
+	//
+	// startTypingMessage(): void {
+	// 	this.chatBox.startTypingMessage();
+	// }
+	//
+	// cancelMessage(): void {
+	// 	this.chatBox.cancelMessage();
+	// }
+	//
+	// sendMessage(): void {
+	// 	this.chatBox.sendMessage(this.devConsole);
+	// }
 
 	getEntity(id: number): Entity | undefined {
 		return this.entityManager.allEntities().find((entity) => entity.getId() == id);
@@ -202,16 +203,16 @@ export class SpaceInvadersGame {
 			this.p,
 			menuIndex,
 			this.inputHandler,
-			this.websocket,
+			this.gcm,
 			args
 		);
 
 		oldMenu.onExit();
 	}
 
-	isTypingInChat(): boolean {
-		return this.chatBox.isTypingInChat();
-	}
+	// isTypingInChat(): boolean {
+	// 	return this.chatBox.isTypingInChat();
+	// }
 
 	public getCurrentPlayer(): Player {
 		return this.entityManager
@@ -225,9 +226,9 @@ export class SpaceInvadersGame {
 			.filter((player: Player) => uuid == player.uuid)[0];
 	}
 
-	private startWebsocket() {
-		this.websocket.connect();
-	}
+	// private startWebsocket() {
+	// 	this.websocket.connect();
+	// }
 
 	/**
 	 * The main game loop. Updates game state and draws our background frames.
@@ -239,7 +240,7 @@ export class SpaceInvadersGame {
 				case GameState.RUN:
 					this.update(timestamp);
 					this.draw();
-					this.gameStateManager.sendGameState(); // Send game state update
+					// this.gameStateManager.sendGameState(); // Send game state update
 					break;
 				case GameState.PAUSE:
 					this.handleInput(timestamp); // TODO: why
@@ -250,10 +251,10 @@ export class SpaceInvadersGame {
 			}
 		}
 
-		if (this.websocket.isOk() || this.fpsManager.shouldPingWebSocket(timestamp)) {
-			this.websocket.sendMessage('ping');
-		}
-		this.chatBox.receiveMessage();
+		// if (this.websocket.isOk() || this.fpsManager.shouldPingWebSocket(timestamp)) {
+		// 	this.websocket.sendMessage('ping');
+		// }
+		// this.chatBox.receiveMessage();
 		this.fpsManager.update(timestamp);
 	}
 
