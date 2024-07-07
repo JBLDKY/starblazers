@@ -20,6 +20,7 @@ import { InputHandler } from '$lib/system/input_handler';
 import { EntityIndex, MenuFactory, MenuKind } from '$lib/entity/entity_index';
 // import { GameStateManager } from '$lib/system/game_state_manager';
 import type { SynchronizeStateMessage, UserState } from '$lib/types';
+import { WebSocketManager } from '$lib/websocketmanager';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cartesian = (...a: any) => a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
@@ -57,6 +58,12 @@ export class SpaceInvadersGame {
 		this.setGameStateData = this.setGameStateData.bind(this);
 		this.setSynchronizedState = this.setSynchronizedState.bind(this);
 		this.gcm = wsm;
+
+		this.webSocketManager = new WebSocketManager(
+			this.getGameStateData,
+			this.setGameStateData,
+			this.gcm
+		);
 
 		this.user = new User('username', player_id);
 		// this.chatBox = new ChatBox(this.user, this.websocket);

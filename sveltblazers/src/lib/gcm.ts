@@ -1,10 +1,7 @@
 export class GameConnection {
-	private socket: WebSocket | null = null;
-	private uuid: string;
+	socket: WebSocket | null = null;
 
-	constructor(uuid: string) {
-		this.uuid = uuid;
-	}
+	constructor() {}
 
 	connect() {
 		this.disconnect();
@@ -28,12 +25,6 @@ export class GameConnection {
 		if (this.socket) {
 			this.socket.close();
 			this.socket = null;
-		}
-	}
-
-	sendGameData(data: any) {
-		if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-			this.socket.send(JSON.stringify(data));
 		}
 	}
 }
