@@ -1,13 +1,15 @@
 #![cfg(feature = "daemon")]
-use std::io::BufRead;
-use std::{fs::File, io::BufReader};
-
 use clap::Parser;
 use dotenv::dotenv;
 use service::{
     daemon::basic::{get_daemon_status, get_local_websockt, start_daemon, stop_daemon},
     pid_file::{SOCKET_PATH, STDOUT},
 };
+use std::io::BufRead;
+use std::process::Command;
+use std::thread;
+use std::time::Duration;
+use std::{fs::File, io::BufReader};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 
@@ -39,6 +41,10 @@ enum StarblazersCommand {
         #[arg(short, long, default_value = "10")]
         n: usize,
     },
+    #[command()]
+    List(ListOptions),
+    #[command()]
+    Recompile,
 }
 
 #[derive(Parser, Debug)]
@@ -46,6 +52,21 @@ enum StarblazersCommand {
 struct DaemonCommand {
     #[command(subcommand)]
     command: DaemonSubCommand,
+}
+
+#[derive(Parser, Debug)]
+struct ListOptions {
+    /// List WebSocket connections
+    #[arg(short, long)]
+    websocket: bool,
+
+    /// List active players
+    #[arg(short, long)]
+    players: bool,
+
+    /// List active games
+    #[arg(short, long)]
+    games: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -73,7 +94,6 @@ pub enum ServerSubCommand {
     Ws,
     Newplayer,
     Jwt,
-    List,
 }
 
 #[derive(Parser, Debug)]
@@ -118,11 +138,19 @@ async fn main() -> Result<(), anyhow::Error> {
         StarblazersCommand::Log { n } => {
             read_last_n_lines(n).expect("Could not read last `n` lines.")
         }
+        StarblazersCommand::List(list_options) => handle_list_command(list_options).await,
+        StarblazersCommand::Recompile => handle_recompile_command().expect("Failed to recompile"),
     }
 
     Ok(())
 }
-
+async fn handle_list_command(list_options: ListOptions) {
+    if list_options.websocket {
+        send_message_to_daemon("list_websocket".to_string())
+            .await
+            .expect("failed")
+    }
+}
 async fn handle_server_command(server_command: ServerCommand) {
     match server_command.command {
         ServerSubCommand::Helloworld => send_message_to_daemon("helloworld".to_string())
@@ -135,9 +163,6 @@ async fn handle_server_command(server_command: ServerCommand) {
             .await
             .expect("Failed"),
         ServerSubCommand::Ws => send_message_to_daemon("ws".to_string())
-            .await
-            .expect("Failed"),
-        ServerSubCommand::List => send_message_to_daemon("list".to_string())
             .await
             .expect("Failed"),
     }
@@ -185,6 +210,36 @@ fn read_last_n_lines(n: usize) -> Result<(), anyhow::Error> {
             break;
         }
     }
+
+    Ok(())
+}
+
+fn handle_recompile_command() -> Result<(), Box<dyn std::error::Error>> {
+    // Kill the current daemon
+    stop_daemon();
+
+    // Wait for 1 second
+    thread::sleep(Duration::from_secs(1));
+
+    // Start the new daemon
+    let output = Command::new("cargo")
+        .args(["run", "--bin", "sb-daemon"])
+        .output()?;
+
+    read_last_n_lines(2).ok();
+
+    if !output.status.success() {
+        log::error!(
+            "Failed to start daemon: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Wait for 1 second
+    thread::sleep(Duration::from_secs(1));
+
+    // Check daemon status
+    get_daemon_status();
 
     Ok(())
 }

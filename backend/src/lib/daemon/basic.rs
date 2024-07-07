@@ -14,9 +14,10 @@ pub fn start_daemon() {
         log::info!("Daemon is already running.");
         return;
     }
+    log::info!("Starting daemon...");
 
     let output = Command::new("cargo")
-        .args(["run", "--bin", "sb-daemon", "--features", "daemon"])
+        .args(["run", "--bin", "sb-daemon"])
         .output()
         .expect("Failed to execute command");
 
@@ -35,7 +36,7 @@ pub fn stop_daemon() {
         log::info!("Daemon is not running.");
         return;
     }
-    log::info!("Starting daemon");
+    log::info!("Stopping daemon...");
 
     // Read the PID from the file
     let mut file = std::fs::File::open(PID_FILE).expect("Failed to open PID file");
@@ -153,4 +154,21 @@ pub fn get_local_address() -> String {
 
 pub fn get_local_websockt() -> String {
     std::env::var("LOCALWS").expect("Add localws to .env")
+}
+
+pub async fn handle_hello_world() -> String {
+    let client = Client::new();
+
+    match client
+        .get(format!("{}helloworld", get_local_address()))
+        .send()
+        .await
+    {
+        Ok(res) => format!(
+            "{} - {}",
+            res.status(),
+            res.text().await.unwrap_or_default()
+        ),
+        Err(e) => e.to_string(),
+    }
 }

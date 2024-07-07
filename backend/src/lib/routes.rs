@@ -257,6 +257,8 @@ async fn lobby_websocket(
 
     let claims;
 
+    log::info!("{:?}", &req);
+
     match header_value {
         Some(header_value) => match Claims::from_header_value(header_value) {
             Ok(v) => claims = v,
@@ -279,7 +281,12 @@ async fn lobby_websocket(
         }
     };
 
-    let connection_id = Uuid::new_v4();
+    let connection_id = req
+        .headers()
+        .get("X-Connection-ID")
+        .and_then(|id| id.to_str().ok())
+        .and_then(|id| Uuid::parse_str(id).ok())
+        .unwrap_or_else(Uuid::new_v4);
 
     ws::start(
         WsSession {

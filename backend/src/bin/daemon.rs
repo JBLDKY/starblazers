@@ -1,11 +1,14 @@
 #![cfg(feature = "daemon")]
 use daemonize::Daemonize;
 use dotenv::dotenv;
+use futures_util::stream::SplitSink;
+use futures_util::stream::SplitStream;
 use futures_util::SinkExt;
 use futures_util::StreamExt;
 use reqwest::Client;
 use service::daemon::basic::get_local_address;
 use service::daemon::basic::get_local_websockt;
+use service::daemon::basic::handle_hello_world;
 use service::daemon::basic::{create_player, create_player_and_get_jwt};
 use service::pid_file::{PID_FILE, SOCKET_PATH, STDOUT};
 use std::collections::HashMap;
@@ -14,14 +17,22 @@ use std::os::unix::fs::PermissionsExt;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 use tokio::net::UnixListener;
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
+use tokio_tungstenite::MaybeTlsStream;
+use tokio_tungstenite::WebSocketStream;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use uuid::Uuid;
 
+type SSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
+type SStream = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
 type WebSocketHandle = JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>>;
+
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
 struct GlobalState {
@@ -46,7 +57,6 @@ async fn main() -> std::io::Result<()> {
     let listener = init_daemon().expect("Failed to init daemon");
     let state = Arc::new(Mutex::new(GlobalState::new()));
 
-    log::info!("Starting loop.");
     loop {
         let (mut stream, _) = listener.accept().await?;
         let state = Arc::clone(&state);
@@ -55,16 +65,16 @@ async fn main() -> std::io::Result<()> {
             let n = stream.read(&mut buffer).await.unwrap();
             let command = std::str::from_utf8(&buffer[..n]).unwrap().trim();
 
-            log::info!("[DAEMON] Received command: {}", command);
+            log::info!("Received command: {}", command);
+
             let response = match command.trim() {
                 "helloworld" => handle_hello_world().await,
                 "np" => {
                     let (user, pass) = create_player().await.expect("Couldnt create player");
                     format!("user: {}/pass: {}", user, pass)
                 }
-
                 "jwt" => create_player_and_get_jwt().await.expect("No jwt for u"),
-                "list" => format!("{:#?}", state),
+                "list_websocket" => format!("{:#?}", state),
                 "ws" => {
                     let handle = new_websocket();
                     let id = Uuid::new_v4();
@@ -74,27 +84,18 @@ async fn main() -> std::io::Result<()> {
                 _ => "Unknown command".to_string(),
             };
 
-            log::info!("Successfully executed: {}", command.trim());
+            log::info!(
+                "Successfully executed: {}. Response: {}",
+                command.trim(),
+                response
+            );
             stream.write_all(response.as_bytes()).await.unwrap();
         });
     }
 }
 
-async fn handle_hello_world() -> String {
-    let client = Client::new();
-    match client
-        .get(format!("{}/helloworld", get_local_address()))
-        .send()
-        .await
-    {
-        Ok(resp) => resp
-            .text()
-            .await
-            .unwrap_or_else(|_| "Failed to get response text".to_string()),
-        Err(e) => format!("Request failed: {}", e),
-    }
-}
-
+/// Initializes the Daemon configuration, STDOUT, and the Unixsocket.
+/// Returns a listener for the socket.
 fn init_daemon() -> Result<UnixListener, anyhow::Error> {
     let stdout = File::create(STDOUT)?;
     //
@@ -126,73 +127,126 @@ fn init_daemon() -> Result<UnixListener, anyhow::Error> {
     Ok(listener)
 }
 
+/// Returns a http request with which a websocket connection can be established
+/// A JWT can be provided to this function. Must be prefixed by Bearer!
+/// If None is provided, a new account will be created and authenticated to get
+/// a fresh JWT.
+async fn new_websocket_request(
+    jwt: Option<String>,
+) -> tokio_tungstenite::tungstenite::http::Request<()> {
+    let url = get_local_websockt();
+
+    let jwt = match jwt {
+        Some(token) => token,
+        None => create_player_and_get_jwt()
+            .await
+            .expect("Failed to create new player and get jwt"),
+    };
+
+    let connection_id: String = Uuid::new_v4().into();
+
+    Request::builder()
+        .method("GET")
+        .uri(&url)
+        .header("Cookie", format!("Authorization={}", jwt))
+        .header("Host", &url)
+        .header("Connection", "Upgrade")
+        .header("Connection-ID", &connection_id)
+        .header("Upgrade", "websocket")
+        .header("Sec-WebSocket-Version", "13")
+        .header("Sec-WebSocket-Key", generate_key())
+        .body(())
+        .expect("Failed to build websocket request")
+}
+
+/// Connects a new websocket to the server in an asynchronous task. Runs
+/// until it is manually terminated.
 fn new_websocket() -> JoinHandle<Result<(), Box<dyn std::error::Error + Send + Sync>>> {
     tokio::spawn(async move {
-        let url = get_local_websockt();
-        let jwt = create_player_and_get_jwt()
-            .await
-            .expect("Failed to create new player and get jwt");
-        let request = Request::builder()
-            .method("GET")
-            .uri(&url)
-            .header("Cookie", format!("Authorization={}", jwt))
-            .header("Host", &url)
-            .header("Connection", "Upgrade")
-            .header("Upgrade", "websocket")
-            .header("Sec-WebSocket-Version", "13")
-            .header("Sec-WebSocket-Key", generate_key())
-            .body(())
-            .unwrap();
+        // Establish the WebSocket connection
+        let (read, write) = establish_connection().await?;
 
-        let (ws_stream, _) = connect_async(request).await?;
-        let (mut write, mut read) = ws_stream.split();
+        // Create a shared timestamp for the last ping received
         let last_ping = Arc::new(Mutex::new(Instant::now()));
-        let timeout_check = Arc::clone(&last_ping);
 
-        log::info!("WebSocket connection established successfully");
+        // Spawn a task to handle incoming WebSocket messages
+        let read_task = spawn_read_task(read, Arc::clone(&last_ping), write);
 
-        let read_task = tokio::spawn(async move {
-            while let Some(message) = read.next().await {
-                match message {
-                    Ok(msg) => match msg {
-                        Message::Ping(ping) => {
-                            log::info!("ping");
-                            *last_ping.lock().unwrap() = Instant::now();
-                            if let Err(e) = write.send(Message::Pong(ping)).await {
-                                log::info!("Error sending pong: {:?}", e);
-                                break;
-                            }
-                        }
-                        Message::Text(text) => {
-                            log::info!("Message: {}", text);
-                        }
-                        _ => log::info!("OTher message: {:?}", msg),
-                    },
-                    Err(e) => {
-                        log::info!("Error: {:?}", e);
-                        break;
-                    }
-                }
-            }
-            log::info!("WebSocket read task died");
-        });
+        // Spawn a task to monitor for connection timeouts
+        let timeout_task = spawn_timeout_task(Arc::clone(&last_ping));
 
-        let timeout_task = tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(Duration::from_secs(1)).await;
-                let last_ping = timeout_check.lock().unwrap();
-                if Instant::now().duration_since(*last_ping) > Duration::from_secs(10) {
-                    log::info!("Connection timed out");
-                    break;
-                }
-            }
-        });
-
+        // Wait for either the read task or the timeout task to finish
         tokio::select! {
             _ = read_task => log::info!("Read task finished"),
             _ = timeout_task => log::info!("Timeout task finished"),
         }
 
         Ok(())
+    })
+}
+
+/// Establishes new websocket connection that is offloaded to an asynchronous task.
+/// A new player is created and authenticated.
+async fn establish_connection() -> Result<(SStream, SSink), Box<dyn std::error::Error + Send + Sync>>
+{
+    let request = new_websocket_request(None).await;
+    let (ws_stream, _) = connect_async(request).await?;
+    let (write, read) = ws_stream.split();
+    log::info!("WebSocket connection established successfully");
+    Ok((read, write))
+}
+
+/// Monitors WebSocket connection for timeouts.
+/// Spawns a task that checks the Stream for incoming messages.
+/// Stops the thread if something goes wrong reading a message.
+/// Forwards messages to handle_message() if there is no error.
+fn spawn_read_task(
+    mut read: SStream,
+    last_ping: Arc<Mutex<Instant>>,
+    mut write: SSink,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        while let Some(message) = read.next().await {
+            match message {
+                Ok(msg) => handle_message(msg, &last_ping, &mut write).await,
+                Err(e) => {
+                    log::error!("Error: {:?}", e);
+                    break;
+                }
+            }
+        }
+        log::info!("WebSocket read task ended");
+    })
+}
+
+/// Handles incoming websocket traffic.
+/// Responds to Ping by sending a Pong.
+/// Logs received Text to STDOUT.
+async fn handle_message(msg: Message, last_ping: &Arc<Mutex<Instant>>, write: &mut SSink) {
+    match msg {
+        Message::Ping(ping) => {
+            log::info!("Received ping");
+            *last_ping.lock().unwrap() = Instant::now();
+            if let Err(e) = write.send(Message::Pong(ping)).await {
+                log::error!("Error sending pong: {:?}", e);
+            }
+        }
+        Message::Text(text) => log::info!("Received message: {}", text),
+        _ => log::info!("Received other message: {:?}", msg),
+    }
+}
+/// Monitors WebSocket connection for timeouts.
+/// Spawns a task that checks the time since last ping every HEARTBEAT_INTERVAL.
+/// Logs and terminates if no ping received within CONNECTION_TIMEOUT.
+fn spawn_timeout_task(last_ping: Arc<Mutex<Instant>>) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(HEARTBEAT_INTERVAL).await;
+            let last_ping = last_ping.lock().unwrap();
+            if Instant::now().duration_since(*last_ping) > CONNECTION_TIMEOUT {
+                log::info!("Connection timed out");
+                break;
+            }
+        }
     })
 }
