@@ -1,8 +1,9 @@
 #![cfg(feature = "daemon")]
+use anyhow::anyhow;
 use clap::Parser;
 use dotenv::dotenv;
 use service::{
-    daemon::basic::{get_daemon_status, get_local_websockt, start_daemon, stop_daemon},
+    daemon::basic::{get_daemon_status, start_daemon, stop_daemon},
     pid_file::{SOCKET_PATH, STDOUT},
 };
 use std::io::BufRead;
@@ -35,16 +36,31 @@ enum StarblazersCommand {
     /// The Starblazers Game related commands.
     #[command()]
     Game(GameCommand),
-    /// The daemon's logs.
+    /// Print the last -n logs that are recorded.
     #[command()]
     Log {
         #[arg(short, long, default_value = "10")]
         n: usize,
     },
     #[command()]
+    /// List one of the following: -w --websocket, -g --game, -p --players
     List(ListOptions),
     #[command()]
+    /// Recompile and restart the daemon
+    /// TODO: Only recompile if used in dev mode and only release in release mode
     Recompile,
+    #[command()]
+    /// Kill a -t --target by its -i --id (first 3 characters are enough).
+    Kill {
+        /// Specifies that the target is a websocket
+        /// Options: [websocket, .. wip]
+        #[arg(long, short)]
+        target: String,
+
+        /// Substring of the ID of the target to kill (min match = first three chars)
+        #[arg(long, short)]
+        id: String,
+    },
 }
 
 #[derive(Parser, Debug)]
@@ -55,18 +71,30 @@ struct DaemonCommand {
 }
 
 #[derive(Parser, Debug)]
+#[command(group(clap::ArgGroup::new("list_type").required(true).args(["websocket", "players", "games"])))]
 struct ListOptions {
     /// List WebSocket connections
+    #[arg(short, long, group = "list_type")]
+    websocket: bool,
+
+    /// List active players
+    #[arg(short, long, group = "list_type")]
+    players: bool,
+
+    /// List active games
+    #[arg(short, long, group = "list_type")]
+    games: bool,
+}
+
+#[derive(Parser, Debug)]
+struct KillOptions {
+    /// T
     #[arg(short, long)]
     websocket: bool,
 
     /// List active players
     #[arg(short, long)]
-    players: bool,
-
-    /// List active games
-    #[arg(short, long)]
-    games: bool,
+    id: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -140,6 +168,14 @@ async fn main() -> Result<(), anyhow::Error> {
         }
         StarblazersCommand::List(list_options) => handle_list_command(list_options).await,
         StarblazersCommand::Recompile => handle_recompile_command().expect("Failed to recompile"),
+        StarblazersCommand::Kill { target, id } => {
+            if id.len() < 3 {
+                return Err(anyhow!(
+                    "Length of ID value must be 3 characters or longer."
+                ));
+            }
+            handle_kill_command(target, id).await
+        }
     }
 
     Ok(())
@@ -181,7 +217,6 @@ fn handle_daemon_command(daemon_command: DaemonCommand) {
 }
 
 async fn send_message_to_daemon(msg: String) -> Result<(), anyhow::Error> {
-    get_local_websockt();
     let mut stream = UnixStream::connect(SOCKET_PATH).await?;
     stream.write_all(msg.as_bytes()).await?;
 
@@ -242,4 +277,33 @@ fn handle_recompile_command() -> Result<(), Box<dyn std::error::Error>> {
     get_daemon_status();
 
     Ok(())
+}
+
+#[derive(Debug)]
+enum KillTarget {
+    Websocket,
+}
+
+impl From<&str> for KillTarget {
+    fn from(cmd: &str) -> Self {
+        match cmd.trim() {
+            "websocket" | "ws" | "w" => KillTarget::Websocket,
+            _ => todo!(),
+        }
+    }
+}
+
+impl From<String> for KillTarget {
+    fn from(cmd: String) -> Self {
+        KillTarget::from(cmd.as_str())
+    }
+}
+
+async fn handle_kill_command(target: String, id: String) {
+    let target = KillTarget::from(target);
+    match target {
+        KillTarget::Websocket => send_message_to_daemon(format!("kill websocket {}", id))
+            .await
+            .expect("Failed to kill websocket"),
+    }
 }

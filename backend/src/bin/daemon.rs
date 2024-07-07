@@ -5,6 +5,7 @@ use futures_util::stream::SplitSink;
 use futures_util::stream::SplitStream;
 use futures_util::SinkExt;
 use futures_util::StreamExt;
+use serde::{Deserialize, Serialize};
 use service::daemon::basic::get_local_websockt;
 use service::daemon::basic::handle_hello_world;
 use service::daemon::basic::{create_player, create_player_and_get_jwt};
@@ -17,7 +18,7 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::net::UnixListener;
-use tokio::sync::watch;
+use tokio::sync::{watch, Mutex as TokioMutex};
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
@@ -51,6 +52,103 @@ impl GlobalState {
             websocket_handles: HashMap::new(),
         }
     }
+
+    /// Looks for an active websocket id starting with kill_id.
+    /// Sends a message to the websocket's receiver channel which is
+    /// the signal to close itself.
+    /// The websocket is then also removed from `websocket_handles`.
+    fn kill_websocket(&mut self, kill_id: String) -> Option<Uuid> {
+        let to_kill = {
+            *self
+                .websocket_handles
+                .keys()
+                .find(|active_id| active_id.to_string().starts_with(&kill_id))?
+        };
+
+        let task = &self
+            .websocket_handles
+            .get(&to_kill)
+            .expect("Task not found");
+
+        task.cancel_sender.send(true).ok();
+
+        self.websocket_handles
+            .remove(&to_kill.clone())
+            .map(|task| task.id);
+
+        Some(to_kill)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+enum UnixSocketMessage {
+    HelloWorld,
+    CreatePlayer,
+    CreatePlayerAndGetJwt,
+    ListWebsockets,
+    NewWebsocket { id: Option<Uuid> },
+    KillWebsocket { substring: String },
+    Unknown(String),
+}
+
+impl From<&str> for UnixSocketMessage {
+    fn from(cmd: &str) -> Self {
+        match cmd.trim() {
+            "helloworld" => UnixSocketMessage::HelloWorld,
+            "np" => UnixSocketMessage::CreatePlayer,
+            "jwt" => UnixSocketMessage::CreatePlayerAndGetJwt,
+            "list_websocket" => UnixSocketMessage::ListWebsockets,
+
+            // TODO: This is dogshit and not scalable
+            // waiting until there is other stuff to kill before refactoring.
+            s if s.starts_with("kill") => {
+                // Expected format:
+                // kill <target> <id>
+                // e.g.:
+                // kill websocket d8a
+                let mut command_parts = s.split(" ").skip(1);
+                // value for --target or -t
+                let target = command_parts.next();
+                // value for --id or -i
+                let id = command_parts.next();
+
+                if target.is_none() | id.is_none() {
+                    // gracefully handle invalid user input
+                    return UnixSocketMessage::Unknown(cmd.to_string());
+                }
+
+                match target.unwrap() {
+                    // The only valid result for now
+                    "websocket" => UnixSocketMessage::KillWebsocket {
+                        substring: id.unwrap().to_string(),
+                    },
+                    _ => todo!(),
+                }
+            }
+
+            // Create a websocket with a specified id
+            s if s.starts_with("ws") => {
+                let id = s
+                    .split_whitespace()
+                    .nth(1)
+                    .and_then(|id| Uuid::parse_str(id).ok());
+                UnixSocketMessage::NewWebsocket { id }
+            }
+            _ => UnixSocketMessage::Unknown(cmd.to_string()),
+        }
+    }
+}
+
+impl From<String> for UnixSocketMessage {
+    fn from(cmd: String) -> Self {
+        UnixSocketMessage::from(cmd.as_str())
+    }
+}
+
+impl From<Uuid> for UnixSocketMessage {
+    fn from(id: Uuid) -> Self {
+        UnixSocketMessage::NewWebsocket { id: Some(id) }
+    }
 }
 
 #[actix_web::main]
@@ -64,37 +162,60 @@ async fn main() -> std::io::Result<()> {
     let state = Arc::new(Mutex::new(GlobalState::new()));
 
     loop {
+        // The next line blocks the thread until a message is sent from the CLI
         let (mut stream, _) = listener.accept().await?;
+
+        // Need to clone this because we're in a loop
         let state = Arc::clone(&state);
+
+        // Spawn an async task to handle the message we received
         tokio::spawn(async move {
             let mut buffer = [0; 1024];
-            let n = stream.read(&mut buffer).await.unwrap();
-            let command = std::str::from_utf8(&buffer[..n]).unwrap().trim();
+            let n = stream
+                .read(&mut buffer)
+                .await
+                .expect("UnixSocket Connection failed");
 
-            log::info!("Received command: {}", command);
+            // Parse the command into a any of the possible enums
+            let command: UnixSocketMessage = match serde_json::from_slice(&buffer[..n]) {
+                Ok(msg) => msg,
+                Err(_) => {
+                    // If we can't parse it as JSON, treat it as a plain string command
+                    UnixSocketMessage::from(String::from_utf8_lossy(&buffer[..n]).to_string())
+                }
+            };
 
-            let response = match command.trim() {
-                "helloworld" => handle_hello_world().await,
-                "np" => {
-                    let (user, pass) = create_player().await.expect("Couldnt create player");
+            log::info!("Received command: {:?}", command);
+
+            let response = match command {
+                UnixSocketMessage::HelloWorld => handle_hello_world().await,
+                UnixSocketMessage::CreatePlayer => {
+                    let (user, pass) = create_player().await.expect("Couldn't create player");
                     format!("user: {}/pass: {}", user, pass)
                 }
-                "jwt" => create_player_and_get_jwt().await.expect("No jwt for u"),
-                "list_websocket" => format!("{:#?}", state),
-                "ws" => {
-                    let id = Uuid::new_v4();
+                UnixSocketMessage::CreatePlayerAndGetJwt => {
+                    create_player_and_get_jwt().await.expect("No jwt for u")
+                }
+                UnixSocketMessage::ListWebsockets => format!("{:#?}", state.lock().unwrap()),
+                UnixSocketMessage::NewWebsocket { id } => {
+                    let id = id.unwrap_or_else(Uuid::new_v4);
                     let task = new_websocket(Some(id));
                     state.lock().unwrap().websocket_handles.insert(id, task);
-                    "WebSocket connection spawned".to_string()
+                    format!("WebSocket connection spawned, connection_id: {}", id)
                 }
-                _ => "Unknown command".to_string(),
+                UnixSocketMessage::KillWebsocket { ref substring } => {
+                    gracefully_shutdown_websocket(&state, substring.to_string()).await
+                }
+                UnixSocketMessage::Unknown(ref cmd) => format!("Unknown command: {}", cmd),
             };
 
             log::info!(
-                "Successfully executed: {}. Response: {}",
-                command.trim(),
+                "Successfully executed: {:?}. Response: {}",
+                command,
                 response
             );
+
+            // Return a message to the CLI
             stream.write_all(response.as_bytes()).await.unwrap();
         });
     }
@@ -171,6 +292,7 @@ async fn new_websocket_request(
 
 /// Connects a new websocket to the server in an asynchronous task. Runs
 /// until it is manually terminated.
+#[allow(clippy::let_underscore_future)]
 fn new_websocket(connection_id: Option<Uuid>) -> Task {
     let (cancel_sender, mut cancel_receiver) = watch::channel(false);
 
@@ -178,24 +300,35 @@ fn new_websocket(connection_id: Option<Uuid>) -> Task {
         // Establish the WebSocket connection
         let (read, write) = establish_connection(connection_id).await?;
 
+        // Needs to wrapped in Mutex because it is used in the while loop
+        let write = Arc::new(TokioMutex::new(write));
+
         // Create a shared timestamp for the last ping received
         let last_ping = Arc::new(Mutex::new(Instant::now()));
 
         // Spawn a task to handle incoming WebSocket messages
-        let _ = spawn_read_task(read, Arc::clone(&last_ping), write);
+        let read_task = spawn_read_task(read, Arc::clone(&last_ping), write.clone());
 
         // Spawn a task to monitor for connection timeouts
-        let _ = spawn_timeout_task(Arc::clone(&last_ping));
+        let timeout_task = spawn_timeout_task(Arc::clone(&last_ping));
 
         // Wait for either the read task or the timeout task to finish
-        while !*cancel_receiver.borrow() {
-            tokio::select! {
-                _ = cancel_receiver.changed() => { break; }
-                _ = async {
-                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                    } => {}
+        tokio::select! {
+            _ = cancel_receiver.changed() => {
+                let mut write_lock = write.lock().await;
+                // Send `Close` msg over websocket connection
+                write_lock.close().await?;
+            }
+
+            result = read_task => {
+                log::info!("Read task finished: {:?}", result);
+            }
+
+            _ = timeout_task => {
+                log::info!("Timed out: {:?}", &connection_id);
             }
         }
+
         Ok(())
     });
 
@@ -227,7 +360,7 @@ async fn establish_connection(
 fn spawn_read_task(
     mut read: SStream,
     last_ping: Arc<Mutex<Instant>>,
-    mut write: SSink,
+    mut write: Arc<TokioMutex<SSink>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         while let Some(message) = read.next().await {
@@ -246,12 +379,17 @@ fn spawn_read_task(
 /// Handles incoming websocket traffic.
 /// Responds to Ping by sending a Pong.
 /// Logs received Text to STDOUT.
-async fn handle_message(msg: Message, last_ping: &Arc<Mutex<Instant>>, write: &mut SSink) {
+async fn handle_message(
+    msg: Message,
+    last_ping: &Arc<Mutex<Instant>>,
+    write: &mut Arc<TokioMutex<SSink>>,
+) {
+    let mut write_lock = write.lock().await;
     match msg {
         Message::Ping(ping) => {
             log::info!("Received ping");
             *last_ping.lock().unwrap() = Instant::now();
-            if let Err(e) = write.send(Message::Pong(ping)).await {
+            if let Err(e) = write_lock.send(Message::Pong(ping)).await {
                 log::error!("Error sending pong: {:?}", e);
             }
         }
@@ -259,6 +397,7 @@ async fn handle_message(msg: Message, last_ping: &Arc<Mutex<Instant>>, write: &m
         _ => log::info!("Received other message: {:?}", msg),
     }
 }
+
 /// Monitors WebSocket connection for timeouts.
 /// Spawns a task that checks the time since last ping every HEARTBEAT_INTERVAL.
 /// Logs and terminates if no ping received within CONNECTION_TIMEOUT.
@@ -273,4 +412,21 @@ fn spawn_timeout_task(last_ping: Arc<Mutex<Instant>>) -> JoinHandle<()> {
             }
         }
     })
+}
+
+/// Look for a websocket in the state. If found, tell it to shut itself down.
+/// This finishes the Task which then exits to prevent leaks.
+async fn gracefully_shutdown_websocket(
+    state: &Arc<Mutex<GlobalState>>,
+    connection_id: String,
+) -> String {
+    let result = state
+        .lock()
+        .expect("Failed to lock mutex")
+        .kill_websocket(connection_id);
+
+    match result {
+        Some(id) => format!("Succesfully shut down websocket: {:?}", id),
+        None => "Websocket starting with id: `{:?}` does not exist".to_string(),
+    }
 }
