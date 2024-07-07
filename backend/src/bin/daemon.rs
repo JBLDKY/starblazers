@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::net::UnixListener;
-use tokio::sync::{watch, Mutex as TokioMutex};
+use tokio::sync::{mpsc, watch, Mutex as TokioMutex};
 use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
@@ -45,6 +45,7 @@ struct Task {
     jwt: String,
     handle: WebSocketHandle,
     cancel_sender: watch::Sender<bool>,
+    message_sender: mpsc::Sender<String>,
 }
 
 #[derive(Debug)]
@@ -311,6 +312,8 @@ async fn new_websocket(connection_id: Option<Uuid>) -> Task {
 
     let request = new_websocket_request(Some(connection_id), Some(jwt.clone())).await;
 
+    let (message_sender, message_receiver) = mpsc::channel(100);
+
     let handle = tokio::spawn(async move {
         // Establish the WebSocket connection
         let (read, write) = establish_connection(request).await?;
@@ -327,13 +330,16 @@ async fn new_websocket(connection_id: Option<Uuid>) -> Task {
         // Spawn a task to monitor for connection timeouts
         let timeout_task = spawn_timeout_task(Arc::clone(&last_ping));
 
+        // Spawn a task for sending messages to the server
+        let write_task = spawn_write_task(message_receiver, write.clone());
+
         // Wait for either the read task or the timeout task to finish
         tokio::select! {
-            _ = cancel_receiver.changed() => {
-                let mut write_lock = write.lock().await;
-                // Send `Close` msg over websocket connection
-                write_lock.close().await?;
-            }
+        _ = cancel_receiver.changed() => {
+            let mut write_lock = write.lock().await;
+            // Send `Close` msg over websocket connection
+            write_lock.close().await?;
+        }
 
             result = read_task => {
                 log::info!("Read task finished: {:?}", result);
@@ -342,9 +348,13 @@ async fn new_websocket(connection_id: Option<Uuid>) -> Task {
             _ = timeout_task => {
                 log::info!("Timed out: {:?}", &connection_id);
             }
+
+            result = write_task => {
+                log::info!("Write task finished: {:?}", result);
+            }
         }
 
-        Ok(())
+        Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
     });
 
     let player_info = Client::new()
@@ -367,6 +377,7 @@ async fn new_websocket(connection_id: Option<Uuid>) -> Task {
         player_id,
         handle,
         cancel_sender,
+        message_sender,
     }
 }
 
@@ -442,6 +453,18 @@ fn spawn_timeout_task(last_ping: Arc<Mutex<Instant>>) -> JoinHandle<()> {
     })
 }
 
+/// Sends messages to the server.
+async fn spawn_write_task(
+    mut message_receiver: mpsc::Receiver<String>,
+    write: Arc<TokioMutex<SSink>>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    while let Some(message) = message_receiver.recv().await {
+        let mut write_lock = write.lock().await;
+        write_lock.send(Message::Text(message)).await?;
+    }
+    Ok(())
+}
+
 /// Look for a websocket in the state. If found, tell it to shut itself down.
 /// This finishes the Task which then exits to prevent leaks.
 async fn gracefully_shutdown_websocket(
@@ -458,3 +481,48 @@ async fn gracefully_shutdown_websocket(
         None => "Websocket starting with id: `{:?}` does not exist".to_string(),
     }
 }
+
+// async fn create_lobby(
+//     state: &GlobalState,
+//     connection_id: Uuid,
+//     lobby_name: String,
+// ) -> Result<(), Box<dyn std::error::Error>> {
+//     let connection = state
+//         .websocket_handles
+//         .get(&connection_id)
+//         .ok_or("Connection not found")?;
+//
+//     let connection = connection.lock().await;
+//
+//     // Verify that the player is authenticated
+//     let player_id = connection
+//         .player_id
+//         .as_ref()
+//         .ok_or("Player not authenticated")?;
+//
+//     // Check if the lobby already exists
+//     let mut lobbies = state.lobbies.lock().await;
+//     if lobbies.contains_key(&lobby_name) {
+//         return Err("Lobby already exists".into());
+//     }
+//
+//     // Create the lobby
+//     let lobby = Lobby {
+//         name: lobby_name.clone(),
+//         host_id: player_id.clone(),
+//         players: vec![player_id.clone()],
+//     };
+//     lobbies.insert(lobby_name.clone(), lobby);
+//
+//     // Send confirmation message to the client
+//     let message = json!({
+//         "type": "LobbyCreated",
+//         "lobby_name": lobby_name,
+//         "player_id": player_id,
+//     });
+//     connection.sender.send(serde_json::to_string(&message)?)?;
+//
+//     println!("Lobby '{}' created by player '{}'", lobby_name, player_id);
+//
+//     Ok(())
+// }
