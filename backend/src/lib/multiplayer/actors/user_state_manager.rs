@@ -174,10 +174,10 @@ impl Handler<JoinLobbyRequest> for UserStateManager {
     fn handle(&mut self, req: JoinLobbyRequest, _ctx: &mut Self::Context) {
         // TODO:  Handle errors
         let player_id =
-            uuid::Uuid::parse_str(&req.player_id).unwrap_or_else(|_| return Default::default());
+            uuid::Uuid::parse_str(&req.player_id).unwrap_or_else(|_| Default::default());
 
         let lobby_id =
-            uuid::Uuid::parse_str(&req.lobby_name).unwrap_or_else(|_| return Default::default());
+            uuid::Uuid::parse_str(&req.lobby_name).unwrap_or_else(|_| Default::default());
 
         if let Some(state) = self.states.get_mut(&player_id) {
             state.transition(UserEvent::JoinLobby(lobby_id))

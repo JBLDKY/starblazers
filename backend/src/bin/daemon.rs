@@ -25,7 +25,6 @@ use tokio::net::TcpStream;
 use tokio::net::UnixListener;
 use tokio::sync::{mpsc, watch, Mutex as TokioMutex};
 use tokio::task::JoinHandle;
-use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::handshake::client::generate_key;
 use tokio_tungstenite::tungstenite::http::Request;
 use tokio_tungstenite::MaybeTlsStream;
@@ -41,6 +40,7 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Task {
     id: Uuid,
     player_id: Uuid,
@@ -90,9 +90,7 @@ impl GlobalState {
             return None;
         }
 
-        tokio::time::sleep(Duration::from_secs(2));
         // Wait for the task to complete (with a timeout)
-
         Some(to_kill)
     }
 
